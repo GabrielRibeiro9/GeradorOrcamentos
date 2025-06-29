@@ -1,0 +1,350 @@
+/* Toggle switch styling */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 28px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 25px; /* Mantém a altura da bolinha */
+    width: 25px;  /* Mantém a largura da bolinha */
+    left: 4px;
+    bottom: 6.5px;  /* AJUSTE: Alterado de 4px para 6.5px para centralizar verticalmente */
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+
+input:checked + .slider {
+    background-color: #4CAF50;
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+/* General styles */
+body {
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    background-color: #f9f9f9;
+}
+
+.itens-title {
+  text-align: center;
+  color: #4CAF50;
+}
+
+.container {
+    width: 100%;
+    margin: 30px auto;
+    padding: 20px;
+
+}
+
+h1 {
+    text-align: center;
+    color: #4CAF50;
+}
+
+/* Media query para telas menores que 400px */
+@media (max-width: 400px) {
+  .container {
+    padding: 10px; /* Reduz o padding do container em telas pequenas */
+    width: 100%; /* AJUSTE: Ocupa a largura total da tela */
+    margin: 0; /* AJUSTE: Remove as margens externas */
+    border-radius: 0; /* Opcional: remove o border-radius para um visual mais "full screen" */
+  }
+}
+
+/* Media query para telas menores que 600px */
+@media (max-width: 600px) {
+  .form-group input[type="number"] {
+    font-size: 16px; /* Ajusta o tamanho da fonte para inputs numéricos */
+    padding: 8px; /* Ajusta o padding para inputs numéricos */
+  }
+}
+
+/* cada form-group agora usa flex para alinhar label + input */
+.form-group {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+/* label ocupa um espaço fixo à esquerda */
+.form-group label {
+    display: inline-block;
+    width: 100px; /* ajuste conforme o rótulo mais longo */
+    margin: 0;
+    font-weight: bold;
+}
+
+/* input na mesma linha, ocupa o restante */
+.form-group input[type="text"],
+.form-group input[type="tel"] {
+    display: inline-block;
+    flex: 1; /* Permite que cresçam para preencher o espaço */
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+/* Ajustes específicos para inputs de número e select */
+.form-group input[type="number"],
+.form-group select {
+    padding: 5px 8px; /* Padding ajustado para alinhar com o switch */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    box-sizing: border-box;
+    /* Removido flex: 1 para controlar a largura com 'width' */
+}
+
+/* Larguras fixas para os campos Qtd, Valor e Tipo */
+#quantidade, #valor {
+  width: 65px; /* Largura fixa para Qtd e Valor */
+}
+
+#tipoItem {
+  width: 90px; /* Largura fixa para o Tipo (select) */
+}
+
+
+button {
+    width: auto;
+    padding: 14px; /* Mantido o padding geral para outros botões */
+    margin: 20px auto 0;
+    display: block;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.items-list {
+  margin-top: 20px;
+  padding: 0;      
+}
+
+.items-list .item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f1f1f1;   
+  padding: 6px 12px;           
+  margin: 4px 0;               
+  border-radius: 4px;           
+  font-size: 14px;
+}
+.items-list .item {
+  display: flex;
+  justify-content: space-between;
+  background: #f1f1f1;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.items-list .item .remove-item {
+  color: red !important;
+  cursor: pointer;
+  font-weight: bold;
+  margin: 0;
+}
+
+/* Fixa largura do label e impede que encolha, e alinha o texto verticalmente */
+.form-group label {
+  display: flex;
+  margin-bottom: 4px;
+  font-weight: bold;
+  height: 20px; /* Altura consistente para todos os labels */
+  align-items: center; /* Centraliza o texto verticalmente */
+}
+
+/* faz o input “Item” crescer e preencher o espaço disponível */
+.form-group input,
+.form-group .dropdown,
+.button-group {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Aumentando a espessura dos botões no button-group */
+.button-group button {
+  font-weight: bold;
+  padding: 15px 20px; /* AJUSTE: Aumentado o padding vertical para 15px */
+}
+
+.itens-title {
+  text-align: center;
+  color: #4CAF50;
+  margin-top: 20px;
+}
+
+.save-label {
+  pointer-events: none;
+  user-select: none;
+  font-weight: bold;
+}
+
+/* tamanho fixo do toggle (track + thumb) */
+.switch {
+  display: inline-block;
+  width: 60px;
+  height: 28px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.switch {
+  width: 50px !important;
+  height: 28px;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #ccc;
+  border-radius: 28px;
+  transition: .4s;
+}
+.slider::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  width: 15px;
+  height: 15px;
+  background: white;
+  border-radius: 50%;
+  transition: .4s;
+}
+.input:checked + .slider {
+  background: #4CAF50;
+}
+.input:checked + .slider::before {
+  transform: translateX(32px);
+}
+
+/* Custom dropdown */
+.dropdown {
+    position: relative;
+    flex: 1; /* Makes the dropdown behave like an input within form-group */
+}
+
+.dropdown-selected {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #fff;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.dropdown-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.dropdown-item {
+    padding: 8px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dropdown-item:hover {
+    background: #f4f4f4;
+}
+
+.remove-catalog {
+    color: red;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.hidden {
+    display: none;
+}
+
+/* REGRAS PARA ALINHAMENTO DO "SALVAR?" E RESPONSIVIDADE */
+
+/* Ajustes para o grupo de campos "Qtd", "Valor(und)", "Tipo" e "Salvar?" */
+.form-group.inline-group {
+    display: flex; /* Garante que os sub-fields fiquem lado a lado */
+    align-items: flex-end; /* Alinha os itens pela parte inferior */
+    justify-content: flex-start; /* Inicia os itens da esquerda */
+    margin-bottom: 15px; /* Mantém o espaçamento inferior do form-group */
+}
+
+/* Estilos gerais para os sub-fields dentro de inline-group */
+.sub-field {
+    display: flex;
+    flex-direction: column; /* Faz o label aparecer acima do input/select */
+    align-items: flex-start; /* Alinha o label e o input/select à esquerda dentro do sub-field */
+    margin-right: 5px; /* Espaçamento reduzido entre os sub-fields */
+    flex-grow: 0; /* Impede que os sub-fields cresçam */
+    flex-shrink: 0; /* Impede que os sub-fields encolham abaixo do seu conteúdo */
+}
+
+/* Estilos específicos para o sub-field do toggle "Salvar?" */
+.save-toggle-field {
+    display: flex;
+    flex-direction: column; /* Rótulo acima do switch */
+    align-items: right; /* Centraliza o rótulo e o switch horizontalmente dentro deste sub-field */
+    margin-left: auto; /* Empurra este sub-field para a extrema direita */
+    margin-right: 300px; /* Remove a margem direita para o último item */
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
