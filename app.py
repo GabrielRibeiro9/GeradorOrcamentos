@@ -9,12 +9,12 @@ from fastapi import Path, FastAPI, HTTPException, status, Form, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fpdf import FPDF
 from sqlmodel import Field, SQLModel, Session, create_engine, select
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse, StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 load_dotenv( )
 
@@ -272,70 +272,16 @@ async def gerar_pdf(
     pdf.set_text_color(0, 51, 102)
     pdf.cell(0, 7, data_validade, ln=True)
 
-    file_name = f"Orcamento_{nome.strip().replace(' ', '_')}_{numero}.pdf"
-    file_path = os.path.join(STATIC_DIR, file_name)
-    pdf.output(file_path)
+    pdf_bytes = pdf.output(dest="S").encode("latin1")  # Retorna PDF como bytes string
+    pdf_buffer = io.BytesIO(pdf_bytes)
 
-    return HTMLResponse(content=f"""
-    <!DOCTYPE html>
-    <html lang="pt-br">
-    <head>
-        <meta charset="UTF-8">
-        <title>Orçamento Gerado</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body {{
-                margin: 0;
-                padding: 0;
-                font-family: Arial, sans-serif;
-                background: #f9fafb;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }}
-            .pdf-actions {{
-                margin: 16px 0;
-                display: flex;
-                flex-direction: row;
-                gap: 12px;
-            }}
-            .pdf-actions a {{
-                display: inline-block;
-                background: #059669;
-                color: #fff;
-                padding: 10px 18px;
-                border-radius: 8px;
-                font-weight: bold;
-                text-decoration: none;
-                transition: background 0.2s;
-            }}
-            .pdf-actions a:hover {{
-                background: #047857;
-            }}
-            @media (max-width: 600px) {{
-                iframe {{
-                    width: 100vw;
-                    height: 65vh;
-                }}
-            }}
-            @media (min-width: 601px) {{
-                iframe {{
-                    width: 90vw;
-                    height: 75vh;
-                }}
-            }}
-        </style>
-    </head>
-    <body>
-        <h1 style="color:#059669;margin-top:1rem;">Orçamento Gerado</h1>
-        <div class="pdf-actions">
-            <a href="/static/{file_name}" download>📥 Baixar PDF</a>
-            <a href="/static/{file_name}" target="_blank">🔗 Abrir em nova aba</a>
-        </div>
-        <iframe src="/static/{file_name}" frameborder="0"></iframe>
-    </body>
-    </html>
-    """)
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="Orcamento_{nome.strip().replace(" ", "_")}_{numero}.pdf"'
+        }
+    )
 
 
 @app.post("/api/item/", response_model=Item)
