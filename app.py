@@ -18,6 +18,9 @@ from fastapi.templating import Jinja2Templates
 
 load_dotenv( )
 
+def format_brl(value):
+    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 def get_current_user(request: Request):
     user = request.session.get("user")
     if not user:
@@ -232,8 +235,8 @@ async def gerar_pdf(
         pdf.set_y(start_y)
         pdf.set_x(x_after_item + TABLE_COL_WIDTHS[1])
         pdf.cell(TABLE_COL_WIDTHS[2], row_height, str(it["qtd"]), border=1, align='C')
-        pdf.cell(TABLE_COL_WIDTHS[3], row_height, locale.currency(it['unit'], grouping=True), border=1, align="C")
-        pdf.cell(TABLE_COL_WIDTHS[4], row_height, locale.currency(it['total'], grouping=True), border=1, align="C", ln=1)
+        pdf.cell(TABLE_COL_WIDTHS[3], row_height, format_brl(it['unit']), border=1, align="C")
+        pdf.cell(TABLE_COL_WIDTHS[4], row_height, format_brl(it['total']), border=1, align="C", ln=1)
 
     servicos = [i for i in itens_pdf if i["tipo"].lower() == "servico"]
     materiais = [i for i in itens_pdf if i["tipo"].lower() == "material"]
@@ -260,7 +263,7 @@ async def gerar_pdf(
     label_w = sum(TABLE_COL_WIDTHS[:-1])
     pdf.set_x(10)
     pdf.cell(label_w, 8, "TOTAL GERAL:", 0, align='R', fill=True)
-    pdf.cell(TABLE_COL_WIDTHS[-1], 8, locale.currency(total_geral, grouping=True), 0, align="R", fill=True)
+    pdf.cell(TABLE_COL_WIDTHS[-1], 8, format_brl(total_geral), 0, align="R", fill=True)
     pdf.set_y(-30)
     pdf.set_font("Arial", "B", 10)
     pdf.set_text_color(0, 51, 102)
