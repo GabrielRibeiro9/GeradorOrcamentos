@@ -1,0 +1,9 @@
+# Ignorar a pasta de ambientes virtuais
+venv/
+.env
+*.pyc
+__pycache__/
+*.db
+*.sqlite3
+*.log
+.DS_Store
