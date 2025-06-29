@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlmodel
+httpx
+python-dotenv
+fpdf
+jinja2
+itsdangerous
+starlette
+gunicorn
