@@ -145,17 +145,27 @@
     function editarOrcamento(id) { window.location.href = `/editar-orcamento/${id}`; }
     function baixarPDF(id) { window.open(`/orcamento/${id}/pdf`, "_blank"); }
 
+    function isMobile() {
+      return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+    }
+
     async function enviarWhatsApp(id) {
       try {
         const response = await fetch(`/orcamento/${id}/whatsapp`);
         if (!response.ok) throw new Error("Não foi possível gerar o link do WhatsApp.");
         const data = await response.json();
-        window.open(data.whatsapp_url, '_blank');
+
+        if (isMobile()) {
+          window.location.href = data.whatsapp_url;  // Redireciona (mobile)
+        } else {
+          window.open(data.whatsapp_url, '_blank');  // Abre nova aba (desktop)
+        }
       } catch (error) {
         console.error("Erro ao enviar por WhatsApp:", error);
-        alert("Ocorreu um erro: " + error.message);
+        alert("Ocorreu um erro ao tentar preparar a mensagem para o WhatsApp.");
       }
     }
+
 
     async function deletarOrcamento(id) {
       if (!confirm(`Tem certeza que deseja excluir o orçamento?`)) return;

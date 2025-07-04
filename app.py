@@ -10,7 +10,7 @@ from typing import List, Optional
 from urllib.parse import quote
 
 # --- Imports do FastAPI e bibliotecas ---
-from fastapi import FastAPI, HTTPException, status, Form, Request, Depends, Response
+from fastapi import FastAPI, HTTPException, status, Form, Request, Depends, Response, Header
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -322,9 +322,6 @@ async def orcamentos_page(request: Request, current_user: User = Depends(get_cur
 
 
 # --- ROTAS DA API ---
-
-# ROTA PRINCIPAL: Salva um novo orçamento e redireciona
-# SUBSTITUA A FUNÇÃO DE SALVAR ANTIGA POR ESTA
 
 @app.post("/salvar-orcamento/")
 async def salvar_orcamento_endpoint(
