@@ -9,3 +9,5 @@ itsdangerous
 starlette
 gunicorn
 python-multipart
+cloudinary
+psycopg2-binary

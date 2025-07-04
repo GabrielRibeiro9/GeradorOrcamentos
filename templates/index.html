@@ -6,17 +6,45 @@
     <title>Formulário de Orçamento</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<div class="flex justify-end items-center gap-2 mb-2">
-    <span class="text-gray-700 text-sm font-medium">Olá {{ user }}</span>
-    <form action="/logout" method="get">
-        <button type="submit" class="py-1 px-2 bg-red-500 hover:bg-red-700 text-white font-semibold rounded-xl shadow-md text-sm transition-all duration-200">
-            Sair
-        </button>
-    </form>
-</div>
+<header class="bg-gradient-to-r from-emerald-500 to-teal-600 shadow-lg px-4 sm:px-6 py-3 flex items-center justify-between text-white sticky top-0 z-50">
+  <!-- Esquerda: Avatar + Nome -->
+  <div class="flex items-center gap-3">
+    <!-- Avatar -->
+    <div class="w-10 h-10 rounded-full bg-white/20 ring-2 ring-white/50 flex items-center justify-center text-white font-bold text-xl shadow-md flex-shrink-0">
+      {{ user.username[0]|upper }}
+    </div>
+    <!-- Nome do Usuário: sempre visível -->
+    <div class="font-semibold text-base sm:text-lg">
+      Olá, <span class="font-bold">{{ user.username }}</span>
+    </div>
+  </div>
+  <!-- Direita: Botões de Ação -->
+  <div class="flex items-center gap-2 sm:gap-3">
+    <!-- Botão Orçamentos -->
+    <a href="/orcamentos"
+       class="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg shadow-sm transition-all duration-200 border border-white/20">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h4a1 1 0 100-2H7zm0 4a1 1 0 100 2h4a1 1 0 100-2H7z" clip-rule="evenodd" />
+      </svg>
+      <span class="font-semibold hidden sm:inline">Orçamentos</span>
+    </a>
+    <!-- Botão Sair -->
+    <a href="/logout"
+       class="flex items-center gap-2 px-3 py-2 bg-red-500/80 hover:bg-red-500 backdrop-blur-sm rounded-lg shadow-sm transition-all duration-200 border border-white/20">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd" />
+      </svg>
+      <span class="font-semibold hidden sm:inline">Sair</span>
+    </a>
+  </div>
+</header>
+
     <div class="flex flex-col gap-8 p-8 max-w-4xl mx-auto">
-        <h1 class="text-2xl font-bold text-green-600 text-center">Formulário para Orçamento</h1>
-        <form id="orcamentoForm" action="/gerar-pdf/" method="post" target="_blank" class="flex flex-col gap-4">
+        <h1 class="text-3xl sm:text-3xl md:text-4xl font-extrabold text-center mb-1 bg-gradient-to-tr from-green-600 to-green-400 bg-clip-text text-transparent drop-shadow">
+        Formulário para Orçamento
+        </h1>
+        <form id="orcamentoForm" action="/salvar-orcamento/" method="post" class="flex flex-col gap-4">
 
             <!-- DADOS DO CLIENTE E ENDEREÇO -->
             <div class="flex flex-col items-start justify-start gap-2">
@@ -83,7 +111,9 @@
             </div>
             
             <!-- DETALHES DO ORÇAMENTO -->
-            <h1 class="text-xl font-bold text-green-600 text-center">Detalhes do Orçamento</h1>
+            <h1 class="text-3xl sm:text-3xl md:text-4xl font-extrabold text-center mb-1 bg-gradient-to-tr from-green-600 to-green-400 bg-clip-text text-transparent drop-shadow">
+            Detalhamento
+            </h1>
             <div class="flex flex-col items-start justify-start gap-2">
                 <label for="descricaoServico" class="text-sm font-bold">Descrição do serviço:</label>
                 <div class="relative w-full">
@@ -141,17 +171,27 @@
                     </div>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <label class="inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="toggleSalvar" class="sr-only peer cursor-pointer">
-                    <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                    <span class="ms-3 text-sm font-medium text-gray-900">Salvar item no catálogo?</span>
-                </label>
-            </div>
+                <div class="flex items-center justify-start gap-6 mb-4">
+            
+                        <!-- Esquerda: Toggle para Salvar no Catálogo -->
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggleSalvar" class="sr-only peer">
+                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                            <span class="ms-3 text-sm font-medium text-gray-900">Salvar item no catálogo?</span>
+                        </label>
+
+                        <!-- Direita: Campo do Número do Orçamento -->
+                        <div class="flex items-center gap-2">
+                            <label for="numero_orcamento" class="text-sm font-medium text-gray-700">Nº:</label>
+                            <input type="text" id="numero_orcamento" name="numero_orcamento" 
+                                class="w-20 h-6 text-center font-semibold border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400">
+                        </div>
+
+                    </div>
             
             <div class="flex flex-col gap-2">
                 <button id="adicionarItemBtn" class="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold uppercase tracking-wide rounded-2xl shadow-lg transform hover:-translate-y-0.5 transition-all duration-200" type="button">Adicionar Item</button>
-                <button id="gerarOrcamentoBtn" class="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold uppercase tracking-wide rounded-xl shadow-md transform hover:-translate-y-0.5 transition-all duration-200" type="submit">Gerar Orçamento</button>
+                <button id="gerarOrcamentoBtn" class="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold uppercase tracking-wide rounded-xl shadow-md transform hover:-translate-y-0.5 transition-all duration-200" type="submit">Salvar Orçamento</button>
             </div>
             
             <div class="relative overflow-x-auto shadow-md sm:rounded-lg hidden" id="tableContainer">
@@ -471,9 +511,25 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("cep").addEventListener("blur", consultarCep);
         adicionarItemBtn.addEventListener("click", adicionarItem);
         
-        
+        preencherNumeroSugerido();
         carregarCatalogosAPI();
         updateTableVisibility();
+    }
+
+    async function preencherNumeroSugerido() {
+        try {
+            const response = await fetch('/api/proximo-numero/');
+            if (!response.ok) {
+                console.error('Falha ao buscar próximo número.');
+                document.getElementById('numero_orcamento').value = "0001"; // Fallback
+                return;
+            }
+            const data = await response.json();
+            document.getElementById('numero_orcamento').value = data.proximo_numero;
+        } catch (error) {
+            console.error("Erro ao buscar próximo número:", error);
+            document.getElementById('numero_orcamento').placeholder = "Erro"; 
+        }
     }
 
     inicializar();
