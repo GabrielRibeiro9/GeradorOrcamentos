@@ -272,12 +272,12 @@ def get_current_user(request: Request, session: Session = Depends(get_db_session
     """
     user_id = request.session.get("user_id")
     if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Não autenticado")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
     
     user = session.get(User, user_id)
     if not user:
         request.session.clear()
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuário não encontrado")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
     
     return user
 
@@ -312,15 +312,13 @@ async def logout(request: Request):
     return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request, user: str = Depends(get_current_user)):
-    return templates.TemplateResponse("index.html", {"request": request, "user": user})
+async def home(request: Request, current_user: User = Depends(get_current_user)):
+    return templates.TemplateResponse("index.html", {"request": request, "user": current_user})
 
 @app.get("/orcamentos", response_class=HTMLResponse)
-async def orcamentos_page(request: Request, user: str = Depends(get_current_user)):
-
+async def orcamentos_page(request: Request, current_user: User = Depends(get_current_user)):
     admin_username = os.getenv("BASIC_AUTH_USER", "admin")
-
-    return templates.TemplateResponse("orcamentos.html", {"request": request, "user": user, "admin_username_from_env": admin_username})
+    return templates.TemplateResponse("orcamentos.html", {"request": request, "user": current_user, "admin_username_from_env": admin_username})
 
 
 # --- ROTAS DA API ---
@@ -330,22 +328,20 @@ async def orcamentos_page(request: Request, user: str = Depends(get_current_user
 
 @app.post("/salvar-orcamento/")
 async def salvar_orcamento_endpoint(
-    request: Request,
-    nome: str = Form(...), logradouro: str = Form(...), numero_casa: str = Form(...),
-    complemento: str = Form(""), bairro: str = Form(...), cidade_uf: str = Form(...),
-    cep: str = Form(...), telefone: str = Form(...), descricao_servico: str = Form(...),
-    itens: str = Form(...), numero_orcamento: str = Form(...),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    nome: str = Form(...),
+    logradouro: str = Form(...),
+    numero_casa: str = Form(...),
+    complemento: str = Form(""),
+    bairro: str = Form(...),
+    cidade_uf: str = Form(...),
+    cep: str = Form(...),
+    telefone: str = Form(...),
+    descricao_servico: str = Form(...),
+    itens: str = Form(...),
+    numero_orcamento: str = Form(...)
 ):
-    
-    with Session(engine) as session:
-        orcamento_db = Orcamento(
-            # ... (todos os seus outros campos) ...
-            data_validade=data_validade,
-            user_id=current_user.id  # <-- LINHA CRUCIAL: Associa ao usuário logado
-        )
-
-
+    # 1. Define o número final do orçamento
     numero_final = numero_orcamento.strip()
     if not numero_final:
         numero_final = get_next_orcamento_number()
@@ -360,6 +356,7 @@ async def salvar_orcamento_endpoint(
             with open("orcamento_number.txt", "w") as f:
                 f.write(numero_final)
     
+    # 2. Processa todos os dados recebidos do formulário
     itens_data = json.loads(itens)
     partes_endereco = [f"{logradouro}, Nº {numero_casa}", complemento.strip(), bairro]
     endereco_formatado = f"{', '.join(filter(None, partes_endereco))} - {cidade_uf} - CEP {cep}"
@@ -369,11 +366,19 @@ async def salvar_orcamento_endpoint(
     data_emissao = hoje.strftime('%d/%m/%Y')
     data_validade = (hoje + timedelta(days=7)).strftime('%d/%m/%Y')
 
+    # 3. Cria e salva o objeto no banco de dados, AGORA que todas as variáveis existem
     with Session(engine) as session:
         orcamento_db = Orcamento(
-            numero=numero_final, nome=nome, endereco=endereco_formatado, telefone=telefone,
-            descricao_servico=descricao_servico, itens=itens_formatados, total_geral=total_geral,
-            data_emissao=data_emissao, data_validade=data_validade
+            numero=numero_final,
+            nome=nome,
+            endereco=endereco_formatado,
+            telefone=telefone,
+            descricao_servico=descricao_servico,
+            itens=itens_formatados,
+            total_geral=total_geral,
+            data_emissao=data_emissao,
+            data_validade=data_validade,
+            user_id=current_user.id  # Associação com o usuário logado
         )
         session.add(orcamento_db)
         session.commit()
@@ -525,17 +530,25 @@ def gerar_link_whatsapp(orcamento_id: int, request: Request, current_user: User 
     return JSONResponse(content={"whatsapp_url":whatsapp_url})
 
 @app.get("/editar-orcamento/{orcamento_id}", response_class=HTMLResponse)
-async def editar_orcamento_page(orcamento_id: int, request: Request, current_user: User = Depends(get_current_user)):
+async def editar_orcamento_page(
+    orcamento_id: int, 
+    request: Request, 
+    current_user: User = Depends(get_current_user) # Nome padronizado para 'current_user'
+):
     with Session(engine) as session:
         orcamento = session.get(Orcamento, orcamento_id)
         if not orcamento:
             raise HTTPException(status_code=404, detail="Orçamento não encontrado")
         
+        # Agora a verificação de permissão funciona
         if orcamento.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Acesso negado")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado")
     
-    # O Jinja2 usará este objeto 'orcamento' para preencher o formulário
-    return templates.TemplateResponse("editar_orcamento.html", {"request": request, "user": current_user, "orcamento": orcamento})
+    # E passamos a variável correta para o template
+    return templates.TemplateResponse(
+        "editar_orcamento.html", 
+        {"request": request, "user": current_user, "orcamento": orcamento}
+    )
 
 # SUBSTITUA SUA FUNÇÃO DE ATUALIZAÇÃO INTEIRA POR ESTA
 
