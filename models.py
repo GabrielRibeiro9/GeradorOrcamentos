@@ -1,40 +1,75 @@
-
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, JSON, Column, Relationship
 
-# O modelo Item permanece o mesmo
+# --- Modelo Item (Sem alterações) ---
 class Item(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     tipo: str
     nome: str
     valor: float
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    user: Optional["User"] = Relationship(back_populates="itens")
 
-# Forward reference para User, para evitar erro de importação circular
+
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(unique=True, index=True)
+    hashed_password: str
+    
+    # --- ADICIONE ESTE NOVO CAMPO ---
+    pdf_template_name: str = Field(default="default")
+    
+    # --- Relacionamentos existentes (não mude) ---
+    itens: List["Item"] = Relationship(back_populates="user")
+    clientes: List["Cliente"] = Relationship(back_populates="user")
+    orcamentos: List["Orcamento"] = Relationship(back_populates="user")     
+
+# --- Modelo Cliente ---
+
+class Cliente(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nome: str
+    telefone: str
+    cep: str
+    logradouro: str
+    numero_casa: str
+    complemento: Optional[str] = Field(default=None)
+    bairro: str
+    cidade_uf: str
+    user_id: int = Field(foreign_key="user.id")
+    user: "User" = Relationship(back_populates="clientes")
+    
+    orcamentos: List["Orcamento"] = Relationship(back_populates="cliente")
+
+# --- Modelo Orcamento (Atualizado) ---
 class Orcamento(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     numero: str
-    nome: str
-    endereco: str
-    telefone: str
     descricao_servico: str
     itens: List[dict] = Field(sa_column=Column(JSON))
     total_geral: float
     data_emissao: str
     data_validade: str
     pdf_url: Optional[str] = Field(default=None)
-
-    # --- MUDANÇA AQUI: Chave Estrangeira que liga ao Usuário ---
-    user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    cliente_id: Optional[int] = Field(default=None, foreign_key="cliente.id")
+    nome_cliente: Optional[str] = None
+    telefone_cliente: Optional[str] = None
+    cep_cliente: Optional[str] = None
+    logradouro_cliente: Optional[str] = None
+    numero_casa_cliente: Optional[str] = None
+    complemento_cliente: Optional[str] = None
+    bairro_cliente: Optional[str] = None
+    cidade_uf_cliente: Optional[str] = None
+    condicao_pagamento: Optional[str] = Field(default=None)
+    prazo_entrega: Optional[str] = Field(default=None)
+    garantia: Optional[str] = Field(default=None)
+    observacoes: Optional[str] = Field(default=None)
     
-    # --- MUDANÇA AQUI: Relação que permite acessar o usuário a partir do orçamento ---
+    user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     user: Optional["User"] = Relationship(back_populates="orcamentos")
 
+    # Esta é a chave estrangeira que conecta ao cliente
+    cliente_id: Optional[int] = Field(default=None, foreign_key="cliente.id")
+    cliente: Optional[Cliente] = Relationship(back_populates="orcamentos")
 
-# NOVO MODELO: User
-class User(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    username: str = Field(unique=True, index=True)
-    hashed_password: str # Armazenará a senha criptografada
-    
-    # --- MUDANÇA AQUI: Relação que permite acessar os orçamentos a partir do usuário ---
-    orcamentos: List[Orcamento] = Relationship(back_populates="user")
+ 

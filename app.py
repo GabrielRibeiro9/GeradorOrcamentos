@@ -8,9 +8,10 @@ import io
 from datetime import datetime, timedelta
 from typing import List, Optional
 from urllib.parse import quote
+from sqlalchemy import func, cast, Integer
 
 # --- Imports do FastAPI e bibliotecas ---
-from fastapi import FastAPI, HTTPException, status, Form, Request, Depends, Response, Header
+from fastapi import FastAPI, HTTPException, status, Form, Request, Depends, Response, Header, Path
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +21,7 @@ from dotenv import load_dotenv
 from fpdf import FPDF
 from sqlmodel import SQLModel, Session, create_engine, select
 from contextlib import asynccontextmanager
+from sqlalchemy.orm import selectinload
 
 # --- IMPORTS DO CLOUDINARY (MOVA ELES PARA CÁ) ---
 import cloudinary
@@ -27,10 +29,19 @@ import cloudinary.uploader
 import cloudinary.api
 
 # --- Import dos seus modelos de dados ---
-from models import Orcamento, Item, User
+from models import Orcamento, Item, User, Cliente
 
 # --- Import do nosso módulo de segurança ---
 from security import get_password_hash, verify_password
+
+from pdf_models.modelo_joao import gerar_pdf_joao
+from pdf_models.modelo_cacador import gerar_pdf_cacador
+
+PDF_GENERATORS = {
+    "joao": gerar_pdf_joao,
+    "cacador": gerar_pdf_cacador,
+    "default": gerar_pdf_joao 
+}
 
 # --- CONFIGURAÇÃO INICIAL E CONSTANTES ---
 load_dotenv()
@@ -68,18 +79,6 @@ def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
     print("INFO:     Tabelas prontas.")
 
-# --- FUNÇÕES AUXILIARES ---
-def get_next_orcamento_number():
-    file_path = "orcamento_number.txt"
-    try:
-        with open(file_path, "r") as f:
-            current = int(f.read().strip())
-    except (FileNotFoundError, ValueError):
-        current = 0
-    next_number = current + 1
-    with open(file_path, "w") as f:
-        f.write(str(next_number))
-    return str(next_number).zfill(4)
 
 def format_brl(value):
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -93,138 +92,6 @@ PADDING_RECT_VERTICAL = 1
 LINE_HEIGHT = 4
 TABLE_COL_WIDTHS = [10, 80, 30, 40, 30]
 TABLE_TOTAL_WIDTH = sum(TABLE_COL_WIDTHS)
-
-class MyPDF(FPDF):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.client_data = {}
-        self.orcamento_data = {}
-        self.set_auto_page_break(auto=True, margin=15)
-
-    def set_all_data(self, client_data, orcamento_data):
-        self.client_data = client_data
-        self.orcamento_data = orcamento_data
-
-    def header(self):
-        if os.path.exists(FULL_PAGE_BACKGROUND_IMAGE):
-            self.image(FULL_PAGE_BACKGROUND_IMAGE, 0, 0, self.w, self.h)
-        if os.path.exists(LOGO_PATH):
-            self.image(LOGO_PATH, x=145, y=5, w=60)
-        self.set_xy(0, 50)
-        self.set_font("Arial", "B", 24)
-        self.set_text_color(0, 51, 102)
-        self.cell(self.w, 10, "ORÇAMENTO", align='C', ln=True)
-        self.set_xy(0, self.get_y() - 2)
-        self.set_font("Arial", "B", 18)
-        self.cell(self.w, 8, f"Nº{self.orcamento_data.get('numero_orcamento', '')}", align='C', ln=True)
-        self.ln(-2)
-        self.set_font("Arial", "", 6)
-        self.set_text_color(0, 51, 102)
-        self.set_x(10)
-        self.cell(0, 4, f"DATA EMISSÃO: {self.orcamento_data.get('data_emissao', '')}", align='L', ln=True)
-        self.ln(2)
-
-    def footer(self):
-        pass
-
-    def draw_content(self, orcamento: Orcamento):
-        # Esta função centraliza a lógica de desenho do conteúdo do PDF
-        campos = [("CLIENTE: ", orcamento.nome),("ENDEREÇO: ", orcamento.endereco),("TELEFONE: ", orcamento.telefone),("DESCRIÇÃO DO SERVIÇO: ", orcamento.descricao_servico)]
-        current_y = 70
-        for label, value in campos:
-            is_desc = label.startswith("DESCRIÇÃO")
-            self.set_font("Arial", "B", 10)
-            w_label = self.get_string_width(label)
-            w_val = TABLE_TOTAL_WIDTH - w_label - 2 * PADDING_RECT_VERTICAL
-            if not is_desc:
-                h_rect = FIXED_RECT_HEIGHT
-            else:
-                self.set_font("Arial", "", 10)
-                lines = self.multi_cell(w_val, LINE_HEIGHT, value, split_only=True)
-                h_rect = max(FIXED_RECT_HEIGHT, len(lines) * LINE_HEIGHT + 2 * PADDING_RECT_VERTICAL)
-            
-            self.set_fill_color(240, 240, 240)
-            self.rect(10, current_y, TABLE_TOTAL_WIDTH, h_rect, "F")
-            self.set_xy(10 + PADDING_RECT_VERTICAL, current_y + PADDING_RECT_VERTICAL)
-            self.set_font("Arial", "B", 10)
-            self.set_text_color(0, 51, 102)
-            self.cell(w_label, LINE_HEIGHT, label, ln=0)
-            self.set_text_color(0, 0, 0)
-            self.set_font("Arial", "", 10)
-            self.set_xy(10 + w_label + PADDING_RECT_VERTICAL, current_y + PADDING_RECT_VERTICAL)
-            self.multi_cell(w_val, LINE_HEIGHT, value)
-            current_y += h_rect + 2
-        
-        self.set_y(current_y)
-        self.ln(2)
-
-        servicos = [i for i in orcamento.itens if i["tipo"].lower() == "servico"]
-        materiais = [i for i in orcamento.itens if i["tipo"].lower() == "material"]
-
-        if servicos:
-            self.ln(4)
-            self.set_font("Arial", "B", 12)
-            self.set_text_color(0, 51, 102)
-            self.cell(0, 10, "Serviços", ln=True, align="L")
-            self.draw_table(servicos)
-
-        if materiais:
-            self.ln(4)
-            self.set_font("Arial", "B", 12)
-            self.set_text_color(0, 51, 102)
-            self.cell(0, 10, "Materiais", ln=True, align="L")
-            self.draw_table(materiais)
-
-        self.ln(4)
-        self.set_font("Arial", "B", 10)
-        self.set_fill_color(255, 204, 0)
-        self.set_text_color(0, 51, 102)
-        label_w = sum(TABLE_COL_WIDTHS[:-1])
-        self.set_x(10)
-        self.cell(label_w, 8, "TOTAL GERAL:", 0, align='R', fill=True)
-        self.cell(TABLE_COL_WIDTHS[-1], 8, format_brl(orcamento.total_geral), 0, align="R", fill=True)
-        self.set_y(-30)
-        self.set_font("Arial", "B", 10)
-        self.set_text_color(0, 51, 102)
-        self.cell(0, 7, "VALIDADE DO DOCUMENTO:", ln=True)
-        self.set_font("Arial", "B", 10)
-        self.cell(0, 7, orcamento.data_validade, ln=True)
-
-    def draw_table(self, itens_do_tipo):
-        titles = ["ITEM", "DESCRIÇÃO", "QTD", "UNITÁRIO", "TOTAL"]
-        self.set_fill_color(255, 204, 0)
-        self.set_font("Arial", "B", 9)
-        self.set_text_color(0, 51, 102)
-        self.set_x(10)
-        for w, title in zip(TABLE_COL_WIDTHS, titles):
-            self.cell(w, 8, title, 1, align='C', fill=True)
-        self.ln()
-
-        for idx, it in enumerate(itens_do_tipo, start=1):
-            self.set_font("Arial", "", 9)
-            self.set_text_color(0, 0, 0)
-            start_y = self.get_y()
-            lines = self.multi_cell(TABLE_COL_WIDTHS[1], 5, it["desc"], split_only=True)
-            text_height = len(lines) * 5
-            row_height = max(10, text_height + 4)
-            if start_y + row_height > self.page_break_trigger:
-                self.add_page()
-                self.draw_header()
-                start_y = self.get_y()
-            
-            self.set_y(start_y)
-            self.set_x(10)
-            self.cell(TABLE_COL_WIDTHS[0], row_height, str(idx), border=1, align='C')
-            x_after_item = self.get_x()
-            y_text_pos = start_y + (row_height - text_height) / 2
-            self.set_xy(x_after_item, y_text_pos)
-            self.multi_cell(TABLE_COL_WIDTHS[1], 5, it["desc"], border=0, align='L')
-            self.rect(x=x_after_item, y=start_y, w=TABLE_COL_WIDTHS[1], h=row_height)
-            self.set_y(start_y)
-            self.set_x(x_after_item + TABLE_COL_WIDTHS[1])
-            self.cell(TABLE_COL_WIDTHS[2], row_height, str(it["qtd"]), border=1, align='C')
-            self.cell(TABLE_COL_WIDTHS[3], row_height, format_brl(it['unit']), border=1, align="C")
-            self.cell(TABLE_COL_WIDTHS[4], row_height, format_brl(it['total']), border=1, align="C", ln=1)
 
 create_db_and_tables()
 
@@ -248,7 +115,7 @@ with Session(engine) as session:
         hashed_password = get_password_hash(admin_password)
         
         # Cria o objeto User e salva no banco
-        admin_user = User(username=admin_username, hashed_password=hashed_password)
+        admin_user = User(username=admin_username, hashed_password=hashed_password, pdf_template_name="joao" )
         session.add(admin_user)
         session.commit()
         print(f"Usuário '{admin_username}' criado com sucesso com a senha padrão.")
@@ -325,162 +192,212 @@ async def orcamentos_page(request: Request, current_user: User = Depends(get_cur
 
 @app.post("/salvar-orcamento/")
 async def salvar_orcamento_endpoint(
-    current_user: User = Depends(get_current_user),
-    nome: str = Form(...),
-    logradouro: str = Form(...),
-    numero_casa: str = Form(...),
-    complemento: str = Form(""),
-    bairro: str = Form(...),
-    cidade_uf: str = Form(...),
-    cep: str = Form(...),
-    telefone: str = Form(...),
-    descricao_servico: str = Form(...),
-    itens: str = Form(...),
-    numero_orcamento: str = Form(...)
+    request: Request,
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
 ):
-    # 1. Define o número final do orçamento
-    numero_final = numero_orcamento.strip()
-    if not numero_final:
-        numero_final = get_next_orcamento_number()
-    else:
-        try:
-            with open("orcamento_number.txt", "r") as f:
-                contador_atual = int(f.read().strip())
-            proximo_no_contador = max(int(numero_final), contador_atual)
-            with open("orcamento_number.txt", "w") as f:
-                f.write(str(proximo_no_contador))
-        except (FileNotFoundError, ValueError):
-            with open("orcamento_number.txt", "w") as f:
-                f.write(numero_final)
+    form_data = await request.form()
     
-    # 2. Processa todos os dados recebidos do formulário
-    itens_data = json.loads(itens)
-    partes_endereco = [f"{logradouro}, Nº {numero_casa}", complemento.strip(), bairro]
-    endereco_formatado = f"{', '.join(filter(None, partes_endereco))} - {cidade_uf} - CEP {cep}"
-    itens_formatados = [{"id": i.get('id'), "tipo": i['tipo'], "desc": i['nome'], "qtd": int(i['quantidade']), "unit": float(i['valor']), "total": int(i['quantidade']) * float(i['valor'])} for i in itens_data]
-    total_geral = sum(i["total"] for i in itens_formatados)
-    hoje = datetime.now()
-    data_emissao = hoje.strftime('%d/%m/%Y')
-    data_validade = (hoje + timedelta(days=7)).strftime('%d/%m/%Y')
+    cliente_id_str = form_data.get("cliente_id")
+    nome_cliente = form_data.get("nome")
+    # verifica se foi marcado para salvar cliente (caso do toggle, se precisar)
+    salvar_cliente_flag = form_data.get("salvar_cliente")
 
-    # 3. Cria e salva o objeto no banco de dados, AGORA que todas as variáveis existem
-    with Session(engine) as session:
-        orcamento_db = Orcamento(
-            numero=numero_final,
-            nome=nome,
-            endereco=endereco_formatado,
-            telefone=telefone,
-            descricao_servico=descricao_servico,
-            itens=itens_formatados,
-            total_geral=total_geral,
-            data_emissao=data_emissao,
-            data_validade=data_validade,
-            user_id=current_user.id  # Associação com o usuário logado
+    # Se não tem cliente_id e não preencheu nome, ERRO!
+    if not cliente_id_str and not nome_cliente:
+        raise HTTPException(
+            status_code=400,
+            detail="Selecione um cliente existente ou preencha os dados do novo cliente."
         )
-        session.add(orcamento_db)
-        session.commit()
+
+    cliente_db = None
+
+    # Se usuário selecionou um cliente existente
+    if cliente_id_str:
+        cliente_db = session.get(Cliente, int(cliente_id_str))
+        if not cliente_db or cliente_db.user_id != current_user.id:
+            raise HTTPException(status_code=404, detail="Cliente selecionado inválido.")
+
+        # (Opcional: se quiser atualizar dados, mantenha o toggle, mas pode ignorar!)
     
-    return RedirectResponse(url="/orcamentos", status_code=status.HTTP_303_SEE_OTHER)
+        # Se usuário preencheu o nome, cria novo cliente
+    elif nome_cliente:
+        if salvar_cliente_flag == "on":
+            cliente_db = Cliente(
+                nome=nome_cliente,
+                telefone=form_data.get("telefone"),
+                cep=form_data.get("cep"),
+                logradouro=form_data.get("logradouro"),
+                numero_casa=form_data.get("numero_casa"),
+                complemento=form_data.get("complemento"),
+                bairro=form_data.get("bairro"),
+                cidade_uf=form_data.get("cidade_uf"),
+                user_id=current_user.id
+            )
+            session.add(cliente_db)
+            session.commit()
+            session.refresh(cliente_db)
+        else:
+            cliente_db = None
+    else:
+        # Não deveria chegar aqui, mas se chegar, ERRO
+        raise HTTPException(
+            status_code=400,
+            detail="Preencha os dados do cliente para criar um novo orçamento."
+        )
+
+    # --- LÓGICA DO ORÇAMENTO (como já estava)
+    itens_data = json.loads(form_data.get("itens"))
+    total_geral = sum(int(i['quantidade']) * float(i['valor']) for i in itens_data)
+    
+    orcamento_db = Orcamento(
+        numero=form_data.get("numero_orcamento"),
+        descricao_servico=form_data.get("descricao_servico"),
+        itens=itens_data,
+        total_geral=total_geral,
+        data_emissao=datetime.now().strftime('%d/%m/%Y'),
+        data_validade=(datetime.now() + timedelta(days=7)).strftime('%d/%m/%Y'),
+        user_id=current_user.id,
+        cliente_id=cliente_db.id if cliente_db else None,
+        nome_cliente=form_data.get("nome"),
+        telefone_cliente=form_data.get("telefone"),
+        cep_cliente=form_data.get("cep"),
+        logradouro_cliente=form_data.get("logradouro"),
+        numero_casa_cliente=form_data.get("numero_casa"),
+        complemento_cliente=form_data.get("complemento"),
+        bairro_cliente=form_data.get("bairro"),
+        cidade_uf_cliente=form_data.get("cidade_uf"),
+        condicao_pagamento=form_data.get("condicao_pagamento"),
+        prazo_entrega=form_data.get("prazo_entrega"),
+        garantia=form_data.get("garantia"),
+        observacoes=form_data.get("observacoes"),
+    )
+    session.add(orcamento_db)
+    session.commit()
+    
+    return RedirectResponse(url="/orcamentos", status_code=303)
+
 
 @app.get("/orcamento/{orcamento_id}/pdf", response_class=StreamingResponse)
-async def gerar_e_salvar_pdf(orcamento_id: int, current_user: User = Depends(get_current_user), session: Session = Depends(get_db_session)):
-    with Session(engine) as session:
-        orcamento = session.get(Orcamento, orcamento_id)
-        if not orcamento:
-            raise HTTPException(status_code=404, detail="Orçamento não encontrado")
+async def gerar_e_salvar_pdf(
+    orcamento_id: int, 
+    session: Session = Depends(get_db_session)
+):
+    # 1. Busca o orçamento FORÇANDO o carregamento do cliente junto
+    statement = (
+        select(Orcamento)
+        .options(selectinload(Orcamento.cliente)) # A linha mágica
+        .where(Orcamento.id == orcamento_id)
+    )
+    orcamento = session.exec(statement).first() # Usa .first() para pegar um único resultado
+
+    if not orcamento:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado")
         
-        if orcamento.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Acesso negado")
+    # 2. Pega o nome do modelo a partir do usuário dono do orçamento
+    template_name = orcamento.user.pdf_template_name
+    
+    # 3. Usa o dicionário para encontrar a função de PDF correta
+    pdf_function = PDF_GENERATORS.get(template_name, PDF_GENERATORS["default"])
+    print(f"INFO: Gerando PDF para o orçamento #{orcamento.id} usando o modelo: '{template_name}'")
 
-        # Verifica se o PDF já foi gerado e salvo antes
-        if orcamento.pdf_url:
-            print(f"PDF já existe na nuvem. Buscando de: {orcamento.pdf_url}")
-           
-            try:
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(orcamento.pdf_url) 
-                    response.raise_for_status()
+    # 4. Gera o PDF em memória (sem salvar no disco do servidor)
+    pdf_buffer = io.BytesIO()
 
-                pdf_bytes = response.content
+    # 5. CHAMA A FUNÇÃO DE PDF CORRETA
+    try:
+        # Agora orcamento.cliente nunca será None
+        pdf_function(file_path=pdf_buffer, orcamento=orcamento)
+    except Exception as e:
+        print(f"ERRO ao gerar PDF com o modelo '{template_name}': {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno ao gerar o PDF.")
 
-                return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf",
-                    headers={"Content-Disposition": f'inline; filename="Orcamento_{orcamento.numero}.pdf"'})
-
-            except Exception as e:
-                print(f"Falha ao buscar PDF do Cloudinary, gerando novamente... Erro: {e}")    
-
-        # --- SE O PDF AINDA NÃO EXISTE, GERAMOS E FAZEMOS O UPLOAD ---
-        print(f"Gerando novo PDF para o orçamento #{orcamento.id}")
-        
-        # 1. Gera o PDF em memória (seu código existente)
-        pdf = MyPDF(format="A4")
-        pdf.set_all_data(
-            client_data={"nome": orcamento.nome, "endereco": orcamento.endereco, "telefone": orcamento.telefone},
-            orcamento_data={"numero_orcamento": orcamento.numero, "data_emissao": orcamento.data_emissao}
-        )
-        pdf.add_page()
-        pdf.draw_content(orcamento)
-        
-        pdf_bytes = pdf.output(dest="S").encode("latin1")
+    # Pega os bytes do PDF que foi gerado no buffer
+    pdf_bytes = pdf_buffer.getvalue()
         
         # 2. Faz o upload dos bytes do PDF para o Cloudinary
-        try:
-            upload_result = cloudinary.uploader.upload(
-                file=pdf_bytes,
-                folder="orcamentos_pdf",  # Organiza os PDFs em uma pasta
-                public_id=f"Orcamento_{orcamento.numero}", # Nome do arquivo na nuvem
-                resource_type="raw", # Usamos 'raw' para arquivos não-imagem como PDF
-                flags="attachment:inline"
-            )
-            
-            # 3. Pega a URL segura do arquivo na nuvem
-            secure_url = upload_result.get("secure_url")
-            if not secure_url:
-                raise Exception("Cloudinary não retornou uma URL segura.")
-
-            # 4. Salva a URL no banco de dados para uso futuro
-            orcamento.pdf_url = secure_url
-            session.add(orcamento)
-            session.commit()
-            print(f"PDF salvo na nuvem com sucesso. URL: {secure_url}")
-
-        except Exception as e:
-            print(f"Erro no upload para Cloudinary: {e}")
-            raise HTTPException(status_code=500, detail="Falha ao fazer upload do PDF.")
+    try:
+        upload_result = cloudinary.uploader.upload(
+            file=pdf_bytes,
+            folder="orcamentos_pdf",  # Organiza os PDFs em uma pasta
+            public_id=f"Orcamento_{orcamento.numero}", # Nome do arquivo na nuvem
+            resource_type="raw", # Usamos 'raw' para arquivos não-imagem como PDF
+            flags="attachment:inline"
+        )
         
-        # 5. Envia o PDF para o navegador do usuário, como antes
-        return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf",
-            headers={"Content-Disposition": f'inline; filename="Orcamento_{orcamento.numero}.pdf"'})
+        # 3. Pega a URL segura do arquivo na nuvem
+        secure_url = upload_result.get("secure_url")
+        if not secure_url:
+            raise Exception("Cloudinary não retornou uma URL segura.")
+
+        # 4. Salva a URL no banco de dados para uso futuro
+        orcamento.pdf_url = secure_url
+        session.add(orcamento)
+        session.commit()
+        print(f"PDF salvo na nuvem com sucesso. URL: {secure_url}")
+
+    except Exception as e:
+        print(f"Erro no upload para Cloudinary: {e}")
+        raise HTTPException(status_code=500, detail="Falha ao fazer upload do PDF.")
+        
+    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf",
+    headers={"Content-Disposition": f'inline; filename="Orcamento_{orcamento.numero}.pdf"'})
 
 # ROTA DE API: Lista todos os orçamentos (para o JavaScript)
-@app.get("/api/orcamentos/", response_model=List[Orcamento])
-def listar_orcamentos_api(user: User = Depends(get_current_user)):
-    with Session(engine) as session:
-        statement = select(Orcamento).where(Orcamento.user_id == user.id).order_by(Orcamento.id.desc())
-        orcamentos = session.exec(statement).all()
-        return orcamentos
+@app.get("/api/orcamentos/")
+def listar_orcamentos_api(
+    user: User = Depends(get_current_user), 
+    session: Session = Depends(get_db_session)
+):
+    statement = (
+        select(Orcamento)
+        .options(selectinload(Orcamento.cliente)) 
+        .where(Orcamento.user_id == user.id)
+        .order_by(Orcamento.id.desc())
+    )
+    orcamentos = session.exec(statement).all()
+    resultado = []
+    for o in orcamentos:
+        nome_cliente = o.cliente.nome if o.cliente else o.nome_cliente
+        resultado.append({
+            "id": o.id,
+            "numero": o.numero,
+            "nome": nome_cliente,
+            "data_emissao": o.data_emissao,
+            "total_geral": o.total_geral,
+        })
+    return resultado
+
 
 
 # --- ROTAS DA API PARA ITENS DE CATÁLOGO ---
 @app.post("/api/item/", response_model=Item)
-def create_item(item: Item):
-    with Session(engine) as session:
-        session.add(item)
-        session.commit()
-        session.refresh(item)
-        return item
+def create_item(
+    item: Item,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    item.user_id = current_user.id
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
 
 @app.get("/api/servico/", response_model=List[Item])
-def read_servicos():
-    with Session(engine) as session:
-        statement = select(Item).where(Item.tipo == "servico")
-        return session.exec(statement).all()
+def read_servicos(current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    
+    statement = select(Item).where(Item.tipo == "servico", Item.user_id == current_user.id)
+    return session.exec(statement).all()
 
 @app.get("/api/materiais/", response_model=List[Item])
-def read_materiais():
-    with Session(engine) as session:
-        statement = select(Item).where(Item.tipo == "material")
-        return session.exec(statement).all()
+def read_materiais(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    statement = select(Item).where(Item.tipo == "material", Item.user_id == current_user.id)
+    return session.exec(statement).all()
 
 @app.delete("/api/item/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_item(item_id: int):
@@ -491,21 +408,29 @@ def delete_item(item_id: int):
         session.delete(item)
         session.commit()
         return
+    
 @app.get("/orcamento/{orcamento_id}/whatsapp")
-def gerar_link_whatsapp(orcamento_id: int, request: Request, current_user: User = Depends(get_current_user), session: Session = Depends(get_db_session)):
-    with Session(engine) as session:
-        orcamento = session.get(Orcamento, orcamento_id)
-        if not orcamento:
-            raise HTTPException(status_code=404, detail="Orçamento não encontrado")
-        
-        if orcamento.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Acesso negado")
+def gerar_link_whatsapp(
+    orcamento_id: int, 
+    request: Request, 
+    session: Session = Depends(get_db_session)
+):
+    # Busca o orçamento FORÇANDO o carregamento do cliente junto
+    statement = (
+        select(Orcamento)
+        .options(selectinload(Orcamento.cliente))
+        .where(Orcamento.id == orcamento_id)
+    )
+    orcamento = session.exec(statement).first()
+
+    if not orcamento:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado")
 
     pdf_url = f"{str(request.base_url)}orcamento/{orcamento.id}/pdf"
-
+    
     # Formatar a mensagem para o WhatsApp
     mensagem = (
-        f"Olá, {orcamento.nome}!\n\n"
+        f"Olá, {(orcamento.cliente.nome if orcamento.cliente else 'Cliente não identificado')}!\n\n"
         f"Segue o seu orçamento de número *{orcamento.numero}*.\n\n"
         f"*{orcamento.descricao_servico}*\n\n"
         f"Valor Total: *{format_brl(orcamento.total_geral)}*\n"
@@ -517,7 +442,7 @@ def gerar_link_whatsapp(orcamento_id: int, request: Request, current_user: User 
     # Codifica a mensagem para ser usada em uma URL
     mensagem_codificada = quote(mensagem)
     # Remove parênteses, espaços, hífens, etc.
-    telefone_limpo = ''.join(filter(str.isdigit, orcamento.telefone))
+    telefone_limpo = ''.join(filter(str.isdigit, orcamento.cliente.telefone)) if orcamento.cliente and orcamento.cliente.telefone else ""
     # Adiciona o código do país (55 para o Brasil) se não tiver
     if not telefone_limpo.startswith("55"):
         telefone_limpo = "55" + telefone_limpo
@@ -530,84 +455,67 @@ def gerar_link_whatsapp(orcamento_id: int, request: Request, current_user: User 
 async def editar_orcamento_page(
     orcamento_id: int, 
     request: Request, 
-    current_user: User = Depends(get_current_user) # Nome padronizado para 'current_user'
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session) # Usa a sessão da dependência
 ):
-    with Session(engine) as session:
-        orcamento = session.get(Orcamento, orcamento_id)
-        if not orcamento:
-            raise HTTPException(status_code=404, detail="Orçamento não encontrado")
-        
-        # Agora a verificação de permissão funciona
-        if orcamento.user_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado")
+    # USAREMOS selectinload PARA GARANTIR QUE O CLIENTE VENHA JUNTO
+    statement = (
+        select(Orcamento)
+        .options(selectinload(Orcamento.cliente)) # A linha mágica
+        .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
+    )
+    orcamento = session.exec(statement).first()
+
+    if not orcamento:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado")
     
-    # E passamos a variável correta para o template
+    # O resto do seu código já estava correto
     return templates.TemplateResponse(
         "editar_orcamento.html", 
         {"request": request, "user": current_user, "orcamento": orcamento}
     )
 
-# SUBSTITUA SUA FUNÇÃO DE ATUALIZAÇÃO INTEIRA POR ESTA
-
+# SUBSTITUA A FUNÇÃO ATUALIZAR INTEIRA POR ESTA:
 @app.post("/atualizar-orcamento/{orcamento_id}")
 async def atualizar_orcamento_submit(
+    request: Request,
     orcamento_id: int,
-    numero_orcamento: str = Form(...),
-    nome: str = Form(...),
-    logradouro: str = Form(...),
-    numero_casa: str = Form(...),
-    complemento: str = Form(""),
-    bairro: str = Form(...),
-    cidade_uf: str = Form(...),
-    cep: str = Form(...),
-    telefone: str = Form(...),
-    descricao_servico: str = Form(...),
-    itens: str = Form(...),
+    session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user)
 ):
-    with Session(engine) as session:
-        # 1. Busca o orçamento que será atualizado, UMA ÚNICA VEZ.
-        orcamento_db = session.exec(select(Orcamento).where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)).first()
-        if not orcamento_db:
-            raise HTTPException(status_code=404, detail="Orçamento não encontrado para atualizar")
+    form_data = await request.form()
+    
+    # 1. Busca o orçamento que será atualizado
+    orcamento_db = session.exec(select(Orcamento).where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)).first()
+    if not orcamento_db:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado para atualizar")
 
-        # 2. Atualiza todos os campos do objeto com os dados do formulário.
-        orcamento_db.numero = numero_orcamento.strip()
-        orcamento_db.nome = nome
-        partes_endereco = [f"{logradouro}, Nº {numero_casa}", complemento.strip(), bairro]
-        orcamento_db.endereco = f"{', '.join(filter(None, partes_endereco))} - {cidade_uf} - CEP {cep}"
-        orcamento_db.telefone = telefone
-        orcamento_db.descricao_servico = descricao_servico
-        
-        itens_data = json.loads(itens)
-        
-        # 3. Converte os itens do JavaScript para o formato do banco de dados.
-        itens_formatados_para_db = []
-        for item_js in itens_data:
-            itens_formatados_para_db.append({
-                "id": item_js.get('id'),
-                "tipo": item_js['tipo'],
-                "desc": item_js['nome'],      # Converte 'nome' para 'desc'
-                "qtd": int(item_js['quantidade']),
-                "unit": float(item_js['valor']),
-                "total": int(item_js['quantidade']) * float(item_js['valor'])
-            })
-        
-        orcamento_db.itens = itens_formatados_para_db
-        orcamento_db.total_geral = sum(i["total"] for i in itens_formatados_para_db)
+    # 2. ATUALIZA OS DADOS DO CLIENTE ASSOCIADO
+    # Acessamos o cliente através da relação orcamento_db.cliente
+    cliente_db = orcamento_db.cliente
+    if cliente_db:
+        cliente_db.nome = form_data.get("nome")
+        cliente_db.telefone = form_data.get("telefone")
+        cliente_db.cep = form_data.get("cep")
+        cliente_db.logradouro = form_data.get("logradouro")
+        cliente_db.numero_casa = form_data.get("numero_casa")
+        cliente_db.complemento = form_data.get("complemento")
+        cliente_db.bairro = form_data.get("bairro")
+        cliente_db.cidade_uf = form_data.get("cidade_uf")
+        session.add(cliente_db)
 
-        # 4. Atualiza a data de emissão para a data da modificação
-        orcamento_db.data_emissao = datetime.now().strftime('%d/%m/%Y')
-        orcamento_db.data_validade = (datetime.now() + timedelta(days=7)).strftime('%d/%m/%Y')
-        
-        # 5. Salva o objeto modificado no banco de dados.
-        session.add(orcamento_db)
-        session.commit()
-
-    # 6. Redireciona o usuário para a lista de orçamentos com uma mensagem de sucesso.
+    # 3. ATUALIZA OS DADOS DO PRÓPRIO ORÇAMENTO
+    orcamento_db.numero = form_data.get("numero_orcamento").strip()
+    orcamento_db.descricao_servico = form_data.get("descricao_servico")
+    
+    itens_data = json.loads(form_data.get("itens"))
+    orcamento_db.itens = itens_data
+    orcamento_db.total_geral = sum(int(i['quantidade']) * float(i['valor']) for i in itens_data)
+    
+    # 4. Salva tudo e redireciona
+    session.commit()
     return RedirectResponse(url="/orcamentos?atualizado=true", status_code=status.HTTP_303_SEE_OTHER)
 
-# Em app.py
 
 @app.delete("/api/orcamentos/{orcamento_id}", status_code=status.HTTP_204_NO_CONTENT)
 def deletar_orcamento(
@@ -628,18 +536,18 @@ def deletar_orcamento(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @app.get("/api/proximo-numero/")
-def sugerir_proximo_numero():
-    file_path = "orcamento_number.txt"
-    try:
-        with open(file_path, "r") as f:
-            current = int(f.read().strip())
-    except (FileNotFoundError, ValueError):
-        current = 0
-    
-    # Apenas sugere, não incrementa o arquivo aqui
-    next_number = current + 1
-    return {"proximo_numero": str(next_number).zfill(4)}
+def get_proximo_numero(current_user: User = Depends(get_current_user), session: Session = Depends(get_db_session)):
+    # Busca o último orçamento DESTE usuário, ordenando pelo número como inteiro
 
+    ultimo_orcamento = session.exec(
+        select(Orcamento)
+        .where(Orcamento.user_id == current_user.id)
+        .order_by(cast(Orcamento.numero, Integer).desc())
+    ).first()
+    
+    proximo_numero_int = (int(ultimo_orcamento.numero) if ultimo_orcamento else 0) + 1
+    return {"proximo_numero": str(proximo_numero_int).zfill(4)}
+    
 @app.post("/api/resetar-contador/")
 async def resetar_contador_endpoint(
     novo_inicio: int = Form(...)
@@ -667,8 +575,9 @@ async def resetar_contador_endpoint(
 def create_user(
     username: str = Form(...),
     password: str = Form(...),
+    pdf_template_name: str = Form(...),
     session: Session = Depends(get_db_session),
-    current_user: User = Depends(get_current_user) # Garante que só um usuário logado pode criar outros
+    current_user: User = Depends(get_current_user) 
 ):
     admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
     # Opcional: Adicionar uma verificação para que apenas o 'admin' possa criar usuários
@@ -685,7 +594,7 @@ def create_user(
 
     # Criptografa a senha e cria o novo usuário
     hashed_password = get_password_hash(password)
-    new_user = User(username=username, hashed_password=hashed_password)
+    new_user = User(username=username, hashed_password=hashed_password, pdf_template_name=pdf_template_name)
 
     session.add(new_user)
     session.commit()
@@ -700,4 +609,167 @@ def get_orcamento_do_usuario(session, orcamento_id, user_id):
         raise HTTPException(status_code=404, detail="Orçamento não encontrado.")
     return orcamento
 
+# --- ROTAS DA API PARA CLIENTES ---
+
+@app.get("/api/clientes/", response_model=List[Cliente])
+def listar_clientes_api(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    """Retorna uma lista de todos os clientes associados ao usuário logado."""
+    clientes = session.exec(
+        select(Cliente).where(Cliente.user_id == current_user.id).order_by(Cliente.nome)
+    ).all()
+    return clientes
+
+@app.get("/api/clientes/{cliente_id}", response_model=Cliente)
+def obter_cliente_api(
+    cliente_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    """Retorna os dados de um cliente específico, verificando se ele pertence ao usuário logado."""
+    cliente = session.exec(
+        select(Cliente).where(Cliente.id == cliente_id, Cliente.user_id == current_user.id)
+    ).first()
+    
+    if not cliente:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Cliente não encontrado ou não pertence a este usuário."
+        )
+    
+    return cliente
+
+@app.delete("/api/clientes/{cliente_id}", status_code=204)
+def deletar_cliente(
+    cliente_id: int = Path(...),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    cliente = session.get(Cliente, cliente_id)
+    if not cliente or cliente.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado.")
+    session.delete(cliente)
+    session.commit()
+    return Response(status_code=204)
+
+@app.post("/orcamento/{orcamento_id}/email/link")
+def gerar_link_email(
+    orcamento_id: int,
+    destinatario: str = Form(...),
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    # Usa selectinload para garantir que o cliente e o usuário sejam carregados
+    statement = (
+        select(Orcamento)
+        .options(selectinload(Orcamento.cliente), selectinload(Orcamento.user))
+        .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
+    )
+    orcamento = session.exec(statement).first()
+
+    if not orcamento:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado")
+    
+    # Garante que o PDF já foi gerado e salvo no Cloudinary
+    pdf_url = orcamento.pdf_url
+    if not pdf_url:
+        raise HTTPException(status_code=400, detail="O PDF para este orçamento precisa ser gerado primeiro. Clique no ícone de PDF para gerá-lo.")
+
+    # --- MONTAGEM DO LINK mailto: ---
+    
+    nome_cliente = orcamento.cliente.nome if orcamento.cliente else orcamento.nome_cliente
+
+    assunto = f"Orçamento #{str(orcamento.numero).zfill(4)}"
+    
+    corpo_email = f"""Olá {nome_cliente},
+
+    Conforme solicitado, segue o seu orçamento de número #{str(orcamento.numero).zfill(4)}.
+
+    Serviço: {orcamento.descricao_servico}
+    Valor Total: {format_brl(orcamento.total_geral)}
+
+    Você pode visualizar o orçamento completo no link abaixo:
+
+    {pdf_url}
+
+    Qualquer dúvida, estou à disposição.
+    """
+    # Codifica os componentes para serem usados em uma URL
+    assunto_codificado = quote(assunto)
+    corpo_codificado = quote(corpo_email)
+
+    # Cria o link final
+    mailto_link = f"mailto:{destinatario}?subject={assunto_codificado}&body={corpo_codificado}"
+    
+    # Retorna o link para o frontend
+    return {"mailto_link": mailto_link}
+
+@app.post("/api/user/update-template")
+def update_user_template(
+    new_template: str = Form(...),
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    # 1. Pega o nome do usuário administrador a partir do arquivo .env
+    admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
+
+    # 2. VERIFICAÇÃO DE PERMISSÃO: Apenas o admin pode usar esta rota
+    if current_user.username != admin_user_env:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas o administrador pode alterar o modelo de PDF."
+        )
+
+    # 3. Verifica se o template enviado é válido
+    if new_template not in PDF_GENERATORS:
+        raise HTTPException(status_code=400, detail="Modelo de PDF inválido.")
+
+    # 4. Atualiza o campo no objeto do usuário administrador
+    current_user.pdf_template_name = new_template
+    
+    # 5. Adiciona à sessão e salva no banco de dados
+    session.add(current_user)
+    session.commit()
+    
+    # 6. Retorna uma mensagem de sucesso
+    return {"message": f"Seu modelo de PDF foi atualizado para '{new_template.capitalize()}'!"}
+
+@app.get("/api/users/", response_model=List[User])
+def list_users(
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Lista todos os usuários. Apenas o administrador pode acessar."""
+    admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
+    if current_user.username != admin_user_env:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+    
+    users = session.exec(select(User)).all()
+    return users
+
+
+@app.delete("/api/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: int,
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Apaga um usuário. Apenas o administrador pode e ele não pode se apagar."""
+    admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
+    if current_user.username != admin_user_env:
+        raise HTTPException(status_code=403, detail="Apenas o administrador pode apagar usuários.")
+
+    user_to_delete = session.get(User, user_id)
+    if not user_to_delete:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    # Medida de segurança: o admin não pode se auto-deletar.
+    if user_to_delete.username == admin_user_env:
+        raise HTTPException(status_code=400, detail="O administrador não pode apagar a própria conta.")
+
+    session.delete(user_to_delete)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
  

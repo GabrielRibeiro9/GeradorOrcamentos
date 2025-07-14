@@ -7,6 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
+    <!-- Bloco para injetar dados do Jinja2 para o JavaScript de forma segura -->
+    <script>
+        const orcamentoData = JSON.parse('{{ orcamento.json() | safe }}');
+    </script>
+    
+    <!-- HEADER -->
     <header class="bg-gradient-to-r from-emerald-500 to-teal-600 shadow-lg px-4 sm:px-6 py-3 flex items-center justify-between text-white sticky top-0 z-50">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-full bg-white/20 ring-2 ring-white/50 flex items-center justify-center text-white font-bold text-xl shadow-md flex-shrink-0">
@@ -28,402 +34,254 @@
       </div>
     </header>
 
+    <!-- FORMULÁRIO PRINCIPAL -->
     <div class="flex flex-col gap-8 p-8 max-w-4xl mx-auto">
-        <h1 class="text-3xl sm:text-3xl md:text-4xl font-extrabold text-center mb-1 bg-gradient-to-tr from-green-600 to-green-400 bg-clip-text text-transparent drop-shadow">
-            Editar Orçamento #{{ orcamento.numero }}
+        <h1 class="text-3xl font-extrabold text-center text-gray-800">
+            Editar Orçamento #<span id="titulo_numero_orcamento"></span>
         </h1>
         <form id="orcamentoForm" action="/atualizar-orcamento/{{ orcamento.id }}" method="post" class="flex flex-col gap-4">
-            <!-- DADOS DO CLIENTE E ENDEREÇO -->
-            <div class="flex flex-col items-start justify-start gap-2">
-                <label for="nome" class="text-sm font-bold">Nome do Cliente:</label>
-                <div class="relative w-full">
-                    <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M1 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V6Zm4 1.5a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm2 3a4 4 0 0 0-3.665 2.395.75.75 0 0 0 .416 1A8.98 8.98 0 0 0 7 14.5a8.98 8.98 0 0 0 3.249-.604.75.75 0 0 0 .416-1.001A4.001 4.001 0 0 0 7 10.5Zm5-3.75a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Zm0 6.5a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Zm.75-4a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5Z" clip-rule="evenodd" /></svg></div>
-                    <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="nome" name="nome" required>
-                </div>
+            
+            <!-- SEÇÃO DE DADOS DO CLIENTE -->
+            <h2 class="text-xl font-bold text-gray-700 mt-4 border-b pb-2">Dados do Cliente</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label for="nome" class="text-sm font-bold">Nome do Cliente:</label><input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="text" id="nome" name="nome" required></div>
+                <div><label for="telefone" class="text-sm font-bold">Telefone:</label><input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="tel" id="telefone" name="telefone" required></div>
+                <div><label for="cep" class="text-sm font-bold">CEP:</label><input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="text" id="cep" name="cep"></div>
+                <div><label for="logradouro" class="text-sm font-bold">Rua:</label><input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="text" id="logradouro" name="logradouro"></div>
+                <div><label for="numero_casa" class="text-sm font-bold">Número:</label><input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="text" id="numero_casa" name="numero_casa"></div>
+                <div><label for="bairro" class="text-sm font-bold">Bairro:</label><input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="text" id="bairro" name="bairro"></div>
+                <div><label for="cidade_uf" class="text-sm font-bold">Cidade/UF:</label><input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="text" id="cidade_uf" name="cidade_uf"></div>
+                <div><label for="complemento" class="text-sm font-bold">Complemento:</label><input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="text" id="complemento" name="complemento"></div>
             </div>
-            <div class="flex flex-wrap items-end justify-between gap-2">
-                <div class="flex flex-col items-start justify-start flex-1 min-w-[120px]">
-                    <label for="cep" class="text-sm font-bold">CEP:</label>
-                    <div class="relative w-full">
-                        <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M9.293 2.293a1 1 0 0 1 1.414 0l7 7A1 1 0 0 1 17 11h-1v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6H3a1 1 0 0 1-.707-1.707l7-7Z" clip-rule="evenodd" /></svg></div>
-                        <input class="h-10 w-full ps-10 pr-2 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="cep" name="cep" placeholder="_____-___" maxlength="9" inputmode="numeric">
-                    </div>
-                </div>
-                <div class="flex flex-col items-start justify-start flex-1 min-w-[120px]">
-                    <label for="numero_casa" class="text-sm font-bold">Número:</label>
-                    <div class="relative w-full">
-                        <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M9.493 2.852a.75.75 0 0 0-1.486-.204L7.545 6H4.198a.75.75 0 0 0 0 1.5h3.14l-.69 5H3.302a.75.75 0 0 0 0 1.5h3.14l-.435 3.148a.75.75 0 0 0 1.486.204L7.955 14h2.986l-.434 3.148a.75.75 0 0 0 1.486.204L12.456 14h3.346a.75.75 0 0 0 0-1.5h-3.14l.69-5h3.346a.75.75 0 0 0 0-1.5h-3.14l.435-3.148a.75.75 0 0 0-1.486-.204L12.045 6H9.059l.434-3.148ZM8.852 7.5l-.69 5h2.986l.69-5H8.852Z" clip-rule="evenodd" /></svg></div>
-                        <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="numero_casa" name="numero_casa" required inputmode="numeric">
-                    </div>
-                </div>
+
+            <!-- SEÇÃO DE DETALHAMENTO -->
+            <h2 class="text-xl font-bold text-gray-700 mt-6 border-b pb-2">Detalhamento do Orçamento</h2>
+            <div>
+                <label for="descricaoServico" class="text-sm font-bold">Descrição Principal do Serviço:</label>
+                <input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="text" id="descricaoServico" name="descricao_servico" required>
+                <input type="hidden" id="numero_orcamento" name="numero_orcamento">
             </div>
-            <div class="flex flex-wrap items-end justify-between gap-2">
-                <div class="flex flex-col items-start justify-start flex-1 min-w-[150px]">
-                    <label for="logradouro" class="text-sm font-bold">Rua:</label>
-                    <div class="relative w-full">
-                        <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="m9.69 18.933.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 0 0 .281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 1 0 3 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 0 0 2.273 1.765 11.842 11.842 0 0 0 .976.544l.062.029.018.008.006.003ZM10 11.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z" clip-rule="evenodd" /></svg></div>
-                        <input class="h-10 w-full ps-10 pr-2 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="logradouro" name="logradouro" required>
-                    </div>
-                </div>
-                <div class="flex flex-col items-start justify-start flex-1 min-w-[150px]">
-                    <label for="complemento" class="text-sm font-bold">Complemento:</label>
-                    <div class="relative w-full">
-                        <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clip-rule="evenodd" /></svg></div>
-                        <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="complemento" name="complemento">
-                    </div>
-                </div>
-            </div>
-            <div class="flex flex-wrap items-end justify-between gap-2">
-                <div class="flex flex-col items-start justify-start flex-1 min-w-[150px]">
-                    <label for="bairro" class="text-sm font-bold">Bairro:</label>
-                    <div class="relative w-full">
-                        <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M8.157 2.176a1.5 1.5 0 0 0-1.147 0l-4.084 1.69A1.5 1.5 0 0 0 2 5.25v10.877a1.5 1.5 0 0 0 2.074 1.386l3.51-1.452 4.26 1.762a1.5 1.5 0 0 0 1.146 0l4.083-1.69A1.5 1.5 0 0 0 18 14.75V3.872a1.5 1.5 0 0 0-2.073-1.386l-3.51 1.452-4.26-1.762ZM7.58 5a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5A.75.75 0 0 1 7.58 5Zm5.59 2.75a.75.75 0 0 0-1.5 0v6.5a.75.75 0 0 0 1.5 0v-6.5Z" clip-rule="evenodd" /></svg></div>
-                        <input class="h-10 w-full ps-10 pr-2 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="bairro" name="bairro" required>
-                    </div>
-                </div>
-                <div class="flex flex-col items-start justify-start flex-1 min-w-[120px]">
-                    <label for="cidade_uf" class="text-sm font-bold">Cidade/UF:</label>
-                    <div class="relative w-full">
-                        <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M1 2.75A.75.75 0 0 1 1.75 2h10.5a.75.75 0 0 1 0 1.5H12v13.75a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1-.75-.75v-2.5a.75.75 0 0 0-.75-.75h-2.5a.75.75 0 0 0-.75.75v2.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5H2v-13h-.25A.75.75 0 0 1 1 2.75ZM4 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM4.5 9a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1ZM8 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM8.5 9a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1ZM14.25 6a.75.75 0 0 0-.75.75V17a1 1 0 0 0 1 1h3.75a.75.75 0 0 0 0-1.5H18v-9h.25a.75.75 0 0 0 0-1.5h-4Zm.5 3.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm.5 3.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Z" clip-rule="evenodd" /></svg></div>
-                        <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="cidade_uf" name="cidade_uf" required>
-                    </div>
-                </div>
-            </div>
-            <div class="flex flex-col items-start justify-start gap-2">
-                <label for="telefone" class="text-sm font-bold">Telefone:</label>
-                <div class="relative w-full">
-                    <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M2 3.5A1.5 1.5 0 0 1 3.5 2h1.148a1.5 1.5 0 0 1 1.465 1.175l.716 3.223a1.5 1.5 0 0 1-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 0 0 6.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 0 1 1.767-1.052l3.223.716A1.5 1.5 0 0 1 18 15.352V16.5a1.5 1.5 0 0 1-1.5 1.5H15c-1.149 0-2.263-.15-3.326-.43A13.022 13.022 0 0 1 2.43 8.326 13.019 13.019 0 0 1 2 5V3.5Z" clip-rule="evenodd" /></svg></div>
-                    <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="tel" id="telefone" name="telefone" placeholder="(99) 99999-9999" maxlength="15" required>
+
+            <div class="bg-gray-200 p-4 rounded-lg mt-4">
+                <h3 class="font-bold text-gray-800 mb-2">Adicionar Novo Item ao Orçamento</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div class="md:col-span-2"><label for="item" class="text-sm font-bold">Item:</label><input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="text" id="item"></div>
+                    <div><label class="text-sm font-bold" for="itemQtd">Qtd:</label><input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="number" id="itemQtd" value="1"></div>
+                    <div><label class="text-sm font-bold" for="itemValor">Valor(unit):</label><input class="h-10 w-full px-3 border border-zinc-300 rounded-lg" type="text" id="itemValor"></div>
+                    <div class="md:col-span-4"><button id="adicionarItemBtn" class="w-full py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700" type="button">Adicionar Item</button></div>
                 </div>
             </div>
             
-            <h1 class="text-3xl sm:text-3xl md:text-4xl font-extrabold text-center mb-1 bg-gradient-to-tr from-green-600 to-green-400 bg-clip-text text-transparent drop-shadow">
-            Detalhamento
-            </h1>
-            <div class="flex flex-col items-start justify-start gap-2">
-                <label for="descricaoServico" class="text-sm font-bold">Descrição do serviço:</label>
-                <div class="relative w-full">
-                    <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" /></svg></div>
-                    <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="descricaoServico" name="descricao_servico" placeholder="Descreva o serviço a ser executado" required>
-                </div>
-            </div>
-            
-            <div class="flex flex-col items-start justify-start gap-2">
-                <label for="selectServico" class="text-sm font-bold">Serviço do Catálogo:</label>
-                <div id="containerServico" class="relative w-full"></div>
-            </div>
-            <div class="flex flex-col items-start justify-start gap-2">
-                <label for="selectMaterial" class="text-sm font-bold">Material do Catálogo:</label>
-                <div id="containerMaterial" class="relative w-full"></div>
-            </div>
-
-            <div class="flex flex-col items-start justify-start gap-2">
-                <label for="item" class="text-sm font-bold">Item:</label>
-                <div class="relative w-full">
-                    <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" /></svg></div>
-                    <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="item" name="item">
-                </div>
-            </div>
-            <div class="flex flex-wrap items-start justify-start gap-2">
-                <div class="flex flex-col items-start justify-start flex-1 min-w-[80px]">
-                    <label class="text-sm font-bold" for="itemQtd">Qtd:</label>
-                    <div class="relative w-full">
-                        <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M10 1c-1.716 0-3.408.106-5.07.31C3.806 1.45 3 2.414 3 3.517V16.75A2.25 2.25 0 0 0 5.25 19h9.5A2.25 2.25 0 0 0 17 16.75V3.517c0-1.103-.806-2.068-1.93-2.207A41.403 41.403 0 0 0 10 1ZM5.99 8.75A.75.75 0 0 1 6.74 8h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75h-.01a.75.75 0 0 1-.75-.75v-.01Zm.75 1.417a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75v-.01a.75.75 0 0 0-.75-.75h-.01Zm-.75 2.916a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75h-.01a.75.75 0 0 1-.75-.75v-.01Zm.75 1.417a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75v-.01a.75.75 0 0 0-.75-.75h-.01Zm1.417-5.75a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75h-.01a.75.75 0 0 1-.75-.75v-.01Zm.75 1.417a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75v-.01a.75.75 0 0 0-.75-.75h-.01Zm-.75 2.916a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75h-.01a.75.75 0 0 1-.75-.75v-.01Zm.75 1.417a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75v-.01a.75.75 0 0 0-.75-.75h-.01Zm1.42-5.75a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75h-.01a.75.75 0 0 1-.75-.75v-.01Zm.75 1.417a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75v-.01a.75.75 0 0 0-.75-.75h-.01Zm-.75 2.916a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75h-.01a.75.75 0 0 1-.75-.75v-.01Zm.75 1.417a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75v-.01a.75.75 0 0 0-.75-.75h-.01ZM12.5 8.75a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 .75.75v.01a.75.75 0 0 1-.75.75h-.01a.75.75 0 0 1-.75-.75v-.01Zm.75 1.417a.75.75 0 0 0-.75.75v.01c0 .414.336.75.75.75h.01a.75.75 0 0 0 .75-.75v-.01a.75.75 0 0 0-.75-.75h-.01Zm0 2.166a.75.75 0 0 1 .75.75v2.167a.75.75 0 1 1-1.5 0v-2.167a.75.75 0 0 1 .75-.75ZM6.75 4a.75.75 0 0 0-.75.75v.5c0 .414.336.75.75.75h6.5a.75.75 0 0 0 .75-.75v-.5a.75.75 0 0 0-.75-.75h-6.5Z" clip-rule="evenodd" /></svg></div>
-                        <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="number" id="itemQtd" value="1" inputmode="numeric" pattern="[0-9]*">
-                    </div>
-                </div>
-                <div class="flex flex-col items-start justify-start flex-1 min-w-[80px]">
-                    <label class="text-sm font-bold" for="itemValor">Valor(unit):</label>
-                    <div class="relative w-full">
-                        <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="M10.75 10.818v2.614A3.13 3.13 0 0 0 11.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 0 0-1.138-.432ZM8.33 8.62c.053.055.115.11.184.164.208.16.46.284.736.363V6.603a2.45 2.45 0 0 0-.35.13c-.14.065-.27.143-.386.233-.377.292-.514.627-.514.909 0 .184.058.39.202.592.037.051.08.102.128.152Z" /><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-6a.75.75 0 0 1 .75.75v.316a3.78 3.78 0 0 1 1.653.713c.426.33.744.74.925 1.2a.75.75 0 0 1-1.395.55 1.35 1.35 0 0 0-.447-.563 2.187 2.187 0 0 0-.736-.363V9.3c.698.093 1.383.32 1.959.696.787.514 1.29 1.27 1.29 2.13 0 .86-.504 1.616-1.29 2.13-.576.377-1.261.603-1.96.696v.299a.75.75 0 1 1-1.5 0v-.3c-.697-.092-1.382-.318-1.958-.695-.482-.315-.857-.717-1.078-1.188a.75.75 0 1 1 1.359-.636c.08.173.245.376.54.569.313.205.706.353 1.138.432v-2.748a3.782 3.782 0 0 1-1.653-.713C6.9 9.433 6.5 8.681 6.5 7.875c0-.805.4-1.558 1.097-2.096a3.78 3.78 0 0 1 1.653-.713V4.75A.75.75 0 0 1 10 4Z" clip-rule="evenodd" /></svg></div>
-                        <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="itemValor" name="itemValor" inputmode="decimal">
-                    </div>
-                </div>
-                <div class="flex flex-col items-start justify-start flex-1 min-w-[80px]">
-                    <label class="text-sm font-bold" for="tipoItem">Tipo:</label>
-                    <div class="relative w-full">
-                        <div id="tipoItemIcon" class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"></div>
-                        <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none tipoItemSeta">                           
-                        </div>
-                        <select class="h-10 w-full ps-9 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400 appearance-none" id="tipoItem" name="tipoItem">
-                            <option value="default">Seleção</option>
-                            <option value="servico">Serviço</option>
-                            <option value="material">Material</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div class="flex items-center justify-start gap-6 mb-4">
-    
-                <!-- Esquerda: Toggle para Salvar no Catálogo -->
-                <label class="inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="toggleSalvar" class="sr-only peer">
-                    <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                    <span class="ms-3 text-sm font-medium text-gray-900">Salvar item no catálogo?</span>
-                </label>
-
-                <!-- Direita: Campo do Número do Orçamento -->
-                <div class="flex items-center gap-2">
-                    <label for="numero_orcamento" class="text-sm font-medium text-gray-700">Nº:</label>
-                    <input type="text" id="numero_orcamento" name="numero_orcamento" 
-                        class="w-20 h-6 text-center font-semibold border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400">
-                </div>
-
-            </div>
-
-            <!-- Botões de Ação (Layout Original Restaurado) -->
-            <div class="flex flex-col gap-2">
-                <button id="adicionarItemBtn" class="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold uppercase tracking-wide rounded-2xl shadow-lg transform hover:-translate-y-0.5 transition-all duration-200" type="button">Adicionar Item</button>
-                
-                <button id="gerarOrcamentoBtn" class="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold uppercase tracking-wide rounded-xl shadow-md transform hover:-translate-y-0.5 transition-all duration-200" type="submit">
-                    <!-- O texto do botão deve ser ajustado para cada página -->
-                    Salvar Orçamento
-                </button>
-            </div>
-            
-            <div class="relative overflow-x-auto shadow-md sm:rounded-lg hidden" id="tableContainer">
-                <table class="w-full text-sm text-left rtl:text-right">
-                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-4 py-3">Item / Tipo</th>
-                            <th scope="col" class="px-4 py-3 text-center">Qtd</th>
-                            <th scope="col" class="px-4 py-3 text-right">Valor Unit</th>
-                            <th scope="col" class="px-4 py-3 text-right">Total</th>
-                            <th scope="col" class="px-4 py-3 text-center">Ação</th>
-                        </tr>
-                    </thead>
-                    <tbody id="itensContainer">
-                    </tbody>
+            <div class="relative overflow-x-auto shadow-md sm:rounded-lg mt-4 hidden" id="tableContainer">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th scope="col" class="px-4 py-3">Item</th><th scope="col" class="px-4 py-3 text-center">Qtd</th><th scope="col" class="px-4 py-3 text-right">Valor Unit</th><th scope="col" class="px-4 py-3 text-right">Total</th><th scope="col" class="px-4 py-3 text-center">Ação</th></tr></thead>
+                    <tbody id="itensContainer"></tbody>
                 </table>
             </div>
+            
+            <!-- CAMPOS OCULTOS -->
             <input type="hidden" name="itens" id="hiddenItens" />    
+            <input type="hidden" name="condicao_pagamento" id="hidden_condicao_pagamento" />
+            <input type="hidden" name="prazo_entrega" id="hidden_prazo_entrega" />
+            <input type="hidden" name="garantia" id="hidden_garantia" />
+            <input type="hidden" name="observacoes" id="hidden_observacoes" />
+            
+            <!-- BOTÕES DE AÇÃO PRINCIPAIS -->
+            <div class="mt-8 flex flex-col gap-3">
+                <button type="button" id="btn-abrir-modal-info" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg shadow-sm hover:bg-gray-100 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM9.25 12.25a.75.75 0 0 0 1.5 0v-2.5a.75.75 0 0 0-1.5 0v2.5ZM10 6a.75.75 0 0 0 0 1.5h.008a.75.75 0 0 0 0-1.5H10Z" clip-rule="evenodd" /></svg>
+                    Editar Informações Adicionais
+                </button>
+                 <button type="submit" class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 transition-all">
+                    Atualizar Orçamento
+                </button>
+            </div>
         </form>
     </div>
 
+    <!-- MODAL DE INFORMAÇÕES ADICIONAIS -->
+    <div id="modal-info" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+        <div id="modal-info-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg mx-4 transform transition-all -translate-y-10 opacity-0 duration-300">
+            <div class="flex items-center justify-between pb-3 border-b"><div class="flex items-center gap-3"><div class="flex-shrink-0 bg-gray-100 p-2 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-600"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM9.25 12.25a.75.75 0 0 0 1.5 0v-2.5a.75.75 0 0 0-1.5 0v2.5ZM10 6a.75.75 0 0 0 0 1.5h.008a.75.75 0 0 0 0-1.5H10Z" clip-rule="evenodd" /></svg></div><h3 class="text-xl font-semibold text-gray-800">Informações Complementares</h3></div><button id="btn-fechar-modal-info" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button></div>
+            <div class="mt-4 space-y-4">
+                <div><label for="info-condicao-pagamento" class="block text-sm font-medium text-gray-700">Condição de Pagamento:</label><select id="info-condicao-pagamento" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="">-- Nenhuma --</option><option value="À vista">À vista</option><option value="Pix">Pix</option><option value="Cartão de Crédito">Cartão de Crédito</option><option value="50% de entrada, 50% na entrega">50% de entrada, 50% na entrega</option><option value="A combinar">A combinar</option></select></div>
+                <div><label for="info-prazo-entrega" class="block text-sm font-medium text-gray-700">Prazo de Entrega/Execução:</label><input type="text" id="info-prazo-entrega" placeholder="Ex: 7 dias úteis" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></div>
+                <div><label for="info-garantia" class="block text-sm font-medium text-gray-700">Garantia:</label><input type="text" id="info-garantia" placeholder="Ex: 90 dias para o serviço" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></div>
+                <div><label for="info-observacoes" class="block text-sm font-medium text-gray-700">Observações Adicionais:</label><textarea id="info-observacoes" rows="3" placeholder="Detalhes extras..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>
+            </div>
+            <div class="mt-6 pt-4 border-t text-right">
+                <button id="btn-salvar-info" class="inline-flex items-center gap-2 bg-emerald-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-emerald-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.052-.143Z" clip-rule="evenodd" /></svg>
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
 <script>
-    // Esta variável é injetada pelo Jinja2 com os dados do orçamento
-    const orcamentoDataJSON = '{{ orcamento.json() | safe }}';
-    const orcamentoData = JSON.parse(orcamentoDataJSON);
+document.addEventListener("DOMContentLoaded", function() {
 
-    document.addEventListener("DOMContentLoaded", function() {
+    // --- 1. DADOS INICIAIS ---
+    let itens = orcamentoData.itens || [];
+
+    // --- 2. ELEMENTOS DO DOM ---
+    const form = document.getElementById("orcamentoForm");
+    const tableContainer = document.getElementById("tableContainer");
+    const itensContainer = document.getElementById("itensContainer");
+    const itemInput = document.getElementById("item");
+    const itemQtdInput = document.getElementById("itemQtd");
+    const itemValorInput = document.getElementById("itemValor");
+    const adicionarItemBtn = document.getElementById("adicionarItemBtn");
+
+    const modalInfo = document.getElementById('modal-info');
+    const modalInfoBox = document.getElementById('modal-info-box');
+    const btnAbrirModalInfo = document.getElementById('btn-abrir-modal-info');
+    const btnFecharModalInfo = document.getElementById('btn-fechar-modal-info');
+    const btnSalvarInfo = document.getElementById('btn-salvar-info');
+
+    // --- 3. FUNÇÕES ---
+
+    function formatarMoeda(e) { 
+        let v = e.target.value.replace(/\D/g, "");
+        e.target.value = !v ? "" : (parseFloat(v) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 }); 
+    }
+    
+    function mascara(e, p) { let i = 0, v = e.target.value.replace(/\D/g, ""); e.target.value = p.replace(/#/g, () => v[i++] || ""); }
+
+    function updateTableVisibility() { 
+        tableContainer.classList.toggle("hidden", itens.length === 0); 
+    }
+
+    function limparCamposItem() {
+        itemInput.value = "";
+        itemQtdInput.value = "1";
+        itemValorInput.value = "";
+        itemInput.focus();
+    }
+
+    function adicionarItemNaTela(item) {
+        const total = (item.quantidade || 0) * (item.valor || 0);
+        const tr = document.createElement("tr");
+        tr.className = "bg-white border-b hover:bg-gray-50";
+        tr.dataset.id = item.id;
+        tr.innerHTML = `
+            <td class="px-4 py-3 font-medium text-gray-900">${item.nome}</td>
+            <td class="px-4 py-3 text-center">${item.quantidade}</td>
+            <td class="px-4 py-3 text-right">${(item.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+            <td class="px-4 py-3 text-right">${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+            <td class="px-4 py-3 text-center">
+                <button type="button" class="px-2 py-1 text-xs text-red-600 bg-red-100 rounded-md hover:bg-red-200" data-action="remover-item">Excluir</button>
+            </td>`;
+        tr.querySelector("[data-action='remover-item']").addEventListener("click", () => removerItem(item.id));
+        itensContainer.appendChild(tr);
+    }
+
+    function renderizarItensNaTabela() {
+        itensContainer.innerHTML = "";
+        itens.forEach(adicionarItemNaTela);
+        updateTableVisibility();
+    }
+
+    function removerItem(itemId) {
+        itens = itens.filter(item => String(item.id) !== String(itemId));
+        renderizarItensNaTabela();
+    }
+
+    function adicionarItem() {
+        const nomeVal = itemInput.value.trim();
+        const qtdVal = parseInt(itemQtdInput.value, 10);
+        const valStr = itemValorInput.value;
+        if (!nomeVal || isNaN(qtdVal) || qtdVal <= 0 || !valStr) {
+            alert("Preencha Item, Quantidade e Valor para adicionar."); return;
+        }
+        const valVal = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
+        const novoItem = { id: `temp-${Date.now()}`, nome: nomeVal, quantidade: qtdVal, valor: valVal, tipo: 'manual' };
+        itens.push(novoItem);
+        renderizarItensNaTabela();
+        limparCamposItem();
+    }
+
+    // --- Funções do Modal de Informações Adicionais ---
+    function abrirModalInfo() {
+        document.getElementById('info-condicao-pagamento').value = orcamentoData.condicao_pagamento || '';
+        document.getElementById('info-prazo-entrega').value = orcamentoData.prazo_entrega || '';
+        document.getElementById('info-garantia').value = orcamentoData.garantia || '';
+        document.getElementById('info-observacoes').value = orcamentoData.observacoes || '';
         
-        // --- CONFIGURAÇÃO E VARIÁVEIS GLOBAIS ---
-        const API_BASE_URL = window.location.origin;
-        let itens = []; 
-        let servicosCatalogo = [];
-        let materiaisCatalogo = [];
+        modalInfo.classList.remove('hidden');
+        modalInfo.classList.add('flex');
+        setTimeout(() => { modalInfoBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+    }
 
-        // --- ELEMENTOS DO DOM ---
-        const form = document.getElementById("orcamentoForm");
-        const tableContainer = document.getElementById("tableContainer");
-        const itensContainer = document.getElementById("itensContainer");
-        const tipoItemSelect = document.getElementById("tipoItem");
-        const tipoItemIconDiv = document.getElementById("tipoItemIcon");
-        const itemInput = document.getElementById("item");
-        const itemQtdInput = document.getElementById("itemQtd");
-        const itemValorInput = document.getElementById("itemValor");
-        const cepInput = document.getElementById("cep");
-        const telefoneInput = document.getElementById("telefone");
-        const adicionarItemBtn = document.getElementById("adicionarItemBtn");
-        const tipoItemSeta = document.querySelector(".tipoItemSeta");
+    function fecharModalInfo() {
+        modalInfoBox.classList.add('-translate-y-10', 'opacity-0');
+        setTimeout(() => { modalInfo.classList.add('hidden'); modalInfo.classList.remove('flex'); }, 300);
+    }
+
+    function salvarInfoModal() {
+        // Pega os valores do modal e salva nos campos ocultos
+        const condicao = document.getElementById('info-condicao-pagamento').value;
+        const prazo = document.getElementById('info-prazo-entrega').value;
+        const garantia = document.getElementById('info-garantia').value;
+        const obs = document.getElementById('info-observacoes').value;
         
-        const icons = {
-            servico: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M14.5 10a4.5 4.5 0 004.284-5.882c-.105-.324-.51-.391-.752-.15L15.34 6.66a.454.454 0 01-.493.11 3.01 3.01 0 01-1.618-1.616.455.455 0 01.11-.494l2.694-2.692c.24-.241.174-.647-.15-.752a4.5 4.5 0 00-5.873 4.575c.055.873-.128 1.808-.8 2.368l-7.23 6.024a2.724 2.724 0 103.837 3.837l6.024-7.23c.56-.672 1.495-.855 2.368-.8.096.007.193.01.291.01ZM5 16a1 1 0 10-2 0 1 1 0 002 0Z" clip-rule="evenodd" /><path d="M14.5 11.5c.173 0 .345-.007.514-.022l3.754 3.754a2.5 2.5 0 01-3.536 3.536l-4.41-4.41 2.172-2.607c.052-.063.147-.138.342-.196.202-.06.469-.087.777-.067.128.008.257.012.387.012ZM6 4.586l2.33 2.33a.452.452 0 01-.08.09L6.8 8.214 4.586 6H3.309a.5.5 0 01-.447-.276l-1.7-3.402a.5.5 0 01.093-.577l.49-.49a.5.5 0 01.577-.094l3.402 1.7A.5.5 0 016 3.31v1.277Z" /></svg>`,
-            material: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>`,
-            default: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>`
-        };
-
-        // --- FUNÇÕES DE UI E FORMATAÇÃO ---
-        function updateTipoItemIcon() { tipoItemIconDiv.innerHTML = icons[tipoItemSelect.value] || icons.default; }
-        function atualizarVisibilidadeSeta() { tipoItemSeta.style.display = tipoItemSelect.value === "default" ? "flex" : "none"; }
-        function formatarMoeda(e) { let v = e.target.value.replace(/\D/g, ""); e.target.value = !v ? "" : (parseFloat(v) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 }); }
-        function mascara(e, p) { let i = 0, v = e.target.value.replace(/\D/g, ""); e.target.value = p.replace(/#/g, () => v[i++] || ""); }
-        function updateTableVisibility() { tableContainer.classList.toggle("hidden", itens.length === 0); }
-
-        function limparCamposItem() {
-            itemInput.value = "";
-            itemQtdInput.value = "1";
-            itemValorInput.value = "";
-            tipoItemSelect.value = "default";
-            document.getElementById("toggleSalvar").checked = false;
-            updateTipoItemIcon();
-            atualizarVisibilidadeSeta();
-        }
-
-        // --- FUNÇÕES DE LÓGICA PRINCIPAL ---
-        function adicionarItemNaTela(item) {
-            const total = item.quantidade * item.valor;
-            const tr = document.createElement("tr");
-            tr.className = "bg-white border-b border-gray-200 hover:bg-gray-50";
-            tr.dataset.id = item.id;
-            tr.innerHTML = `
-               <th scope="row" class="px-4 py-4 font-medium text-gray-900 capitalize">${item.nome} (${item.tipo})</th>
-               <td class="px-4 py-4 text-center">${item.quantidade}</td>
-               <td class="px-4 py-4 text-right">${item.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-               <td class="px-4 py-4 text-right">${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-               <td class="px-4 py-4 text-center">
-                   <button type="button" class="text-red-500 hover:text-red-700 p-1" data-action="remover-item" title="Remover item"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4 pointer-events-none"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.474.14l-.5-5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .71.787l-.5 5a.75.75 0 1 1-1.474-.14l.5-5a.75.75 0 0 1 .764-.647Z" clip-rule="evenodd" /></svg></button>
-               </td>
-            `;
-            tr.querySelector("[data-action='remover-item']").addEventListener("click", () => removerItem(item.id));
-            itensContainer.appendChild(tr);
-        }
-
-        function removerItem(itemId) {
-            itens = itens.filter(item => String(item.id) !== String(itemId));
-            const row = itensContainer.querySelector(`tr[data-id='${itemId}']`);
-            if (row) row.remove();
-            updateTableVisibility();
-        }
-
-        function adicionarItem() {
-            const nomeVal = itemInput.value.trim();
-            const qtdVal = parseInt(itemQtdInput.value, 10);
-            const valStr = itemValorInput.value;
-            const tipo = tipoItemSelect.value;
-            if (tipo === "default" || !nomeVal || isNaN(qtdVal) || qtdVal <= 0 || !valStr) {
-                alert("Preencha: Item, Quantidade, Valor e Tipo para adicionar."); return;
-            }
-            const valVal = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
-
-            // Tenta encontrar se já existe esse item no array
-            let existente = itens.find(item => item.nome.toLowerCase() === nomeVal.toLowerCase() && item.tipo === tipo);
-
-            if (existente) {
-                // Soma quantidade e recalcula total
-                existente.quantidade += qtdVal;
-                existente.valor = valVal; // Se quiser manter sempre o último valor informado
-            } else {
-                let novoItem = { id: `temp-${Date.now()}`, tipo, nome: nomeVal, quantidade: qtdVal, valor: valVal };
-                itens.push(novoItem);
-            }
-
-            // Atualiza a tabela toda (para refletir as mudanças)
-            renderizarItensNaTabela();
-            limparCamposItem();
-            updateTableVisibility();
-        }
-
-
-        function renderizarSeletor(tipo) {
-            const container = document.getElementById(tipo === "servico" ? "containerServico" : "containerMaterial");
-            const catalogo = tipo === "servico" ? servicosCatalogo : materiaisCatalogo;
-            const placeholder = tipo === "servico" ? "-- Selecione um Serviço --" : "-- Selecione um Material --";
-            const icon = icons[tipo];
-            container.innerHTML = `<div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">${icon}</div><select class="select-catalogo h-10 w-full ps-10 px-2 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400 appearance-none"><option value="">${placeholder}</option>${catalogo.map(item => `<option value="${item.id}">${item.nome}</option>`).join("")}</select>`;
-            container.querySelector("select").addEventListener("change", (e) => handleSelecaoCatalogo(e, tipo));
-        }
-
-        async function carregarCatalogosAPI() {
-            try {
-                const [respServ, respMat] = await Promise.all([
-                    fetch(`${API_BASE_URL}/api/servico/`), fetch(`${API_BASE_URL}/api/materiais/`)
-                ]);
-                if (!respServ.ok || !respMat.ok) throw new Error("Falha ao carregar catálogos.");
-                servicosCatalogo = await respServ.json();
-                materiaisCatalogo = await respMat.json();
-                renderizarSeletor("servico");
-                renderizarSeletor("material");
-            } catch (error) {
-                console.error(error);
-                document.getElementById("containerServico").innerHTML = `<div class="text-red-500 p-2">Erro ao carregar serviços.</div>`;
-                document.getElementById("containerMaterial").innerHTML = `<div class="text-red-500 p-2">Erro ao carregar materiais.</div>`;
-            }
-        }
+        document.getElementById('hidden_condicao_pagamento').value = condicao;
+        document.getElementById('hidden_prazo_entrega').value = prazo;
+        document.getElementById('hidden_garantia').value = garantia;
+        document.getElementById('hidden_observacoes').value = obs;
         
-        function handleSelecaoCatalogo(e, tipo) {
-            const id = e.target.value; if (!id) return;
-            const catalogo = tipo === "servico" ? servicosCatalogo : materiaisCatalogo;
-            const obj = catalogo.find(item => item.id == id); if (!obj) return;
-            itemInput.value = obj.nome;
-            itemValorInput.value = obj.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
-            tipoItemSelect.value = tipo;
-            updateTipoItemIcon();
-            atualizarVisibilidadeSeta();
+        fecharModalInfo();
+    }
+    
+    // --- Preenchimento e Inicialização ---
+    function preencherFormularioComDados() {
+        const cliente = orcamentoData.cliente;
+        document.getElementById('nome').value = cliente?.nome || orcamentoData.nome_cliente || '';
+        document.getElementById('telefone').value = cliente?.telefone || orcamentoData.telefone_cliente || '';
+        document.getElementById('cep').value = cliente?.cep || orcamentoData.cep_cliente || '';
+        document.getElementById('logradouro').value = cliente?.logradouro || orcamentoData.logradouro_cliente || '';
+        document.getElementById('numero_casa').value = cliente?.numero_casa || orcamentoData.numero_casa_cliente || '';
+        document.getElementById('complemento').value = cliente?.complemento || orcamentoData.complemento_cliente || '';
+        document.getElementById('bairro').value = cliente?.bairro || orcamentoData.bairro_cliente || '';
+        document.getElementById('cidade_uf').value = cliente?.cidade_uf || orcamentoData.cidade_uf_cliente || '';
+        
+        document.getElementById('titulo_numero_orcamento').textContent = String(orcamentoData.numero).padStart(4, '0');
+        document.getElementById('numero_orcamento').value = orcamentoData.numero;
+        document.getElementById('descricaoServico').value = orcamentoData.descricao_servico || '';
+        
+        // Preenche também os campos ocultos de info adicional
+        document.getElementById('hidden_condicao_pagamento').value = orcamentoData.condicao_pagamento || '';
+        document.getElementById('hidden_prazo_entrega').value = orcamentoData.prazo_entrega || '';
+        document.getElementById('hidden_garantia').value = orcamentoData.garantia || '';
+        document.getElementById('hidden_observacoes').value = orcamentoData.observacoes || '';
+        
+        renderizarItensNaTabela();
+    }
+
+    function inicializar() {
+        preencherFormularioComDados();
+        adicionarItemBtn.addEventListener("click", adicionarItem);
+        itemValorInput.addEventListener("input", formatarMoeda);
+        document.getElementById("telefone").addEventListener("input", (e) => mascara(e, "(##) #####-####"));
+        
+        btnAbrirModalInfo.addEventListener('click', abrirModalInfo);
+        btnFecharModalInfo.addEventListener('click', fecharModalInfo);
+        btnSalvarInfo.addEventListener('click', salvarInfoModal);
+    }
+
+    inicializar();
+
+    // Listener de submit final do formulário
+    form.addEventListener("submit", function(e) {
+        if (itens.length === 0) {
+            alert("Adicione pelo menos um item ao orçamento para atualizar.");
+            e.preventDefault();
+            return;
         }
-
-        function renderizarItensNaTabela() {
-            itensContainer.innerHTML = "";
-            itens.forEach(adicionarItemNaTela);
-        }
-
-
-        async function consultarCep(e) {
-            const cepVal = e.target.value.replace(/\D/g, "");
-            if (cepVal.length !== 8) return;
-            try {
-                const response = await fetch(`https://viacep.com.br/ws/${cepVal}/json/`);
-                const data = await response.json();
-                if (data.erro) { alert("CEP não encontrado."); return; }
-                document.getElementById("logradouro").value = data.logradouro || "";
-                document.getElementById("bairro").value = data.bairro || "";
-                document.getElementById("cidade_uf").value = `${data.localidade || ""}/${data.uf || ""}`;
-                document.getElementById("numero_casa").focus();
-            } catch (error) { alert("Erro ao consultar o CEP."); }
-        }
-
-        function preencherFormularioComDados() {
-            document.getElementById('numero_orcamento').value = orcamentoData.numero || '';
-            document.getElementById('nome').value = orcamentoData.nome || '';
-            document.getElementById('telefone').value = orcamentoData.telefone || '';
-            document.getElementById('descricaoServico').value = orcamentoData.descricao_servico || '';
-            const enderecoCompleto = orcamentoData.endereco || '';
-            const cepMatch = enderecoCompleto.match(/CEP ([\d-]+)/); if (cepMatch) cepInput.value = cepMatch[1];
-            const numeroMatch = enderecoCompleto.match(/Nº ([\d]+)/); if (numeroMatch) document.getElementById('numero_casa').value = numeroMatch[1];
-            document.getElementById('logradouro').value = (enderecoCompleto.split(',')[0] || '').trim();
-            document.getElementById('bairro').value = (enderecoCompleto.split('-')[0].split(',').pop() || '').trim();
-            document.getElementById('cidade_uf').value = (enderecoCompleto.split('-')[1] || '').split('CEP')[0].trim();
-            
-            const itensOrcamento = orcamentoData.itens || [];
-            itens.length = 0;
-            itensContainer.innerHTML = '';
-            
-            itensOrcamento.forEach(item => {
-
-                const itemFormatado = { 
-                    id: item.id || `db-${Date.now()}`, 
-                    nome: item.desc, // Lê 'desc' do banco
-                    quantidade: item.qtd, // Lê 'qtd' do banco
-                    valor: item.unit, // Lê 'unit' do banco
-                    tipo: item.tipo
-                };
-                itens.push(itemFormatado);
-                adicionarItemNaTela(itemFormatado);
-            });
-        }
-
-        // --- ORQUESTRAÇÃO DA INICIALIZAÇÃO ---
-        async function inicializar() {
-            // Adiciona os event listeners
-            itemValorInput.addEventListener("input", formatarMoeda);
-            tipoItemSelect.addEventListener("change", updateTipoItemIcon);
-            tipoItemSelect.addEventListener("change", atualizarVisibilidadeSeta);
-            telefoneInput.addEventListener("input", (e) => mascara(e, "(##) #####-####"));
-            cepInput.addEventListener("input", (e) => mascara(e, "#####-###"));
-            cepInput.addEventListener("blur", consultarCep);
-            adicionarItemBtn.addEventListener("click", adicionarItem);
-            
-            // Ordem de execução correta
-            updateTipoItemIcon();
-            atualizarVisibilidadeSeta();
-            await carregarCatalogosAPI(); 
-            preencherFormularioComDados();
-            updateTableVisibility();
-        }
-
-        inicializar();
-
-        // --- LISTENER DE SUBMIT ---
-        form.addEventListener("submit", function(e) {
-            if (itens.length === 0) {
-                alert("Adicione pelo menos um item ao orçamento para atualizar.");
-                e.preventDefault();
-                return;
-            }
-            // Atualiza o campo oculto com os dados mais recentes antes de enviar
-            document.getElementById("hiddenItens").value = JSON.stringify(itens);
-        });
+        document.getElementById("hiddenItens").value = JSON.stringify(itens);
     });
+});
 </script>
+
 </body>
 </html>

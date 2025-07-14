@@ -50,10 +50,19 @@
             <div class="flex flex-col items-start justify-start gap-2">
                 <label for="nome" class="text-sm font-bold">Nome do Cliente:</label>
                 <div class="relative w-full">
-                    <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M1 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V6Zm4 1.5a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm2 3a4 4 0 0 0-3.665 2.395.75.75 0 0 0 .416 1A8.98 8.98 0 0 0 7 14.5a8.98 8.98 0 0 0 3.249-.604.75.75 0 0 0 .416-1.001A4.001 4.001 0 0 0 7 10.5Zm5-3.75a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Zm0 6.5a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Zm.75-4a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5Z" clip-rule="evenodd" /></svg></div>
-                    <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="nome" name="nome" required>
+                    <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-5.5-2.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM10 12a5.99 5.99 0 0 0-4.793 2.39A6.483 6.483 0 0 0 10 16.5a6.483 6.483 0 0 0 4.793-2.11A5.99 5.99 0 0 0 10 12Z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input class="h-10 w-full ps-10 pe-20 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="nome" name="nome" required>
+                    <!-- O botão que abre o modal -->
+                    <button type="button" id="btnAbrirModalClientes" class="absolute inset-y-0 end-0 flex items-center justify-center px-3 border-l border-zinc-300 text-zinc-600 hover:bg-zinc-100 transition-colors rounded-e-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h8a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 12.5v-9ZM4 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5H4Z" /><path d="M7.25 5.5a.75.75 0 0 0 0 1.5h1.5a.75.75 0 0 0 0-1.5h-1.5Z" /><path fill-rule="evenodd" d="M4.75 9.75a.75.75 0 0 1 .75-.75h5.5a.75.75 0 0 1 0 1.5H5.5a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" clip-rule="evenodd" /></svg>
+                    </button>
                 </div>
             </div>
+            <input type="hidden" name="cliente_id" id="cliente_id">
             <div class="flex flex-wrap items-end justify-between gap-2">
                 <div class="flex flex-col items-start justify-start flex-1 min-w-[120px]">
                     <label for="cep" class="text-sm font-bold">CEP:</label>
@@ -108,6 +117,15 @@
                     <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M2 3.5A1.5 1.5 0 0 1 3.5 2h1.148a1.5 1.5 0 0 1 1.465 1.175l.716 3.223a1.5 1.5 0 0 1-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 0 0 6.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 0 1 1.767-1.052l3.223.716A1.5 1.5 0 0 1 18 15.352V16.5a1.5 1.5 0 0 1-1.5 1.5H15c-1.149 0-2.263-.15-3.326-.43A13.022 13.022 0 0 1 2.43 8.326 13.019 13.019 0 0 1 2 5V3.5Z" clip-rule="evenodd" /></svg></div>
                     <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="tel" id="telefone" name="telefone" placeholder="(99) 99999-9999" maxlength="15" required>
                 </div>
+            </div>
+            <!-- ADICIONE ESTE BLOCO LOGO ABAIXO DO DIV DO NOME DO CLIENTE -->
+
+            <div class="flex items-center justify-start gap-6 mb-4">
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="toggleSalvarCliente" name="salvar_cliente" class="sr-only peer">
+                    <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    <span class="ms-3 text-sm font-medium text-gray-900">Salvar cliente?</span>
+                </label>
             </div>
             
             <!-- DETALHES DO ORÇAMENTO -->
@@ -177,16 +195,22 @@
                         <label class="inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="toggleSalvar" class="sr-only peer">
                             <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                            <span class="ms-3 text-sm font-medium text-gray-900">Salvar item no catálogo?</span>
+                            <span class="ms-3 text-sm font-medium text-gray-900">Salvar item?</span>
                         </label>
 
                         <!-- Direita: Campo do Número do Orçamento -->
                         <div class="flex items-center gap-2">
                             <label for="numero_orcamento" class="text-sm font-medium text-gray-700">Nº:</label>
                             <input type="text" id="numero_orcamento" name="numero_orcamento" 
-                                class="w-20 h-6 text-center font-semibold border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400">
+                                class="w-20 h-6 text-center font-semibold border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400" value="">
                         </div>
 
+                            <button type="button" id="btn-abrir-modal-info" title="Adicionar Informações Complementares"
+                                class="h-9 px-3 flex items-center justify-center bg-gray-200 text-gray-600 rounded-md hover:bg-gray-300 transition-colors shadow-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM9.25 12.25a.75.75 0 0 0 1.5 0v-2.5a.75.75 0 0 0-1.5 0v2.5ZM10 6a.75.75 0 0 0 0 1.5h.008a.75.75 0 0 0 0-1.5H10Z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
                     </div>
             
             <div class="flex flex-col gap-2">
@@ -209,8 +233,78 @@
                     </tbody>
                 </table>
             </div>
-        <input type="hidden" name="itens" id="hiddenItens" />    
+        <input type="hidden" name="itens" id="hiddenItens" />
+        <input type="hidden" name="condicao_pagamento" id="hidden_condicao_pagamento" />
+        <input type="hidden" name="prazo_entrega" id="hidden_prazo_entrega" />
+        <input type="hidden" name="garantia" id="hidden_garantia" />
+        <input type="hidden" name="observacoes" id="hidden_observacoes" />    
         </form>
+    </div>
+
+    <!-- O Modal de Clientes (começa escondido) -->
+            <div id="modalClientes" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+            <div id="modalClientesBox" class="bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 transform transition-all -translate-y-10 opacity-0 duration-300">
+                <div class="flex items-center justify-between p-4 border-b">
+                    <div class="flex items-center gap-3">
+                        <div class="flex-shrink-0 bg-gray-100 p-2 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-600">
+                                <path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.25 1.25 0 0 1 2.228-1.567l.11-.128a5 5 0 0 1 7.4-2.228l.11.128a1.25 1.25 0 0 1 2.228 1.567l-.11.128a3.5 3.5 0 0 1-5.18 1.567l-.255.255a.75.75 0 0 1-1.06 0l-.255-.255a3.5 3.5 0 0 1-5.18-1.567l-.11-.128Z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800">Selecione um Cliente</h3>
+                    </div>
+                    <button id="btnFecharModalClientes" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
+                </div>
+                <div class="p-1">
+                    <input type="text" id="filtroCliente" class="w-full h-10 px-3 my-2 border border-zinc-200 rounded-md" placeholder="Buscar por nome...">
+                </div>
+                <div id="listaClientesModal" class="p-2 max-h-80 overflow-y-auto">
+                    <!-- A lista de clientes será inserida aqui pelo JavaScript -->
+                </div>
+            </div>
+        </div>
+        <div id="modal-info" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+        <div id="modal-info-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg mx-4 transform transition-all -translate-y-10 opacity-0 duration-300">
+            <div class="flex items-center justify-between pb-3 border-b">
+                <h3 class="text-xl font-semibold text-gray-800">Informações Adicionais do Orçamento</h3>
+                <button id="btn-fechar-modal-info" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
+            </div>
+            <div class="mt-4 space-y-4">
+                
+                <div>
+                    <label for="info-condicao-pagamento" class="block text-sm font-medium text-gray-700">Condição de Pagamento:</label>
+                    <select id="info-condicao-pagamento" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                        <option value="">-- Selecione --</option>
+                        <option value="À vista">À vista</option>
+                        <option value="Pix">Pix</option>
+                        <option value="Cartão de Crédito">Cartão de Crédito</option>
+                        <option value="50% de entrada, 50% na entrega">50% de entrada, 50% na entrega</option>
+                        <option value="30 dias">30 dias</option>
+                        <option value="A combinar">A combinar</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="info-prazo-entrega" class="block text-sm font-medium text-gray-700">Prazo de Entrega/Execução:</label>
+                    <input type="text" id="info-prazo-entrega" placeholder="Ex: 7 dias úteis após aprovação" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                </div>
+
+                <div>
+                    <label for="info-garantia" class="block text-sm font-medium text-gray-700">Garantia:</label>
+                    <input type="text" id="info-garantia" placeholder="Ex: 90 dias para o serviço prestado" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                </div>
+                <div>
+                    <label for="info-observacoes" class="block text-sm font-medium text-gray-700">Observações Adicionais:</label>
+                    <textarea id="info-observacoes" rows="3" placeholder="Informações extras, detalhes específicos, etc." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"></textarea>
+                </div>
+
+            </div>
+            <div class="mt-6 text-right">
+                <button id="btn-salvar-info" class="bg-emerald-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-emerald-700 transition-colors">
+                    Confirmar
+                </button>
+            </div>
+        </div>
     </div>
 
 <script>
@@ -237,6 +331,20 @@ document.addEventListener("DOMContentLoaded", function() {
     const telefoneInput = document.getElementById("telefone");
     const adicionarItemBtn = document.getElementById("adicionarItemBtn");
     const gerarOrcamentoBtn = document.getElementById("gerarOrcamentoBtn");
+    const nomeInput = document.getElementById("nome");
+    const clienteIdInput = document.getElementById("cliente_id"); 
+    const btnAbrirModalClientes = document.getElementById("btnAbrirModalClientes");
+    const modalClientes = document.getElementById("modalClientes");
+    const btnFecharModalClientes = document.getElementById("btnFecharModalClientes");
+    const listaClientesModal = document.getElementById("listaClientesModal");
+    const toggleSalvarCliente = document.getElementById("toggleSalvarCliente");
+    const modalInfo = document.getElementById('modal-info');
+    const modalInfoBox = document.getElementById('modal-info-box');
+    const btnAbrirModalInfo = document.getElementById('btn-abrir-modal-info');
+    const btnFecharModalInfo = document.getElementById('btn-fechar-modal-info');
+    const btnSalvarInfo = document.getElementById('btn-salvar-info');
+    const modalClientesBox = document.getElementById("modalClientesBox");
+    const filtroClienteInput = document.getElementById("filtroCliente");
     
     const icons = {
         servico: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M14.5 10a4.5 4.5 0 004.284-5.882c-.105-.324-.51-.391-.752-.15L15.34 6.66a.454.454 0 01-.493.11 3.01 3.01 0 01-1.618-1.616.455.455 0 01.11-.494l2.694-2.692c.24-.241.174-.647-.15-.752a4.5 4.5 0 00-5.873 4.575c.055.873-.128 1.808-.8 2.368l-7.23 6.024a2.724 2.724 0 103.837 3.837l6.024-7.23c.56-.672 1.495-.855 2.368-.8.096.007.193.01.291.01ZM5 16a1 1 0 10-2 0 1 1 0 002 0Z" clip-rule="evenodd" /><path d="M14.5 11.5c.173 0 .345-.007.514-.022l3.754 3.754a2.5 2.5 0 01-3.536 3.536l-4.41-4.41 2.172-2.607c.052-.063.147-.138.342-.196.202-.06.469-.087.777-.067.128.008.257.012.387.012ZM6 4.586l2.33 2.33a.452.452 0 01-.08.09L6.8 8.214 4.586 6H3.309a.5.5 0 01-.447-.276l-1.7-3.402a.5.5 0 01.093-.577l.49-.49a.5.5 0 01.577-.094l3.402 1.7A.5.5 0 016 3.31v1.277Z" /></svg>`,
@@ -304,6 +412,7 @@ document.addEventListener("DOMContentLoaded", function() {
         updateTipoItemIcon();
         renderizarSeletor("servico");
         renderizarSeletor("material");
+        preencherNumeroSugerido();
     }
 
     function adicionarItemNaTela(item) {
@@ -372,6 +481,44 @@ document.addEventListener("DOMContentLoaded", function() {
         const row = itensContainer.querySelector(`tr[data-id=\'${itemId}\']`);
         if (row) row.remove();
         updateTableVisibility();
+    }
+
+    function abrirModalInfo() {
+        modalInfo.classList.remove('hidden');
+        modalInfo.classList.add('flex');
+        setTimeout(() => { 
+            modalInfoBox.classList.remove('-translate-y-10', 'opacity-0'); 
+        }, 50); // Uma pequena espera para a animação
+    }
+
+    function fecharModalInfo() {
+        modalInfoBox.classList.add('-translate-y-10', 'opacity-0');
+        setTimeout(() => { 
+            modalInfo.classList.add('hidden');
+            modalInfo.classList.remove('flex');
+        }, 300); // Espera a animação de saída terminar
+    }
+
+    function salvarInfoModal() {
+        // Pega os valores dos campos do modal NO MOMENTO do clique
+        const condicaoPagamento = document.getElementById('info-condicao-pagamento').value;
+        const prazoEntrega = document.getElementById('info-prazo-entrega').value;
+        const garantia = document.getElementById('info-garantia').value;
+        const observacoes = document.getElementById('info-observacoes').value;
+
+        // Salva os valores nos inputs ocultos do formulário principal
+        document.getElementById('hidden_condicao_pagamento').value = condicaoPagamento;
+        document.getElementById('hidden_prazo_entrega').value = prazoEntrega;
+        document.getElementById('hidden_garantia').value = garantia;
+        document.getElementById('hidden_observacoes').value = observacoes;
+        
+        // Mostra um feedback visual sutil
+        const btnAbrir = document.getElementById('btn-abrir-modal-info');
+        btnAbrir.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-200');
+        btnAbrir.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-emerald-600"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.052-.143Z" clip-rule="evenodd" /></svg>`;
+
+        // Fecha o modal
+        fecharModalInfo();
     }
 
     // --- FUNÇÕES DE LÓGICA E EVENTOS ---
@@ -501,19 +648,162 @@ document.addEventListener("DOMContentLoaded", function() {
         limparCamposItem();
     }
 
+        function fecharModalDeClientes() {
+        modalClientesBox.classList.add('opacity-0', '-translate-y-10');
+        setTimeout(() => { modalClientes.classList.add('hidden'); }, 300);
+    }
+    
+    async function deletarCliente(clienteId, clienteDiv) {
+        if (!confirm("Tem certeza que deseja apagar este cliente? Esta ação não pode ser desfeita.")) return;
+        clienteDiv.style.opacity = '0.5';
+        try {
+            const res = await fetch(`/api/clientes/${clienteId}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Falha ao excluir o cliente.');
+            clienteDiv.remove();
+        } catch (e) {
+            alert(e.message);
+            clienteDiv.style.opacity = '1';
+        }
+    }
+
+    async function selecionarCliente(id) {
+        try {
+            const res = await fetch(`/api/clientes/${id}`);
+            if (!res.ok) throw new Error('Não foi possível carregar os dados do cliente.');
+            const cliente = await res.json();
+            
+            document.getElementById('nome').value = cliente.nome || '';
+            document.getElementById('telefone').value = cliente.telefone || '';
+            document.getElementById('cep').value = cliente.cep || '';
+            document.getElementById('logradouro').value = cliente.logradouro || '';
+            document.getElementById('numero_casa').value = cliente.numero_casa || '';
+            document.getElementById('bairro').value = cliente.bairro || '';
+            document.getElementById('cidade_uf').value = cliente.cidade_uf || '';
+            document.getElementById('complemento').value = cliente.complemento || '';
+            clienteIdInput.value = cliente.id;
+            document.getElementById("toggleSalvarCliente").checked = false;
+
+            fecharModalDeClientes();
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    async function abrirModalDeClientes() {
+        modalClientes.classList.remove('hidden');
+        modalClientesBox.classList.remove('-translate-y-10', 'opacity-0');
+        
+        listaClientesModal.innerHTML = '<p class="p-4 text-center text-gray-500">Carregando...</p>';
+        try {
+            const response = await fetch('/api/clientes/');
+            if (!response.ok) throw new Error('Falha ao carregar clientes');
+            
+            const clientes = await response.json();
+            listaClientesModal.innerHTML = '';
+            
+            if (clientes.length === 0) {
+                listaClientesModal.innerHTML = '<p class="p-4 text-center text-gray-400">Nenhum cliente salvo.</p>';
+                return;
+            }
+            
+            clientes.forEach(cliente => {
+                const clienteDiv = document.createElement('div');
+                clienteDiv.className = 'p-3 flex justify-between items-center rounded-lg hover:bg-gray-100 cursor-pointer border-b last:border-b-0';
+                
+                clienteDiv.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-semibold text-gray-800">${cliente.nome}</span>
+                        <span class="text-sm text-gray-500">${cliente.telefone || ''}</span>
+                    </div>
+                    <button type="button" class="p-2 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600" title="Excluir ${cliente.nome}">
+                        <svg class="size-4 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.474.14l-.5-5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .71.787l-.5 5a.75.75 0 1 1-1.474-.14l.5-5a.75.75 0 0 1 .764-.647Z" clip-rule="evenodd" /></svg>
+                    </button>
+                `;
+                
+                clienteDiv.onclick = () => selecionarCliente(cliente.id);
+                clienteDiv.querySelector('button').onclick = (e) => { 
+                    e.stopPropagation();
+                    deletarCliente(cliente.id, clienteDiv);
+                };
+                listaClientesModal.appendChild(clienteDiv);
+            });
+        } catch (error) {
+            listaClientesModal.innerHTML = `<p class="p-4 text-center text-red-500">${error.message}</p>`;
+        }
+    }
+    
+    // Configura o filtro para funcionar
+    filtroClienteInput.addEventListener('input', e => {
+        const filtro = e.target.value.toLowerCase();
+        listaClientesModal.querySelectorAll('.p-3').forEach(linha => {
+            const nome = linha.querySelector('span.font-semibold').textContent.toLowerCase();
+            linha.style.display = nome.includes(filtro) ? 'flex' : 'none';
+        });
+    });
+
+    // Pega o ID de um cliente, busca seus detalhes e preenche o formulário
+    async function selecionarCliente(clienteId) {
+        try {
+            const response = await fetch(`/api/clientes/${clienteId}`);
+            if (!response.ok) throw new Error('Falha ao buscar dados do cliente');
+            const cliente = await response.json();
+
+            nomeInput.value = cliente.nome;
+            document.getElementById('telefone').value = cliente.telefone;
+            document.getElementById('cep').value = cliente.cep;
+            document.getElementById('logradouro').value = cliente.logradouro;
+            document.getElementById('numero_casa').value = cliente.numero_casa;
+            document.getElementById('complemento').value = cliente.complemento || '';
+            document.getElementById('bairro').value = cliente.bairro;
+            document.getElementById('cidade_uf').value = cliente.cidade_uf;
+            
+            clienteIdInput.value = cliente.id;
+            toggleSalvarCliente.checked = false;
+
+            fecharModalDeClientes();
+        } catch (error) {
+            console.error(error);
+            alert("Não foi possível carregar os dados deste cliente.");
+        }
+    }
+
+
     
     function inicializar() {
         itemValorInput.addEventListener("input", formatarMoeda);
         itemValorInput.addEventListener("blur", limparEFormatarMoeda);
         tipoItemSelect.addEventListener("change", updateTipoItemIcon);
+        tipoItemSelect.addEventListener("change", atualizarVisibilidadeSeta);
         document.getElementById("telefone").addEventListener("input", (e) => mascara(e, "(##) #####-####"));
         document.getElementById("cep").addEventListener("input", (e) => mascara(e, "#####-###"));
         document.getElementById("cep").addEventListener("blur", consultarCep);
         adicionarItemBtn.addEventListener("click", adicionarItem);
+
+        btnAbrirModalClientes.addEventListener('click', abrirModalDeClientes);
+        btnFecharModalClientes.addEventListener('click', fecharModalDeClientes);
+        btnAbrirModalInfo.addEventListener('click', abrirModalInfo);
+        btnFecharModalInfo.addEventListener('click', fecharModalInfo);
+        btnSalvarInfo.addEventListener('click', salvarInfoModal);
+
+        modalInfo.addEventListener('click', (event) => {
+            if (event.target === modalInfo) {
+                fecharModalInfo();
+            }
+        });
+
+        nomeInput.addEventListener('input', () => {
+            clienteIdInput.value = '';
+            toggleSalvarCliente.checked = true;
+        });
         
         preencherNumeroSugerido();
         carregarCatalogosAPI();
         updateTableVisibility();
+        updateTipoItemIcon();
+        atualizarVisibilidadeSeta();
+
+        limparFormularioCompleto();
+
     }
 
     async function preencherNumeroSugerido() {
@@ -535,16 +825,25 @@ document.addEventListener("DOMContentLoaded", function() {
     inicializar();
 
     form.addEventListener("submit", function(e) {
+        const nome = document.getElementById("nome").value.trim();
+        const clienteId = document.getElementById("cliente_id").value.trim();
+
+        if (!clienteId && !nome) {
+            alert("Selecione um cliente existente ou preencha os dados do novo cliente.");
+            e.preventDefault();
+            return;
+        }
+
         if (itens.length === 0) {
             alert("Adicione pelo menos um item ao orçamento.");
             e.preventDefault();
             return;
         }
+
         document.getElementById("hiddenItens").value = JSON.stringify(itens);
-            // Não previna o default! O formulário será enviado normalmente.
+        // Não previna o default! O formulário será enviado normalmente.
     });
 
-        
 
 });
 
