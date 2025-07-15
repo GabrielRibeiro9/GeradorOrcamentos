@@ -461,20 +461,6 @@ document.addEventListener("DOMContentLoaded", function() {
         container.querySelector("select").addEventListener("change", (e) => handleSelecaoCatalogo(e, tipo));
     }
 
-    function renderizarItemSelected(tipo, item) {
-        const container = document.getElementById(tipo === "servico" ? "containerServico" : "containerMaterial");
-        const icon = icons[tipo];
-        container.innerHTML = `
-            <div class="h-10 flex items-center justify-between w-full px-3 border border-zinc-300 rounded-lg shadow-xs bg-white">
-                <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">${icon}</div>
-                <span class="text-sm truncate ps-7">${item.nome}</span>
-                <button type="button" class="p-1.5 bg-red-100 text-red-600 rounded-md hover:bg-red-200 flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.474.14l-.5-5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .71.787l-.5 5a.75.75 0 1 1-1.474-.14l.5-5a.75.75 0 0 1 .764-.647Z" clip-rule="evenodd" /></svg>
-                </button>
-            </div>
-        `;
-        container.querySelector("button" ).addEventListener("click", () => confirmarExclusao(tipo, item));
-    }
 
     function removerItem(itemId) {
         itens = itens.filter(item => String(item.id) !== String(itemId));
@@ -542,25 +528,27 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function handleSelecaoCatalogo(e, tipo) {
-        const id = e.target.value;
-        if (!id) return;
+        const selectElement = e.target;
+        const id = selectElement.value;
+
+        if (!id) return; // Não faz nada se o usuário selecionar a opção "-- Novo ... --"
         
         const catalogo = tipo === "servico" ? servicosCatalogo : materiaisCatalogo;
-        const obj = catalogo.find(item => item.id == id);
-        if (!obj) return;
+        const itemSelecionado = catalogo.find(item => String(item.id) === id);
+        
+        if (!itemSelecionado) return;
 
-        if (tipo === "servico") {
-            renderizarSeletor("material");
-        } else {
-            renderizarSeletor("servico");
-        }
-
-
-        itemInput.value = obj.nome;
-        itemValorInput.value = obj.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+        // 1. Preenche os campos do formulário com os dados do item escolhido
+        itemInput.value = itemSelecionado.nome;
+        itemValorInput.value = itemSelecionado.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
         tipoItemSelect.value = tipo;
         updateTipoItemIcon();
-        renderizarItemSelected(tipo, obj);
+
+        // 2. Foca no campo de quantidade para agilizar
+        itemQtdInput.focus();
+        
+        // 3. Reseta o select para a opção inicial para permitir novas escolhas
+        selectElement.value = ""; 
     }
     
     async function confirmarExclusao(tipo, item) {
@@ -598,6 +586,9 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
+    //
+// SUBSTITUA APENAS ESTA FUNÇÃO NO SEU index.html
+//
     async function adicionarItem() {
         const nomeVal = itemInput.value.trim();
         const qtdVal = parseInt(itemQtdInput.value, 10);
@@ -613,42 +604,52 @@ document.addEventListener("DOMContentLoaded", function() {
         if (salvar) {
             const nomeNormalizado = nomeVal.toLowerCase();
             const catalogoCompleto = [...servicosCatalogo, ...materiaisCatalogo];
-            const itemExistente = catalogoCompleto.find(
-                item => item.nome.toLowerCase() === nomeNormalizado
-            );
-
-            if (itemExistente) {
-                alert(`O item "${nomeVal}" já existe no catálogo como um(a) "${itemExistente.tipo}" e não pode ser salvo novamente.`);
-                return; 
-            }    
+            if (catalogoCompleto.find(item => item.nome.toLowerCase() === nomeNormalizado)) {
+                alert(`O item "${nomeVal}" já existe no catálogo e não pode ser salvo novamente.`);
+                return;
+            }
         }    
+        
         const valVal = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
-        let novoItem = { tipo, nome: nomeVal, quantidade: qtdVal, valor: valVal };
+        
+        // Objeto base que será adicionado à lista 'itens'
+        let itemParaAdicionar = { 
+            nome: nomeVal, 
+            quantidade: qtdVal, // A quantidade que o usuário digitou
+            valor: valVal, 
+            tipo: tipo,
+            id: `temp-${Date.now()}` // ID temporário inicial
+        };
 
         if (salvar) {
             try {
                 const resp = await fetch(`${API_BASE_URL}/api/item/`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(novoItem)
+                    // Enviamos um objeto que o backend entende (sem a quantidade)
+                    body: JSON.stringify({ nome: nomeVal, valor: valVal, tipo: tipo })
                 });
+
                 if (!resp.ok) throw new Error(await resp.text());
-                novoItem = await resp.json();
-                await carregarCatalogosAPI();
+                
+                const itemSalvo = await resp.json(); // Pega a resposta do servidor com o ID permanente
+                itemParaAdicionar.id = itemSalvo.id;  // ATUALIZA o ID do nosso item com o ID real do banco
+                
+                await carregarCatalogosAPI(); // Recarrega os catálogos para mostrar o novo item
+
             } catch (error) {
                 console.error("Erro ao salvar item:", error);
-                alert(`Erro ao salvar item no servidor. ${error}`);
-                novoItem.id = `temp-${Date.now()}`;
+                alert(`Erro ao salvar item no servidor. ${error}. O item será adicionado apenas a este orçamento.`);
+                // Se falhar, mantém o ID temporário que já definimos
             }
-        } else {
-            novoItem.id = `temp-${Date.now()}`;
         }
-        itens.push(novoItem);
-        adicionarItemNaTela(novoItem);
+        
+        itens.push(itemParaAdicionar); // Adiciona o objeto COMPLETO (com quantidade) à lista
+        adicionarItemNaTela(itemParaAdicionar); // Desenha na tela usando o objeto COMPLETO
         limparCamposItem();
     }
 
-        function fecharModalDeClientes() {
+    function fecharModalDeClientes() {
         modalClientesBox.classList.add('opacity-0', '-translate-y-10');
         setTimeout(() => { modalClientes.classList.add('hidden'); }, 300);
     }
