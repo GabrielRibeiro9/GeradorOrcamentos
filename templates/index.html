@@ -448,16 +448,19 @@ document.addEventListener("DOMContentLoaded", function() {
     function renderizarSeletor(tipo) {
         const container = document.getElementById(tipo === "servico" ? "containerServico" : "containerMaterial");
         const catalogo = tipo === "servico" ? servicosCatalogo : materiaisCatalogo;
-        const placeholder = tipo === "servico" ? "-- Novo Serviço --" : "-- Novo Material --";
+        const placeholder = tipo === "servico" ? "-- Selecione um Serviço --" : "-- Selecione um Material --";
         const icon = icons[tipo];
         
+        // Apenas renderiza o select com o ícone, sem botões extras
         container.innerHTML = `
             <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">${icon}</div>
-            <select class="select-catalogo h-10 w-full ps-10 px-2 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400 appearance-none">
+            <select class="select-catalogo h-10 w-full ps-10 pe-4 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400 appearance-none">
                 <option value="">${placeholder}</option>
                 ${catalogo.map(item => `<option value="${item.id}">${item.nome}</option>`).join("")}
             </select>
         `;
+
+        // Adiciona o listener de evento ao select recém-criado
         container.querySelector("select").addEventListener("change", (e) => handleSelecaoCatalogo(e, tipo));
     }
 
@@ -530,8 +533,17 @@ document.addEventListener("DOMContentLoaded", function() {
     function handleSelecaoCatalogo(e, tipo) {
         const selectElement = e.target;
         const id = selectElement.value;
+        const container = selectElement.parentElement;
 
-        if (!id) return; // Não faz nada se o usuário selecionar a opção "-- Novo ... --"
+        const lixeiraAntiga = container.querySelector("[data-action='excluir-do-catalogo']");
+
+        if (lixeiraAntiga) lixeiraAntiga.remove();
+
+        if (!id) { // Se o usuário selecionou "-- Selecione --"
+            itemInput.value = '';
+            itemValorInput.value = '';
+            return;
+        }
         
         const catalogo = tipo === "servico" ? servicosCatalogo : materiaisCatalogo;
         const itemSelecionado = catalogo.find(item => String(item.id) === id);
@@ -547,22 +559,43 @@ document.addEventListener("DOMContentLoaded", function() {
         // 2. Foca no campo de quantidade para agilizar
         itemQtdInput.focus();
         
-        // 3. Reseta o select para a opção inicial para permitir novas escolhas
-        selectElement.value = ""; 
+        const btnExcluir = document.createElement('button');
+        btnExcluir.type = "button";
+        btnExcluir.title = `Excluir "${itemSelecionado.nome}" do catálogo`;
+        btnExcluir.dataset.action = "excluir-do-catalogo";
+        btnExcluir.className = "absolute inset-y-0 end-0 flex items-center justify-center px-3 border-l border-zinc-300 text-zinc-600 hover:bg-red-100 hover:text-red-600 transition-colors rounded-e-lg";
+        btnExcluir.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.474.14l-.5-5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .71.787l-.5 5a.75.75 0 1 1-1.474-.14l.5-5a.75.75 0 0 1 .764-.647Z" clip-rule="evenodd" /></svg>`;
+        
+        // Adiciona o evento de clique que chama a função de exclusão
+        btnExcluir.addEventListener('click', () => confirmarExclusao(itemSelecionado.id, itemSelecionado.nome));
+        
+        container.appendChild(btnExcluir);
+        
     }
+        
     
-    async function confirmarExclusao(tipo, item) {
-        const confirmado = confirm(`Tem certeza que deseja excluir o item "${item.nome}" do catálogo?`);
-        if (confirmado) {
-            try {
-                const resp = await fetch(`${API_BASE_URL}/api/item/${item.id}`, { method: "DELETE" });
-                if (!resp.ok) throw new Error(await resp.text());
-                
-                alert(`Item "${item.nome}" removido com sucesso!`);
-                await carregarCatalogosAPI();
-            } catch (err) {
-                alert(`Erro ao remover item: ${err.message}`);
+    async function confirmarExclusao(itemId, itemName) {
+        if (!confirm(`Tem certeza que deseja excluir o item "${itemName}" do catálogo? Esta ação não pode ser desfeita.`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/item/${itemId}`, { method: 'DELETE' });
+
+            if (response.status !== 204) { // 204 No Content é o sucesso para DELETE
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || "Falha ao excluir item do servidor.");
             }
+            
+            alert(`Item "${itemName}" removido com sucesso!`);
+            
+            // Limpa os campos de item e recarrega os catálogos para atualizar a lista
+            limparCamposItem();
+            await carregarCatalogosAPI();
+
+        } catch (error) {
+            console.error("Erro ao excluir item:", error);
+            alert(`Erro: ${error.message}`);
         }
     }
     
