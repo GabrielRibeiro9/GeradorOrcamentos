@@ -34,7 +34,8 @@ class JoaoPDF(FPDF):
         self.set_xy(0, 50)
         self.set_font("Arial", "B", 24)
         self.set_text_color(0, 51, 102)
-        self.cell(self.w, 10, "ORÇAMENTO", align='C', ln=True)
+        titulo_documento = self.orcamento.status.upper() if self.orcamento.status else "ORÇAMENTO"
+        self.cell(self.w, 10, titulo_documento, align='C', ln=True)
         
         self.set_xy(0, self.get_y() - 2)
         self.set_font("Arial", "B", 18)
@@ -65,9 +66,9 @@ class JoaoPDF(FPDF):
             self.set_font("Arial", "", 9)
             self.set_text_color(0, 0, 0)
             start_y = self.get_y()
-            lines = self.multi_cell(TABLE_COL_WIDTHS[1], 5, it.get("nome", ""), split_only=True)
-            text_height = len(lines) * 5
-            row_height = max(10, text_height + 4)
+            lines = self.multi_cell(TABLE_COL_WIDTHS[1], 4, it.get("nome", ""), split_only=True)
+            text_height = len(lines) * 4
+            row_height = max(7, text_height + 2)
             if self.get_y() + row_height > self.page_break_trigger:
                 self.add_page()
             

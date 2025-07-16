@@ -136,6 +136,32 @@
           </div>
       </div>
   </div>
+    <div id="modal-status-pdf" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+      <div id="modal-status-pdf-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md transform transition-all -translate-y-10 opacity-0 duration-300">
+          <div class="text-center">
+              <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                  <svg class="h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+              </div>
+              <h3 class="mt-4 text-lg leading-6 font-medium text-gray-900">Tipo de Documento</h3>
+              <div class="mt-2 px-7 py-3">
+                  <p class="text-sm text-gray-500">
+                      O serviço deste documento já foi realizado? Escolha o tipo de documento que deseja gerar.
+                  </p>
+              </div>
+          </div>
+          <div class="mt-5 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button id="btn-gerar-orcamento" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700">
+                  Gerar Orçamento
+              </button>
+              <button id="btn-gerar-nota" type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50">
+                  Gerar Nota de Serviço
+              </button>
+          </div>
+          <input type="hidden" id="pdf-orcamento-id">
+      </div>
+  </div>
 
   <script>
 
@@ -147,6 +173,10 @@
     const btnEnviarEmail = document.getElementById('btn-enviar-email');
     const modalBox = document.getElementById('modal-box');
     const modal = document.getElementById('modal-config');
+    const modalStatusPdf = document.getElementById('modal-status-pdf');
+    const modalStatusPdfBox = document.getElementById('modal-status-pdf-box');
+    const pdfOrcamentoIdInput = document.getElementById('pdf-orcamento-id');
+
 
     function abrirModalEmail(orcamentoId, clienteNome, clienteEmail) {
         emailClienteNome.textContent = clienteNome;
@@ -317,7 +347,7 @@
                   <span class="text-emerald-600 font-bold text-lg">R$ ${totalFormatado}</span>
                   <div class="flex items-center gap-2">
                       <button onclick="editarOrcamento(${orc.id})" title="Editar Orçamento" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
-                      <button onclick="baixarPDF(${orc.id})" title="Ver PDF" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" /></svg></button>
+                      <button onclick="abrirModalStatusPDF(${orc.id})" title="Ver PDF" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" /></svg></button>
                       <button onclick="abrirModalEmail(${orc.id}, '${orc.nome.replace(/'/g, "\\'")}', '')" title="Enviar por E-mail" class="p-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                           <path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" />
@@ -338,6 +368,40 @@
     }
 
     function editarOrcamento(id) { window.location.href = `/editar-orcamento/${id}`; }
+
+    function abrirModalStatusPDF(orcamentoId) {
+      pdfOrcamentoIdInput.value = orcamentoId; // Guarda o ID do orçamento
+      modalStatusPdf.classList.remove('hidden');
+      modalStatusPdf.classList.add('flex');
+      setTimeout(() => { modalStatusPdfBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+    }
+
+    function fecharModalStatusPDF() {
+      modalStatusPdfBox.classList.add('-translate-y-10', 'opacity-0');
+      setTimeout(() => { modalStatusPdf.classList.add('hidden'); modalStatusPdf.classList.remove('flex'); }, 300);
+    }
+
+    document.getElementById('btn-gerar-orcamento').addEventListener('click', () => {
+      const id = pdfOrcamentoIdInput.value;
+      // Abre o PDF com o status padrão 'Orçamento'
+      window.open(`/orcamento/${id}/pdf?status=Orçamento`, "_blank");
+      fecharModalStatusPDF();
+    });
+
+    document.getElementById('btn-gerar-nota').addEventListener('click', () => {
+      const id = pdfOrcamentoIdInput.value;
+      // Abre o PDF com o status 'Nota de Serviço'
+      window.open(`/orcamento/${id}/pdf?status=Nota de Serviço`, "_blank");
+      fecharModalStatusPDF();
+    });
+
+    // Listener para fechar o modal clicando fora
+    modalStatusPdf.addEventListener('click', (event) => {
+      if(event.target === modalStatusPdf) {
+          fecharModalStatusPDF();
+      }
+    });
+
     function baixarPDF(id) { window.open(`/orcamento/${id}/pdf`, "_blank"); }
 
     function isMobile() {

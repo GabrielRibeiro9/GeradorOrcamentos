@@ -281,18 +281,22 @@ async def salvar_orcamento_endpoint(
 @app.get("/orcamento/{orcamento_id}/pdf", response_class=StreamingResponse)
 async def gerar_e_salvar_pdf(
     orcamento_id: int, 
-    session: Session = Depends(get_db_session)
+    session: Session = Depends(get_db_session),
+    status: Optional[str] = None
 ):
     # 1. Busca o orçamento FORÇANDO o carregamento do cliente junto
     statement = (
         select(Orcamento)
-        .options(selectinload(Orcamento.cliente)) # A linha mágica
+        .options(selectinload(Orcamento.cliente), selectinload(Orcamento.user)) # Adicionado .user para o template
         .where(Orcamento.id == orcamento_id)
     )
     orcamento = session.exec(statement).first() # Usa .first() para pegar um único resultado
 
     if not orcamento:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado")
+
+    if status and status in ["Orçamento", "Nota de Serviço"]:
+        orcamento.status = status
         
     # 2. Pega o nome do modelo a partir do usuário dono do orçamento
     template_name = orcamento.user.pdf_template_name
@@ -339,9 +343,11 @@ async def gerar_e_salvar_pdf(
     except Exception as e:
         print(f"Erro no upload para Cloudinary: {e}")
         raise HTTPException(status_code=500, detail="Falha ao fazer upload do PDF.")
+    
+    nome_arquivo = f'{orcamento.status.replace(" ", "_")}_{orcamento.numero}.pdf'
         
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf",
-    headers={"Content-Disposition": f'inline; filename="Orcamento_{orcamento.numero}.pdf"'})
+    headers={"Content-Disposition": f'inline; filename="{nome_arquivo}"'})
 
 # ROTA DE API: Lista todos os orçamentos (para o JavaScript)
 @app.get("/api/orcamentos/")

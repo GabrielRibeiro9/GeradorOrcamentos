@@ -37,7 +37,8 @@ class CacadorPDF(FPDF):
         self.set_text_color(255, 255, 255)
         self.set_font("Arial", "B", 9)
         # Usa self.orcamento diretamente
-        header_text = f"Data: {self.orcamento.data_emissao}    |    Orçamento #{self.orcamento.numero}"
+        titulo_documento = self.orcamento.status.capitalize() if self.orcamento.status else "Orçamento"
+        header_text = f"Data: {self.orcamento.data_emissao}    |    {titulo_documento} #{self.orcamento.numero}"
         bar_width = 80
         self.cell(bar_width, 8, "", 0, 1, 'L', fill=True) 
         self.set_xy(5, bar_y) 

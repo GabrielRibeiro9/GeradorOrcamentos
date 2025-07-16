@@ -64,6 +64,7 @@ class Orcamento(SQLModel, table=True):
     prazo_entrega: Optional[str] = Field(default=None)
     garantia: Optional[str] = Field(default=None)
     observacoes: Optional[str] = Field(default=None)
+    status: Optional[str] = Field(default="Orçamento", index=True)
     
     user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     user: Optional["User"] = Relationship(back_populates="orcamentos")
