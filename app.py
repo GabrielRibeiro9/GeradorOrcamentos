@@ -11,7 +11,7 @@ from urllib.parse import quote
 from sqlalchemy import func, cast, Integer
 
 # --- Imports do FastAPI e bibliotecas ---
-from fastapi import FastAPI, HTTPException, status, Form, Request, Depends, Response, Header, Path
+from fastapi import FastAPI, HTTPException, status, Form, Request, Depends, Response, Header, Path, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -778,4 +778,28 @@ def delete_user(
     session.delete(user_to_delete)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@app.get("/api/cliente/verificar/")
+def verificar_cliente_existente(
+    nome: str = Query(..., min_length=3),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    """
+    Verifica se um cliente com um nome específico já existe para o usuário logado.
+    A busca não diferencia maiúsculas de minúsculas.
+    """
+    cliente_existente = session.exec(
+        select(Cliente).where(
+            func.lower(Cliente.nome) == func.lower(nome),
+            Cliente.user_id == current_user.id
+        )
+    ).first()
+    
+    if cliente_existente:
+        # Se encontrou, retorna o cliente existente para o frontend
+        return cliente_existente
+    
+    # Se não encontrou, retorna um objeto vazio para indicar que o nome está livre
+    return {}
  

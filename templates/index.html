@@ -572,6 +572,42 @@ document.addEventListener("DOMContentLoaded", function() {
         container.appendChild(btnExcluir);
         
     }
+
+    async function verificarClienteExistente(event) {
+        const nomeVal = event.target.value.trim();
+
+        // Só faz a verificação se o nome tiver pelo menos 3 caracteres
+        if (nomeVal.length < 3) return;
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/cliente/verificar/?nome=${encodeURIComponent(nomeVal)}`);
+            
+            if (!response.ok) {
+                console.error("Falha na verificação de cliente.");
+                return; 
+            }
+
+            const clienteExistente = await response.json();
+
+            // Se a API retornou um cliente (ou seja, o objeto não está vazio)
+            if (clienteExistente && clienteExistente.id) {
+                const usarDados = confirm(
+                    `Atenção: Já existe um cliente chamado "${clienteExistente.nome}".\n\n` +
+                    "Deseja carregar os dados dele para este orçamento?\n\n" +
+                    "- Clique em 'OK' para usar os dados existentes.\n" +
+                    "- Clique em 'Cancelar' para continuar digitando e criar um novo cliente com este nome."
+                );
+
+                if (usarDados) {
+                    // Se o usuário confirmou, chama a função que preenche o formulário
+                    selecionarCliente(clienteExistente.id);
+                }
+            }
+            
+        } catch (error) {
+            console.error("Erro ao verificar cliente:", error);
+        }
+    }
         
     
     async function confirmarExclusao(itemId, itemName) {
@@ -818,6 +854,7 @@ document.addEventListener("DOMContentLoaded", function() {
         btnAbrirModalInfo.addEventListener('click', abrirModalInfo);
         btnFecharModalInfo.addEventListener('click', fecharModalInfo);
         btnSalvarInfo.addEventListener('click', salvarInfoModal);
+        document.getElementById("nome").addEventListener("blur", verificarClienteExistente);
 
         modalInfo.addEventListener('click', (event) => {
             if (event.target === modalInfo) {
