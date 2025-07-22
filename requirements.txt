@@ -12,4 +12,9 @@ python-multipart
 cloudinary
 psycopg2-binary
 passlib[bcrypt]
+qrcode
+crcmod
+httpx
+python-multipart
+pydantic
 
