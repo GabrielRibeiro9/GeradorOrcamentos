@@ -7,8 +7,8 @@ from pixqrcode import PixQrCode
 
 
 # --- Constantes de layout que sua classe usa ---
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, 'static', 'cacador')
+MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(MODEL_DIR, '..', 'static', 'cacador')
 FULL_PAGE_BACKGROUND_IMAGE = os.path.join(STATIC_DIR, 'fundo_fermec.png')
 LOGO_PATH = os.path.join(STATIC_DIR, 'logo_fermec.png')
 FIXED_RECT_HEIGHT = 10
