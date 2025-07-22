@@ -22,6 +22,7 @@ from fpdf import FPDF
 from sqlmodel import SQLModel, Session, create_engine, select
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import selectinload
+from pydantic import BaseModel
 
 # --- IMPORTS DO CLOUDINARY (MOVA ELES PARA CÁ) ---
 import cloudinary
@@ -29,7 +30,7 @@ import cloudinary.uploader
 import cloudinary.api
 
 # --- Import dos seus modelos de dados ---
-from models import Orcamento, Item, User, Cliente
+from models import Orcamento, Item, User, Cliente, Contato
 
 # --- Import do nosso módulo de segurança ---
 from security import get_password_hash, verify_password
@@ -202,49 +203,48 @@ async def salvar_orcamento_endpoint(
     nome_cliente = form_data.get("nome")
     # verifica se foi marcado para salvar cliente (caso do toggle, se precisar)
     salvar_cliente_flag = form_data.get("salvar_cliente")
-
-    # Se não tem cliente_id e não preencheu nome, ERRO!
-    if not cliente_id_str and not nome_cliente:
-        raise HTTPException(
-            status_code=400,
-            detail="Selecione um cliente existente ou preencha os dados do novo cliente."
-        )
+    contatos_json = form_data.get("contatos", "[]") 
+    contatos_data = json.loads(contatos_json)
 
     cliente_db = None
+    cliente_id_para_orcamento = None
 
     # Se usuário selecionou um cliente existente
     if cliente_id_str:
+        # Se um cliente existente foi selecionado
         cliente_db = session.get(Cliente, int(cliente_id_str))
         if not cliente_db or cliente_db.user_id != current_user.id:
             raise HTTPException(status_code=404, detail="Cliente selecionado inválido.")
+        cliente_id_para_orcamento = cliente_db.id
 
-        # (Opcional: se quiser atualizar dados, mantenha o toggle, mas pode ignorar!)
-    
-        # Se usuário preencheu o nome, cria novo cliente
-    elif nome_cliente:
-        if salvar_cliente_flag == "on":
-            cliente_db = Cliente(
-                nome=nome_cliente,
-                telefone=form_data.get("telefone"),
-                cep=form_data.get("cep"),
-                logradouro=form_data.get("logradouro"),
-                numero_casa=form_data.get("numero_casa"),
-                complemento=form_data.get("complemento"),
-                bairro=form_data.get("bairro"),
-                cidade_uf=form_data.get("cidade_uf"),
-                user_id=current_user.id
-            )
-            session.add(cliente_db)
-            session.commit()
-            session.refresh(cliente_db)
-        else:
-            cliente_db = None
-    else:
-        # Não deveria chegar aqui, mas se chegar, ERRO
-        raise HTTPException(
-            status_code=400,
-            detail="Preencha os dados do cliente para criar um novo orçamento."
+    elif nome_cliente and salvar_cliente_flag:
+        cliente_db = Cliente(
+            nome=nome_cliente,
+            telefone=form_data.get("telefone"),
+            cep=form_data.get("cep"),
+            logradouro=form_data.get("logradouro"),
+            numero_casa=form_data.get("numero_casa"),
+            complemento=form_data.get("complemento"),
+            bairro=form_data.get("bairro"),
+            cidade_uf=form_data.get("cidade_uf"),
+            user_id=current_user.id
         )
+        session.add(cliente_db)
+
+        session.commit()
+        session.refresh(cliente_db)
+
+        cliente_id_para_orcamento = cliente_db.id
+    
+        for contato_info in contatos_data:
+            novo_contato = Contato(
+                nome=contato_info.get('nome'),
+                telefone=contato_info.get('telefone'),
+                 cliente_id=cliente_id_para_orcamento # Linkamos ao cliente
+            )
+            session.add(novo_contato)
+
+        session.commit()    
 
     # --- LÓGICA DO ORÇAMENTO (como já estava)
     itens_data = json.loads(form_data.get("itens"))
@@ -258,7 +258,7 @@ async def salvar_orcamento_endpoint(
         data_emissao=datetime.now().strftime('%d/%m/%Y'),
         data_validade=(datetime.now() + timedelta(days=7)).strftime('%d/%m/%Y'),
         user_id=current_user.id,
-        cliente_id=cliente_db.id if cliente_db else None,
+        cliente_id=cliente_id_para_orcamento,
         nome_cliente=form_data.get("nome"),
         telefone_cliente=form_data.get("telefone"),
         cep_cliente=form_data.get("cep"),
@@ -282,13 +282,14 @@ async def salvar_orcamento_endpoint(
 async def gerar_e_salvar_pdf(
     orcamento_id: int, 
     session: Session = Depends(get_db_session),
-    status: Optional[str] = None
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
 ):
     # 1. Busca o orçamento FORÇANDO o carregamento do cliente junto
     statement = (
         select(Orcamento)
-        .options(selectinload(Orcamento.cliente), selectinload(Orcamento.user)) # Adicionado .user para o template
-        .where(Orcamento.id == orcamento_id)
+        .options(selectinload(Orcamento.cliente).selectinload(Cliente.contatos), selectinload(Orcamento.user)) # Adicionado .user para o template
+        .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
     )
     orcamento = session.exec(statement).first() # Usa .first() para pegar um único resultado
 
@@ -325,8 +326,8 @@ async def gerar_e_salvar_pdf(
             file=pdf_bytes,
             folder="orcamentos_pdf",  # Organiza os PDFs em uma pasta
             public_id=f"Orcamento_{orcamento.numero}", # Nome do arquivo na nuvem
-            resource_type="raw", # Usamos 'raw' para arquivos não-imagem como PDF
-            flags="attachment:inline"
+            resource_type="image", # Usamos 'raw' para arquivos não-imagem como PDF
+            overwrite=True
         )
         
         # 3. Pega a URL segura do arquivo na nuvem
@@ -336,6 +337,10 @@ async def gerar_e_salvar_pdf(
 
         # 4. Salva a URL no banco de dados para uso futuro
         orcamento.pdf_url = secure_url
+
+        if not orcamento.token_visualizacao:
+            orcamento.token_visualizacao = secrets.token_urlsafe(16)
+
         session.add(orcamento)
         session.commit()
         print(f"PDF salvo na nuvem com sucesso. URL: {secure_url}")
@@ -346,8 +351,10 @@ async def gerar_e_salvar_pdf(
     
     nome_arquivo = f'{orcamento.status.replace(" ", "_")}_{orcamento.numero}.pdf'
         
-    return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf",
-    headers={"Content-Disposition": f'inline; filename="{nome_arquivo}"'})
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes), 
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{nome_arquivo}"'})
 
 # ROTA DE API: Lista todos os orçamentos (para o JavaScript)
 @app.get("/api/orcamentos/")
@@ -364,13 +371,18 @@ def listar_orcamentos_api(
     orcamentos = session.exec(statement).all()
     resultado = []
     for o in orcamentos:
+        # Pega o telefone principal, seja do cliente salvo ou do fallback
+        telefone_principal = o.cliente.telefone if o.cliente and o.cliente.telefone else o.telefone_cliente
+        
         nome_cliente = o.cliente.nome if o.cliente else o.nome_cliente
+
         resultado.append({
             "id": o.id,
             "numero": o.numero,
-            "nome": nome_cliente,
+            "nome": o.cliente.nome if o.cliente else o.nome_cliente,
             "data_emissao": o.data_emissao,
             "total_geral": o.total_geral,
+            "telefone": telefone_principal  # <-- CAMPO NOVO E CRUCIAL
         })
     return resultado
 
@@ -419,43 +431,40 @@ def delete_item(item_id: int):
 def gerar_link_whatsapp(
     orcamento_id: int, 
     request: Request, 
-    session: Session = Depends(get_db_session)
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
 ):
-    # Busca o orçamento FORÇANDO o carregamento do cliente junto
-    statement = (
-        select(Orcamento)
-        .options(selectinload(Orcamento.cliente))
-        .where(Orcamento.id == orcamento_id)
-    )
-    orcamento = session.exec(statement).first()
+    orcamento = session.exec(
+        select(Orcamento).options(selectinload(Orcamento.cliente))
+        .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
+    ).first()
 
     if not orcamento:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado")
-
-    pdf_url = f"{str(request.base_url)}orcamento/{orcamento.id}/pdf"
     
-    # Formatar a mensagem para o WhatsApp
+    if not orcamento.pdf_url or not orcamento.token_visualizacao:
+        raise HTTPException(status_code=400, detail="Gere o PDF primeiro clicando no ícone de PDF para poder compartilhar.")
+        
+    
+    pdf_url = f"{str(request.base_url)}orcamento/publico/{orcamento.token_visualizacao}"
+
+    nome_cliente = orcamento.cliente.nome if orcamento.cliente else orcamento.nome_cliente
+    
+    # MENSAGEM LIMPA E CORRETA
     mensagem = (
-        f"Olá, {(orcamento.cliente.nome if orcamento.cliente else 'Cliente não identificado')}!\n\n"
+        f"Olá, {nome_cliente}!\n\n"
         f"Segue o seu orçamento de número *{orcamento.numero}*.\n\n"
-        f"*{orcamento.descricao_servico}*\n\n"
-        f"Valor Total: *{format_brl(orcamento.total_geral)}*\n"
+        f"*{orcamento.descricao_servico.strip()}*\n\n"
         f"Validade: {orcamento.data_validade}\n\n"
-        f"Visualize o orçamento em PDF:\n\n"
-        f"{pdf_url}\n\n"
+        f"Visualize o orçamento completo no link abaixo:\n\n"
+        f"{pdf_url}\n\n"  
         f"Qualquer dúvida, estou à disposição!"
     )
-    # Codifica a mensagem para ser usada em uma URL
+    
     mensagem_codificada = quote(mensagem)
-    # Remove parênteses, espaços, hífens, etc.
-    telefone_limpo = ''.join(filter(str.isdigit, orcamento.cliente.telefone)) if orcamento.cliente and orcamento.cliente.telefone else ""
-    # Adiciona o código do país (55 para o Brasil) se não tiver
-    if not telefone_limpo.startswith("55"):
-        telefone_limpo = "55" + telefone_limpo
-
-    whatsapp_url = f"https://wa.me/{telefone_limpo}?text={mensagem_codificada}"
-
-    return JSONResponse(content={"whatsapp_url":whatsapp_url})
+    
+    # RETORNANDO APENAS A MENSAGEM, COMO DEVERIA TER SIDO
+    return JSONResponse(content={"whatsapp_message": mensagem_codificada})
 
 @app.get("/editar-orcamento/{orcamento_id}", response_class=HTMLResponse)
 async def editar_orcamento_page(
@@ -467,7 +476,7 @@ async def editar_orcamento_page(
     # USAREMOS selectinload PARA GARANTIR QUE O CLIENTE VENHA JUNTO
     statement = (
         select(Orcamento)
-        .options(selectinload(Orcamento.cliente)) # A linha mágica
+        .options(selectinload(Orcamento.cliente).selectinload(Cliente.contatos)) # A linha mágica
         .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
     )
     orcamento = session.exec(statement).first()
@@ -508,7 +517,21 @@ async def atualizar_orcamento_submit(
         cliente_db.complemento = form_data.get("complemento")
         cliente_db.bairro = form_data.get("bairro")
         cliente_db.cidade_uf = form_data.get("cidade_uf")
-        session.add(cliente_db)
+
+        for contato_existente in cliente_db.contatos:
+            session.delete(contato_existente)
+
+        contatos_json = form_data.get("contatos", "[]")
+        contatos_data = json.loads(contatos_json)
+        for contato_info in contatos_data:
+            novo_contato = Contato(
+                nome=contato_info['nome'], 
+                telefone=contato_info['telefone'],
+                cliente_id=cliente_db.id
+            )
+            session.add(novo_contato)
+
+        session.add(cliente_db)    
 
     # 3. ATUALIZA OS DADOS DO PRÓPRIO ORÇAMENTO
     orcamento_db.numero = form_data.get("numero_orcamento").strip()
@@ -615,20 +638,59 @@ def get_orcamento_do_usuario(session, orcamento_id, user_id):
         raise HTTPException(status_code=404, detail="Orçamento não encontrado.")
     return orcamento
 
-# --- ROTAS DA API PARA CLIENTES ---
+class ContatoResponse(BaseModel):
+    id: Optional[int]
+    nome: str
+    telefone: str
 
-@app.get("/api/clientes/", response_model=List[Cliente])
+class ClienteComContatosResponse(BaseModel):
+    id: Optional[int]
+    nome: str
+    telefone: Optional[str] = None
+    cep: Optional[str] = None
+    logradouro: Optional[str] = None
+    numero_casa: Optional[str] = None
+    complemento: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade_uf: Optional[str] = None
+    contatos: List[ContatoResponse] = []
+
+# --- ROTAS DA API PARA CLIENTES ---
+@app.get("/api/orcamento/{orcamento_id}/contatos", response_model=List[ContatoResponse])
+def get_orcamento_contatos(
+    orcamento_id: int, 
+    current_user: User = Depends(get_current_user), 
+    session: Session = Depends(get_db_session)
+):
+    """
+    Busca um orçamento pelo ID e retorna a lista de contatos 
+    do cliente associado a ele.
+    """
+    orcamento = session.exec(
+        select(Orcamento).options(
+            selectinload(Orcamento.cliente).selectinload(Cliente.contatos)
+        )
+        .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
+    ).first()
+    
+    # Se não encontrar o orçamento ou o cliente, retorna uma lista vazia
+    if not orcamento or not orcamento.cliente:
+        return []
+    
+    return orcamento.cliente.contatos
+
+@app.get("/api/clientes/", response_model=List[ClienteComContatosResponse]) 
 def listar_clientes_api(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db_session)
 ):
     """Retorna uma lista de todos os clientes associados ao usuário logado."""
     clientes = session.exec(
-        select(Cliente).where(Cliente.user_id == current_user.id).order_by(Cliente.nome)
+        select(Cliente).options(selectinload(Cliente.contatos)).where(Cliente.user_id == current_user.id).order_by(Cliente.nome) # <--- CORREÇÃO APLICADA
     ).all()
     return clientes
 
-@app.get("/api/clientes/{cliente_id}", response_model=Cliente)
+@app.get("/api/clientes/{cliente_id}", response_model=ClienteComContatosResponse)
 def obter_cliente_api(
     cliente_id: int,
     current_user: User = Depends(get_current_user),
@@ -636,7 +698,7 @@ def obter_cliente_api(
 ):
     """Retorna os dados de um cliente específico, verificando se ele pertence ao usuário logado."""
     cliente = session.exec(
-        select(Cliente).where(Cliente.id == cliente_id, Cliente.user_id == current_user.id)
+    select(Cliente).options(selectinload(Cliente.contatos)).where(Cliente.id == cliente_id, Cliente.user_id == current_user.id)
     ).first()
     
     if not cliente:
@@ -663,6 +725,7 @@ def deletar_cliente(
 @app.post("/orcamento/{orcamento_id}/email/link")
 def gerar_link_email(
     orcamento_id: int,
+    request: Request,
     destinatario: str = Form(...),
     session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user)
@@ -678,10 +741,11 @@ def gerar_link_email(
     if not orcamento:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado")
     
-    # Garante que o PDF já foi gerado e salvo no Cloudinary
-    pdf_url = orcamento.pdf_url
-    if not pdf_url:
-        raise HTTPException(status_code=400, detail="O PDF para este orçamento precisa ser gerado primeiro. Clique no ícone de PDF para gerá-lo.")
+    if not orcamento.pdf_url or not orcamento.token_visualizacao:
+        raise HTTPException(status_code=400, detail="Gere o PDF primeiro clicando no ícone de PDF para poder compartilhar.")
+    
+   
+    pdf_url = f"{str(request.base_url)}orcamento/publico/{orcamento.token_visualizacao}"
 
     # --- MONTAGEM DO LINK mailto: ---
     
@@ -694,7 +758,6 @@ def gerar_link_email(
     Conforme solicitado, segue o seu orçamento de número #{str(orcamento.numero).zfill(4)}.
 
     Serviço: {orcamento.descricao_servico}
-    Valor Total: {format_brl(orcamento.total_geral)}
 
     Você pode visualizar o orçamento completo no link abaixo:
 
@@ -802,4 +865,6 @@ def verificar_cliente_existente(
     
     # Se não encontrou, retorna um objeto vazio para indicar que o nome está livre
     return {}
+
+
  

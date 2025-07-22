@@ -1,6 +1,9 @@
-import os
+import os, qrcode, tempfile
 from fpdf import FPDF
 from models import Orcamento
+from io import BytesIO
+from pixqrcode import PixQrCode
+
 
 
 # --- Constantes de layout que sua classe usa ---
@@ -66,7 +69,14 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
 
     # --- Extrai dados do objeto orcamento ---
     nome = orcamento.cliente.nome
-    endereco = f"{orcamento.cliente.logradouro}, {orcamento.cliente.numero_casa}"
+    endereco_base = f"{orcamento.logradouro_cliente}, {orcamento.numero_casa_cliente}"
+
+    # Adiciona o complemento APENAS se ele existir e não estiver vazio
+    if orcamento.complemento_cliente and orcamento.complemento_cliente.strip():
+        endereco_completo = f"{endereco_base} - {orcamento.complemento_cliente} - {orcamento.bairro_cliente}"
+    else:
+        endereco_completo = f"{endereco_base} - {orcamento.bairro_cliente}"
+
     telefone = orcamento.cliente.telefone
     descricao_servico = orcamento.descricao_servico
     servicos = [item for item in orcamento.itens if item.get("tipo") == "servico"]
@@ -76,7 +86,7 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
     materiais = [item for item in orcamento.itens if item.get("tipo") == "material"]
 
     # --- Desenha retângulos com dados do cliente ---
-    campos = [("CLIENTE: ", nome), ("ENDEREÇO: ", endereco), ("TELEFONE: ", telefone), ("DESCRIÇÃO SERVIÇO: ", descricao_servico)]
+    campos = [("CLIENTE: ", nome), ("ENDEREÇO: ", endereco_completo), ("TELEFONE: ", telefone), ("DESCRIÇÃO SERVIÇO: ", descricao_servico)]
     start_x = 10
     current_y = 75 # Posição inicial
     for label, value in campos:
@@ -255,7 +265,78 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
         pdf.set_font("Arial", "I", 9) # Usando Itálico aqui também
         pdf.set_x(start_x)
         pdf.multi_cell(total_width, 5, orcamento.observacoes, 0, 'C')
-        pdf.ln(1)    
+        pdf.ln(1) 
+
+    def montar_payload_pix(chave_pix, nome_recebedor, cidade_recebedor, valor, descricao=""):
+        # Remove caracteres especiais e limita o tamanho dos campos
+        nome_recebedor = ''.join(e for e in nome_recebedor if e.isalnum() or e.isspace())[:25]
+        cidade_recebedor = ''.join(e for e in cidade_recebedor if e.isalnum() or e.isspace())[:15]
+        
+        # Formata o valor corretamente
+        valor_formatado = f"{float(valor):.2f}"
+        
+        # Monta os campos (IDs do BR Code)
+        payload_format = '000201'
+        merchant_account_info = f"0014BR.GOV.BCB.PIX01{len(chave_pix):02}{chave_pix}"
+        merchant_category_code = '52040000' # Código para "Ponto de Venda" (padrão)
+        transaction_currency = '5303986' # 986 = Real Brasileiro
+        transaction_amount = f'54{len(valor_formatado):02}{valor_formatado}'
+        country_code = '5802BR'
+        merchant_name = f'59{len(nome_recebedor):02}{nome_recebedor}'
+        merchant_city = f'60{len(cidade_recebedor):02}{cidade_recebedor}'
+        additional_data = f'62{len(descricao)+4:02}05{len(descricao):02}{descricao}'
+        
+        payload = f"{payload_format}26{len(merchant_account_info):02}{merchant_account_info}{merchant_category_code}{transaction_currency}{transaction_amount}{country_code}{merchant_name}{merchant_city}{additional_data}6304"
+
+        # Calcula o CRC16 (código de verificação final)
+        import crcmod.predefined
+        crc16 = crcmod.predefined.Crc('crc-ccitt-false')
+        crc16.update(payload.encode('utf-8'))
+        crc_hex = f'{crc16.crcValue:04X}'
+
+        return f"{payload}{crc_hex}"
+
+    chave_pix = "57373871000178"
+    nome_recebedor = "WELLINGTON FERNANDO DE LIMA"
+    cidade_recebedor = "ARARAS"
+    descricao = f"***" # Padrão para PIX estático
+    valor_pix = float(orcamento.total_geral)
+
+    payload_pix = montar_payload_pix(
+        chave_pix=chave_pix,
+        nome_recebedor=nome_recebedor,
+        cidade_recebedor=cidade_recebedor,
+        valor=valor_pix,
+        descricao=descricao
+    )
+
+
+    # Gera a imagem do QR Code
+    qr = qrcode.QRCode(box_size=4, border=2)
+    qr.add_data(payload_pix)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
     
+
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_qr_file:
+        img.save(tmp_qr_file, format="PNG")
+        tmp_qr_path = tmp_qr_file.name
+
+    # Adiciona ao PDF (em uma nova página, ou abaixo do total)
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "Pague por Pix usando o QR Code:", ln=1, align="C")
+
+    # Coordenadas (ajuste conforme layout)
+    x_qr = (pdf.w - 40) / 2
+    y_qr = pdf.get_y()
+    pdf.image(tmp_qr_path, x=x_qr, y=y_qr, w=40, h=40)
+
+    os.unlink(tmp_qr_path)
+
+    pdf.ln(45)
+    pdf.set_font("Arial", "", 9)
+    pdf.multi_cell(0, 6, f"Chave Pix Copia e Cola:\n{payload_pix}", align="C")
+
     pdf_bytes = pdf.output(dest='S').encode('latin-1')
     file_path.write(pdf_bytes)

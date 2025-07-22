@@ -114,13 +114,31 @@
             <div class="flex flex-col items-start justify-start gap-2">
                 <label for="telefone" class="text-sm font-bold">Telefone:</label>
                 <div class="relative w-full">
-                    <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M2 3.5A1.5 1.5 0 0 1 3.5 2h1.148a1.5 1.5 0 0 1 1.465 1.175l.716 3.223a1.5 1.5 0 0 1-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 0 0 6.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 0 1 1.767-1.052l3.223.716A1.5 1.5 0 0 1 18 15.352V16.5a1.5 1.5 0 0 1-1.5 1.5H15c-1.149 0-2.263-.15-3.326-.43A13.022 13.022 0 0 1 2.43 8.326 13.019 13.019 0 0 1 2 5V3.5Z" clip-rule="evenodd" /></svg></div>
-                    <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="tel" id="telefone" name="telefone" placeholder="(99) 99999-9999" maxlength="15" required>
+                    <!-- Ícone do Telefone (como no original) -->
+                    <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M2 3.5A1.5 1.5 0 0 1 3.5 2h1.148a1.5 1.5 0 0 1 1.465 1.175l.716 3.223a1.5 1.5 0 0 1-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 0 0 6.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 0 1 1.767-1.052l3.223.716A1.5 1.5 0 0 1 18 15.352V16.5a1.5 1.5 0 0 1-1.5 1.5H15c-1.149 0-2.263-.15-3.326-.43A13.022 13.022 0 0 1 2.43 8.326 13.019 13.019 0 0 1 2 5V3.5Z" clip-rule="evenodd" /></svg>
+                    </div>
+
+                    <!-- O campo de Telefone (como no original, mas com padding à direita) -->
+                    <input class="h-10 w-full ps-10 pe-12 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="tel" id="telefone" name="telefone" placeholder="(99) 99999-9999" maxlength="15">
+                    
+                    <!-- NOVO: O botão "+" discreto, posicionado dentro do campo -->
+                    <button type="button" id="btnAdicionarContato" class="absolute inset-y-0 end-0 flex items-center justify-center h-10 w-10 text-zinc-600 hover:bg-zinc-100 transition-colors rounded-e-lg border-l border-zinc-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
+                          <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                        </svg>
+                    </button>
                 </div>
             </div>
-            <!-- ADICIONE ESTE BLOCO LOGO ABAIXO DO DIV DO NOME DO CLIENTE -->
 
-            <div class="flex items-center justify-start gap-6 mb-4">
+            <!-- Container onde as linhas extras de contato serão inseridas pelo JavaScript -->
+            <div id="lista-contatos-visivel" class="w-full flex flex-wrap gap-2 mt-1"> </div>
+
+            <!-- Input oculto para os contatos extras -->
+            <input type="hidden" name="contatos" id="hiddenContatos">
+
+
+            <div class="flex items-center justify-start -mt-3">
                 <label class="inline-flex items-center cursor-pointer">
                     <input type="checkbox" id="toggleSalvarCliente" name="salvar_cliente" class="sr-only peer">
                     <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
@@ -306,6 +324,42 @@
             </div>
         </div>
     </div>
+      <div id="modal-contato" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+        <div id="modal-contato-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md mx-4 transform transition-all -translate-y-10 opacity-0 duration-300">
+            <div class="flex items-center justify-between pb-3 border-b">
+                <h3 class="text-xl font-semibold text-gray-800">Adicionar Novo Contato</h3>
+                <button id="btn-fechar-modal-contato" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
+            </div>
+            <div class="mt-4 space-y-4">
+                
+                <div>
+                    <label for="modal-contato-nome" class="block text-sm font-medium text-gray-700">Nome do Contato:</label>
+                    <div class="relative mt-1">
+                        <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
+                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-400"><path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.25 1.25 0 0 1 2.228-1.567l.11-.128a5 5 0 0 1 7.4-2.228l.11.128a1.25 1.25 0 0 1 2.228 1.567l-.11.128a3.5 3.5 0 0 1-5.18 1.567l-.255.255a.75.75 0 0 1-1.06 0l-.255-.255a3.5 3.5 0 0 1-5.18-1.567l-.11-.128Z" /></svg>
+                        </div>
+                        <input type="text" id="modal-contato-nome" class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="modal-contato-telefone" class="block text-sm font-medium text-gray-700">Telefone:</label>
+                    <div class="relative mt-1">
+                        <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-400"><path fill-rule="evenodd" d="M2 3.5A1.5 1.5 0 0 1 3.5 2h1.148a1.5 1.5 0 0 1 1.465 1.175l.716 3.223a1.5 1.5 0 0 1-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 0 0 6.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 0 1 1.767-1.052l3.223.716A1.5 1.5 0 0 1 18 15.352V16.5a1.5 1.5 0 0 1-1.5 1.5H15c-1.149 0-2.263-.15-3.326-.43A13.022 13.022 0 0 1 2.43 8.326 13.019 13.019 0 0 1 2 5V3.5Z" clip-rule="evenodd" /></svg>
+                        </div>
+                        <input type="tel" id="modal-contato-telefone" placeholder="(99) 99999-9999" class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" maxlength="15" oninput="mascara(event, '(##) #####-####')">
+                    </div>
+                </div>
+
+            </div>
+            <div class="mt-6 text-right">
+                <button id="btn-salvar-contato-modal" class="bg-emerald-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-emerald-700 transition-colors">
+                    Adicionar
+                </button>
+            </div>
+        </div>
+    </div>
 
 <script>
 
@@ -315,6 +369,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // --- CONFIGURAÇÃO E VARIÁVEIS GLOBAIS ---
     const API_BASE_URL = window.location.origin;
     let itens = [];
+    let contatosExtras = [];
     let servicosCatalogo = [];
     let materiaisCatalogo = [];
 
@@ -345,6 +400,13 @@ document.addEventListener("DOMContentLoaded", function() {
     const btnSalvarInfo = document.getElementById('btn-salvar-info');
     const modalClientesBox = document.getElementById("modalClientesBox");
     const filtroClienteInput = document.getElementById("filtroCliente");
+    const btnAdicionarContato = document.getElementById("btnAdicionarContato");
+    const modalContato = document.getElementById('modal-contato');
+    const modalContatoBox = document.getElementById('modal-contato-box');
+    const btnFecharModalContato = document.getElementById('btn-fechar-modal-contato');
+    const btnSalvarContatoModal = document.getElementById('btn-salvar-contato-modal');
+    const listaContatosVisivel = document.getElementById('lista-contatos-visivel');
+    
     
     const icons = {
         servico: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M14.5 10a4.5 4.5 0 004.284-5.882c-.105-.324-.51-.391-.752-.15L15.34 6.66a.454.454 0 01-.493.11 3.01 3.01 0 01-1.618-1.616.455.455 0 01.11-.494l2.694-2.692c.24-.241.174-.647-.15-.752a4.5 4.5 0 00-5.873 4.575c.055.873-.128 1.808-.8 2.368l-7.23 6.024a2.724 2.724 0 103.837 3.837l6.024-7.23c.56-.672 1.495-.855 2.368-.8.096.007.193.01.291.01ZM5 16a1 1 0 10-2 0 1 1 0 002 0Z" clip-rule="evenodd" /><path d="M14.5 11.5c.173 0 .345-.007.514-.022l3.754 3.754a2.5 2.5 0 01-3.536 3.536l-4.41-4.41 2.172-2.607c.052-.063.147-.138.342-.196.202-.06.469-.087.777-.067.128.008.257.012.387.012ZM6 4.586l2.33 2.33a.452.452 0 01-.08.09L6.8 8.214 4.586 6H3.309a.5.5 0 01-.447-.276l-1.7-3.402a.5.5 0 01.093-.577l.49-.49a.5.5 0 01.577-.094l3.402 1.7A.5.5 0 016 3.31v1.277Z" /></svg>`,
@@ -385,7 +447,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const numericValue = parseFloat(value) / 100;
         e.target.value = numericValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
     }
-    function mascara(e, pattern) {
+    window.mascara = function(e, pattern) {
         let i = 0;
         const v = e.target.value.replace(/\D/g, "");
         e.target.value = pattern.replace(/#/g, () => v[i++] || "");
@@ -407,7 +469,9 @@ document.addEventListener("DOMContentLoaded", function() {
     function limparFormularioCompleto() {
         form.reset();
         itens = [];
+        contatosExtras = [];
         itensContainer.innerHTML = "";
+        renderizarTagsDeContato();
         updateTableVisibility();
         updateTipoItemIcon();
         renderizarSeletor("servico");
@@ -509,6 +573,64 @@ document.addEventListener("DOMContentLoaded", function() {
         // Fecha o modal
         fecharModalInfo();
     }
+
+    
+    function abrirModalContato() {
+        // Limpa os campos do modal antes de abrir
+        document.getElementById('modal-contato-nome').value = '';
+        document.getElementById('modal-contato-telefone').value = '';
+        
+        modalContato.classList.remove('hidden');
+        modalContato.classList.add('flex');
+        setTimeout(() => { 
+            modalContatoBox.classList.remove('-translate-y-10', 'opacity-0');
+            document.getElementById('modal-contato-nome').focus();
+        }, 50);
+    }
+
+    function fecharModalContato() {
+        modalContatoBox.classList.add('-translate-y-10', 'opacity-0');
+        setTimeout(() => { 
+            modalContato.classList.add('hidden');
+            modalContato.classList.remove('flex');
+        }, 300);
+    }
+
+    function salvarContatoDoModal() {
+        const nome = document.getElementById('modal-contato-nome').value.trim();
+        const telefone = document.getElementById('modal-contato-telefone').value.trim();
+
+        if (!nome || !telefone) {
+            alert("Por favor, preencha o nome e o telefone do contato.");
+            return;
+        }
+
+        contatosExtras.push({ nome: nome, telefone: telefone });
+        renderizarTagsDeContato();
+        fecharModalContato();
+    }
+    
+    // ESTA FUNÇÃO DESENHA AS TAGS VISÍVEIS NO FORMULÁRIO
+    function renderizarTagsDeContato() {
+        listaContatosVisivel.innerHTML = ''; // Limpa a lista antes de redesenhar
+        contatosExtras.forEach((contato, index) => {
+            const tagDiv = document.createElement('div');
+            tagDiv.className = "flex items-center gap-2 bg-emerald-100 text-emerald-800 text-sm font-semibold px-3 py-1 rounded-full";
+            tagDiv.innerHTML = `
+                <span>${contato.nome} - ${contato.telefone} </span>
+                <button type="button" onclick="removerContatoExtra(${index})" class="text-emerald-600 hover:text-emerald-900">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path d="M2.22 2.22a.75.75 0 0 1 1.06 0L8 6.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L9.06 8l4.72 4.72a.75.75 0 1 1-1.06 1.06L8 9.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L6.94 8 2.22 3.28a.75.75 0 0 1 0-1.06Z" /></svg>
+                </button>
+            `;
+            listaContatosVisivel.appendChild(tagDiv);
+        });
+    }
+
+    // A sua função 'removerContatoExtra' precisa chamar a nova função de renderização
+    window.removerContatoExtra = (index) => {
+        contatosExtras.splice(index, 1);
+        renderizarTagsDeContato(); // Atualiza as tags visíveis
+    };    
 
     // --- FUNÇÕES DE LÓGICA E EVENTOS ---
 
@@ -703,25 +825,40 @@ document.addEventListener("DOMContentLoaded", function() {
     async function selecionarCliente(id) {
         try {
             const res = await fetch(`/api/clientes/${id}`);
-            if (!res.ok) throw new Error('Não foi possível carregar os dados do cliente.');
+            if (!res.ok) {
+                throw new Error('Não foi possível carregar os dados completos do cliente.');
+            }
             const cliente = await res.json();
             
-            document.getElementById('nome').value = cliente.nome || '';
-            document.getElementById('telefone').value = cliente.telefone || '';
-            document.getElementById('cep').value = cliente.cep || '';
+            // 1. Limpa contatos extras anteriores antes de preencher
+            contatosExtras = [];
+            renderizarTagsDeContato(); 
+
+            // 2. Preenche todos os campos do formulário com os dados do cliente
+            nomeInput.value = cliente.nome || '';
+            telefoneInput.value = cliente.telefone || ''; // Preenche o telefone PRINCIPAL
+            cepInput.value = cliente.cep || '';
             document.getElementById('logradouro').value = cliente.logradouro || '';
             document.getElementById('numero_casa').value = cliente.numero_casa || '';
             document.getElementById('bairro').value = cliente.bairro || '';
             document.getElementById('cidade_uf').value = cliente.cidade_uf || '';
             document.getElementById('complemento').value = cliente.complemento || '';
             clienteIdInput.value = cliente.id;
-            document.getElementById("toggleSalvarCliente").checked = false;
-
+            
+            // 3. Popula a lista de contatos EXTRAS
+            if (cliente.contatos && cliente.contatos.length > 0) {
+                contatosExtras = cliente.contatos;
+                renderizarTagsDeContato();  // A função correta para desenhar os contatos na tela
+            }
+            
+            toggleSalvarCliente.checked = false;
             fecharModalDeClientes();
         } catch (e) {
+            console.error("Erro ao selecionar cliente:", e);
             alert(e.message);
         }
     }
+
 
     async function abrirModalDeClientes() {
         modalClientes.classList.remove('hidden');
@@ -775,33 +912,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    // Pega o ID de um cliente, busca seus detalhes e preenche o formulário
-    async function selecionarCliente(clienteId) {
-        try {
-            const response = await fetch(`/api/clientes/${clienteId}`);
-            if (!response.ok) throw new Error('Falha ao buscar dados do cliente');
-            const cliente = await response.json();
-
-            nomeInput.value = cliente.nome;
-            document.getElementById('telefone').value = cliente.telefone;
-            document.getElementById('cep').value = cliente.cep;
-            document.getElementById('logradouro').value = cliente.logradouro;
-            document.getElementById('numero_casa').value = cliente.numero_casa;
-            document.getElementById('complemento').value = cliente.complemento || '';
-            document.getElementById('bairro').value = cliente.bairro;
-            document.getElementById('cidade_uf').value = cliente.cidade_uf;
-            
-            clienteIdInput.value = cliente.id;
-            toggleSalvarCliente.checked = false;
-
-            fecharModalDeClientes();
-        } catch (error) {
-            console.error(error);
-            alert("Não foi possível carregar os dados deste cliente.");
-        }
-    }
-
-
     
     function inicializar() {
         itemValorInput.addEventListener("input", formatarMoeda);
@@ -812,6 +922,9 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("cep").addEventListener("input", (e) => mascara(e, "#####-###"));
         document.getElementById("cep").addEventListener("blur", consultarCep);
         adicionarItemBtn.addEventListener("click", adicionarItem);
+        btnAdicionarContato.addEventListener("click", abrirModalContato);
+        btnFecharModalContato.addEventListener('click', fecharModalContato);
+        btnSalvarContatoModal.addEventListener('click', salvarContatoDoModal); 
 
         btnAbrirModalClientes.addEventListener('click', abrirModalDeClientes);
         btnFecharModalClientes.addEventListener('click', fecharModalDeClientes);
@@ -873,8 +986,11 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
+        const contatosValidos = contatosExtras.filter(c => c.nome.trim() !== '' && c.telefone.trim() !== '');
+
         document.getElementById("hiddenItens").value = JSON.stringify(itens);
-        // Não previna o default! O formulário será enviado normalmente.
+        document.getElementById("hiddenContatos").value = JSON.stringify(contatosValidos);
+        
     });
 
 

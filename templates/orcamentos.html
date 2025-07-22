@@ -162,6 +162,25 @@
           <input type="hidden" id="pdf-orcamento-id">
       </div>
   </div>
+    <div id="modal-whatsapp" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+    <div id="modal-whatsapp-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md transform transition-all -translate-y-10 opacity-0 duration-300">
+        <div class="flex items-center justify-between pb-3 border-b">
+            <h3 class="text-xl font-semibold text-gray-800">Enviar por WhatsApp</h3>
+            <button onclick="fecharModalWhatsApp()" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
+        </div>
+        <div class="mt-4 space-y-4">
+            <p class="text-sm">Selecione os contatos para enviar o orçamento:</p>
+            <div id="lista-contatos-whatsapp" class="space-y-2 border-t border-b py-3 max-h-48 overflow-y-auto">
+                <!-- A lista de contatos com checkboxes vai aqui -->
+            </div>
+            <input type="hidden" id="whatsapp-orcamento-id">
+            <button id="btn-enviar-whatsapp-final" class="w-full h-10 px-4 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 transition flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                Enviar para Selecionados
+            </button>
+        </div>
+    </div>
+  </div>
 
   <script>
 
@@ -176,6 +195,10 @@
     const modalStatusPdf = document.getElementById('modal-status-pdf');
     const modalStatusPdfBox = document.getElementById('modal-status-pdf-box');
     const pdfOrcamentoIdInput = document.getElementById('pdf-orcamento-id');
+    const modalWhatsApp = document.getElementById('modal-whatsapp');
+    const modalWhatsAppBox = document.getElementById('modal-whatsapp-box');
+    const whatsappOrcamentoIdInput = document.getElementById('whatsapp-orcamento-id');
+    const btnEnviarWhatsAppFinal = document.getElementById('btn-enviar-whatsapp-final');
 
 
     function abrirModalEmail(orcamentoId, clienteNome, clienteEmail) {
@@ -354,7 +377,7 @@
                           <path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" />
                         </svg>
                       </button>
-                      <button onclick="enviarWhatsApp(${orc.id})" title="Enviar por WhatsApp" class="p-2 rounded bg-green-500 text-white hover:bg-green-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
+                      <button onclick="abrirModalWhatsApp(${orc.id}, '${orc.telefone || ''}')" title="Enviar por WhatsApp" class="p-2 rounded bg-green-500 text-white hover:bg-green-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
                       <button onclick="deletarOrcamento(${orc.id})" title="Excluir Orçamento" class="p-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
                   </div>
               </div>
@@ -408,22 +431,89 @@
       return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
     }
 
-    async function enviarWhatsApp(id) {
-      try {
-        const response = await fetch(`/orcamento/${id}/whatsapp`);
-        if (!response.ok) throw new Error("Não foi possível gerar o link do WhatsApp.");
-        const data = await response.json();
+  function abrirModalWhatsApp(orcamentoId, telefonePrincipal) {
+    whatsappOrcamentoIdInput.value = orcamentoId;
+    const listaContatosDiv = document.getElementById('lista-contatos-whatsapp');
+    listaContatosDiv.innerHTML = `<p class="text-gray-500 text-sm p-2">Carregando...</p>`;
 
-        if (isMobile()) {
-          window.location.href = data.whatsapp_url;  // Redireciona (mobile)
-        } else {
-          window.open(data.whatsapp_url, '_blank');  // Abre nova aba (desktop)
-        }
-      } catch (error) {
-        console.error("Erro ao enviar por WhatsApp:", error);
-        alert("Ocorreu um erro ao tentar preparar a mensagem para o WhatsApp.");
-      }
+    modalWhatsApp.classList.remove('hidden');
+    modalWhatsApp.classList.add('flex');
+    setTimeout(() => { modalWhatsAppBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+
+    // 1. Busca APENAS os contatos extras
+    fetch(`/api/orcamento/${orcamentoId}/contatos`)
+        .then(res => res.json())
+        .then(contatosExtras => {
+            listaContatosDiv.innerHTML = '';
+            
+            // 2. Cria a lista completa começando pelos extras
+            let listaCompleta = [...contatosExtras];
+
+            // 3. Adiciona o contato principal (se ele existir) no início da lista
+            if (telefonePrincipal && telefonePrincipal.trim() !== '') {
+                listaCompleta.unshift({ nome: "Contato Principal", telefone: telefonePrincipal });
+            }
+
+            if (listaCompleta.length === 0) {
+                listaContatosDiv.innerHTML = `<p class="text-red-500 text-sm p-2">Nenhum telefone encontrado para este cliente.</p>`;
+                return;
+            }
+
+            // 4. Renderiza a lista completa no modal
+            listaCompleta.forEach(contato => {
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer";
+                label.innerHTML = `
+                    <input type="checkbox" value="${contato.telefone}" class="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                    <span class="text-gray-700">${contato.nome} <span class="text-gray-500 text-xs">(${contato.telefone})</span></span>
+                `;
+                listaContatosDiv.appendChild(label);
+            });
+        })
+        .catch(error => {
+            listaContatosDiv.innerHTML = `<p class="text-red-500 text-sm p-2">Erro ao carregar contatos.</p>`;
+            console.error(error);
+        });
+  }
+    
+
+  function fecharModalWhatsApp() {
+    modalWhatsAppBox.classList.add('-translate-y-10', 'opacity-0');
+    setTimeout(() => { modalWhatsApp.classList.add('hidden'); modalWhatsApp.classList.remove('flex'); }, 300);
+  }
+
+  btnEnviarWhatsAppFinal.addEventListener('click', async () => {
+    const orcamentoId = whatsappOrcamentoIdInput.value;
+    const checkboxes = document.querySelectorAll('#lista-contatos-whatsapp input[type="checkbox"]:checked');
+    
+    if (checkboxes.length === 0) {
+        alert("Por favor, selecione pelo menos um contato para enviar.");
+        return;
     }
+
+    try {
+        const response = await fetch(`/orcamento/${orcamentoId}/whatsapp`);
+        if (!response.ok) throw new Error("Não foi possível gerar a mensagem.");
+        const data = await response.json();
+        const mensagemBase = data.whatsapp_message; // Supondo que a API retorna isso
+
+        checkboxes.forEach((check, index) => {
+            const telefoneLimpo = check.value.replace(/\D/g, '');
+            if (!telefoneLimpo) return;
+
+            const telefoneFinal = telefoneLimpo.startsWith("55") ? telefoneLimpo : "55" + telefoneLimpo;
+            const urlFinal = `https://wa.me/${telefoneFinal}?text=${mensagemBase}`;
+            
+            setTimeout(() => { window.open(urlFinal, '_blank'); }, index * 300);
+        });
+
+        fecharModalWhatsApp();
+    } catch (error) {
+        alert("Ocorreu um erro: " + error.message);
+    }
+  });
+
+  modalWhatsApp.addEventListener('click', (event) => { if (event.target === modalWhatsApp) fecharModalWhatsApp(); });
 
 
     async function deletarOrcamento(id) {
@@ -546,20 +636,18 @@
           alert(`Ocorreu um erro: ${error.message}`);
       }
     }
-      document.addEventListener('DOMContentLoaded', () => {
-        // Lógica para a notificação de sucesso
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('atualizado')) {
-            const notificacao = document.createElement('div');
-            notificacao.className = 'fixed top-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg';
-            notificacao.innerText = 'Orçamento atualizado com sucesso!';
-            document.body.appendChild(notificacao);
-            setTimeout(() => { notificacao.remove(); window.history.replaceState({}, document.title, "/orcamentos"); }, 3000);
-        }
 
-       
-        carregarOrcamentos();
-      });
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('atualizado')) {
+        const notificacao = document.createElement('div');
+        notificacao.className = 'fixed top-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg';
+        notificacao.innerText = 'Orçamento atualizado com sucesso!';
+        document.body.appendChild(notificacao);
+        setTimeout(() => { notificacao.remove(); window.history.replaceState({}, document.title, "/orcamentos"); }, 3000);
+    }
+
+    // Carrega os orçamentos assim que o script é lido
+    carregarOrcamentos();
   </script>
 </body>
 </html> 

@@ -97,6 +97,7 @@ class JoaoPDF(FPDF):
             telefone = orcamento.cliente.telefone
             logradouro = orcamento.cliente.logradouro
             numero_casa = orcamento.cliente.numero_casa
+            complemento = orcamento.cliente.complemento
             bairro = orcamento.cliente.bairro
             cidade_uf = orcamento.cliente.cidade_uf
         else:
@@ -104,10 +105,19 @@ class JoaoPDF(FPDF):
             telefone = orcamento.telefone_cliente
             logradouro = orcamento.logradouro_cliente
             numero_casa = orcamento.numero_casa_cliente
+            complemento = orcamento.complemento_cliente
             bairro = orcamento.bairro_cliente
             cidade_uf = orcamento.cidade_uf_cliente
 
-        endereco_completo = f"{logradouro}, {numero_casa} - {bairro} - {cidade_uf}"
+        endereco_base = f"{logradouro}, {numero_casa}"
+
+
+        # Adiciona o complemento APENAS se ele existir e não estiver vazio
+        if complemento and complemento.strip():
+            endereco_completo = f"{endereco_base} - {complemento} - {bairro} - {cidade_uf}"
+        else:
+            endereco_completo = f"{endereco_base} - {bairro} - {cidade_uf}"
+
         campos = [
             ("CLIENTE: ", nome),
             ("ENDEREÇO: ", endereco_completo),
@@ -157,39 +167,39 @@ class JoaoPDF(FPDF):
         # --- Condição de Pagamento ---
         if orcamento.condicao_pagamento:
             self.set_x(10)
-            self.set_font("Arial", "B", 9)
+            self.set_font("Arial", "B", 10)
             self.set_text_color(0, 51, 102)
             self.cell(40, 5, "Condição de Pagamento:")
-            self.set_font("Arial", "", 9)
+            self.set_font("Arial", "", 10)
             self.set_text_color(0, 0, 0)
             self.cell(0, 5, orcamento.condicao_pagamento, ln=True)
 
         # --- Prazo de Entrega ---
         if orcamento.prazo_entrega:
             self.set_x(10)
-            self.set_font("Arial", "B", 9)
+            self.set_font("Arial", "B", 10)
             self.set_text_color(0, 51, 102)
             self.cell(40, 5, "Prazo de Entrega:")
-            self.set_font("Arial", "", 9)
+            self.set_font("Arial", "", 10)
             self.set_text_color(0, 0, 0)
             self.cell(0, 5, orcamento.prazo_entrega, ln=True)
 
         # --- Garantia ---
         if orcamento.garantia:
             self.set_x(10)
-            self.set_font("Arial", "B", 9)
+            self.set_font("Arial", "B", 10)
             self.set_text_color(0, 51, 102)
             self.cell(40, 5, "Garantia:")
-            self.set_font("Arial", "", 9)
+            self.set_font("Arial", "", 10)
             self.set_text_color(0, 0, 0)
             self.cell(0, 5, orcamento.garantia, ln=True)
 
         if orcamento.observacoes:
             self.set_x(10)
-            self.set_font("Arial", "B", 9)
+            self.set_font("Arial", "B", 10)
             self.set_text_color(0, 51, 102)
             self.cell(40, 5, "Observações:")
-            self.set_font("Arial", "I", 9) # 'I' para Itálico, para diferenciar
+            self.set_font("Arial", "I", 10) # 'I' para Itálico, para diferenciar
             self.set_text_color(0, 0, 0)
             # Usamos multi_cell para que o texto quebre a linha automaticamente
             self.multi_cell(0, 5, orcamento.observacoes, align='L')    
