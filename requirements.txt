@@ -18,4 +18,5 @@ httpx
 python-multipart
 pydantic
 pixqrcode
+Pillow
 
