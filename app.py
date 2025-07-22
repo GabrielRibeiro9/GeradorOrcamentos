@@ -202,7 +202,7 @@ async def salvar_orcamento_endpoint(
     cliente_id_str = form_data.get("cliente_id")
     nome_cliente = form_data.get("nome")
     # verifica se foi marcado para salvar cliente (caso do toggle, se precisar)
-    salvar_cliente_flag = form_data.get("salvar_cliente")
+    salvar_cliente_flag = form_data.get("salvar_cliente") == "on"
     contatos_json = form_data.get("contatos", "[]") 
     contatos_data = json.loads(contatos_json)
 
@@ -279,82 +279,40 @@ async def salvar_orcamento_endpoint(
 
 
 @app.get("/orcamento/{orcamento_id}/pdf", response_class=StreamingResponse)
-async def gerar_e_salvar_pdf(
-    orcamento_id: int, 
-    session: Session = Depends(get_db_session),
-    status: Optional[str] = None,
-    current_user: User = Depends(get_current_user)
-):
-    # 1. Busca o orçamento FORÇANDO o carregamento do cliente junto
-    statement = (
-        select(Orcamento)
-        .options(selectinload(Orcamento.cliente).selectinload(Cliente.contatos), selectinload(Orcamento.user)) # Adicionado .user para o template
-        .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
-    )
-    orcamento = session.exec(statement).first() # Usa .first() para pegar um único resultado
-
+async def get_pdf_sem_login(orcamento_id: int, session: Session = Depends(get_db_session)):
+    """
+    ESTA ROTA É PÚBLICA e não exige login. Busca o orçamento
+    e seu usuário para gerar o PDF correto.
+    """
+    orcamento = session.get(Orcamento, orcamento_id)
     if not orcamento:
-        raise HTTPException(status_code=404, detail="Orçamento não encontrado")
-
-    if status and status in ["Orçamento", "Nota de Serviço"]:
-        orcamento.status = status
-        
-    # 2. Pega o nome do modelo a partir do usuário dono do orçamento
-    template_name = orcamento.user.pdf_template_name
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado.")
     
-    # 3. Usa o dicionário para encontrar a função de PDF correta
+    # Busca o usuário dono do orçamento para saber qual template de PDF usar
+    user = session.get(User, orcamento.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário criador do orçamento não encontrado.")
+    
+    template_name = user.pdf_template_name
     pdf_function = PDF_GENERATORS.get(template_name, PDF_GENERATORS["default"])
-    print(f"INFO: Gerando PDF para o orçamento #{orcamento.id} usando o modelo: '{template_name}'")
-
-    # 4. Gera o PDF em memória (sem salvar no disco do servidor)
+    
     pdf_buffer = io.BytesIO()
-
-    # 5. CHAMA A FUNÇÃO DE PDF CORRETA
     try:
-        # Agora orcamento.cliente nunca será None
         pdf_function(file_path=pdf_buffer, orcamento=orcamento)
     except Exception as e:
-        print(f"ERRO ao gerar PDF com o modelo '{template_name}': {e}")
+        # Captura erros de geração do PDF para depuração
+        print(f"ERRO ao gerar PDF para o ID {orcamento_id} com o modelo '{template_name}': {e}")
         raise HTTPException(status_code=500, detail=f"Erro interno ao gerar o PDF.")
 
-    # Pega os bytes do PDF que foi gerado no buffer
     pdf_bytes = pdf_buffer.getvalue()
-        
-        # 2. Faz o upload dos bytes do PDF para o Cloudinary
-    try:
-        upload_result = cloudinary.uploader.upload(
-            file=pdf_bytes,
-            folder="orcamentos_pdf",  # Organiza os PDFs em uma pasta
-            public_id=f"Orcamento_{orcamento.numero}", # Nome do arquivo na nuvem
-            resource_type="image", # Usamos 'raw' para arquivos não-imagem como PDF
-            overwrite=True
-        )
-        
-        # 3. Pega a URL segura do arquivo na nuvem
-        secure_url = upload_result.get("secure_url")
-        if not secure_url:
-            raise Exception("Cloudinary não retornou uma URL segura.")
 
-        # 4. Salva a URL no banco de dados para uso futuro
-        orcamento.pdf_url = secure_url
-
-        if not orcamento.token_visualizacao:
-            orcamento.token_visualizacao = secrets.token_urlsafe(16)
-
-        session.add(orcamento)
-        session.commit()
-        print(f"PDF salvo na nuvem com sucesso. URL: {secure_url}")
-
-    except Exception as e:
-        print(f"Erro no upload para Cloudinary: {e}")
-        raise HTTPException(status_code=500, detail="Falha ao fazer upload do PDF.")
-    
-    nome_arquivo = f'{orcamento.status.replace(" ", "_")}_{orcamento.numero}.pdf'
-        
+    # O cabeçalho 'inline' instrui o navegador a tentar abrir o PDF, não baixá-lo.
+    nome_arquivo = f"Orcamento_{orcamento.numero}.pdf"
     return StreamingResponse(
-        io.BytesIO(pdf_bytes), 
+        io.BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{nome_arquivo}"'})
+        headers={"Content-Disposition": f'inline; filename="{nome_arquivo}"'}
+    )
 
 # ROTA DE API: Lista todos os orçamentos (para o JavaScript)
 @app.get("/api/orcamentos/")
@@ -431,39 +389,27 @@ def delete_item(item_id: int):
 def gerar_link_whatsapp(
     orcamento_id: int, 
     request: Request, 
-    session: Session = Depends(get_db_session),
-    current_user: User = Depends(get_current_user)
+    session: Session = Depends(get_db_session)
 ):
-    orcamento = session.exec(
-        select(Orcamento).options(selectinload(Orcamento.cliente))
-        .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
-    ).first()
-
+    orcamento = session.get(Orcamento, orcamento_id)
     if not orcamento:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado")
-    
-    if not orcamento.pdf_url or not orcamento.token_visualizacao:
-        raise HTTPException(status_code=400, detail="Gere o PDF primeiro clicando no ícone de PDF para poder compartilhar.")
-        
-    
-    pdf_url = f"{str(request.base_url)}orcamento/publico/{orcamento.token_visualizacao}"
 
+    # Link direto para a nova rota pública
+    pdf_url = f"{str(request.base_url)}orcamento/{orcamento_id}/pdf"
+    
     nome_cliente = orcamento.cliente.nome if orcamento.cliente else orcamento.nome_cliente
     
-    # MENSAGEM LIMPA E CORRETA
     mensagem = (
         f"Olá, {nome_cliente}!\n\n"
         f"Segue o seu orçamento de número *{orcamento.numero}*.\n\n"
-        f"*{orcamento.descricao_servico.strip()}*\n\n"
-        f"Validade: {orcamento.data_validade}\n\n"
-        f"Visualize o orçamento completo no link abaixo:\n\n"
-        f"{pdf_url}\n\n"  
+        f"*{orcamento.descricao_servico}*\n\n"
+        f"Visualize o orçamento completo em PDF:\n"
+        f"{pdf_url}\n\n"
         f"Qualquer dúvida, estou à disposição!"
     )
-    
     mensagem_codificada = quote(mensagem)
     
-    # RETORNANDO APENAS A MENSAGEM, COMO DEVERIA TER SIDO
     return JSONResponse(content={"whatsapp_message": mensagem_codificada})
 
 @app.get("/editar-orcamento/{orcamento_id}", response_class=HTMLResponse)
