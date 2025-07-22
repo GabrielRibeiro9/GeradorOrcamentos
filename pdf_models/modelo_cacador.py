@@ -59,28 +59,36 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
     if orcamento.cliente:
         nome = orcamento.cliente.nome
         telefone = orcamento.cliente.telefone
-        # ... outros campos
-    else:
+        logradouro = orcamento.cliente.logradouro
+        numero_casa = orcamento.cliente.numero_casa
+        complemento = orcamento.cliente.complemento
+        bairro = orcamento.cliente.bairro
+    else: # Fallback para clientes não salvos no formulário
         nome = orcamento.nome_cliente
         telefone = orcamento.telefone_cliente
+        logradouro = orcamento.logradouro_cliente
+        numero_casa = orcamento.numero_casa_cliente
+        complemento = orcamento.complemento_cliente
+        bairro = orcamento.bairro_cliente
 
     pdf = CacadorPDF(format='A4', orcamento=orcamento)
     pdf.add_page()
 
-    # --- Extrai dados do objeto orcamento ---
-    nome = orcamento.cliente.nome
-    endereco_base = f"{orcamento.logradouro_cliente}, {orcamento.numero_casa_cliente}"
-
-    # Adiciona o complemento APENAS se ele existir e não estiver vazio
-    if orcamento.complemento_cliente and orcamento.complemento_cliente.strip():
-        endereco_completo = f"{endereco_base} - {orcamento.complemento_cliente} - {orcamento.bairro_cliente}"
+    # Bloco 2: Montagem das Variáveis para o PDF
+    endereco_base = f"{logradouro}, {numero_casa}"
+    if complemento and complemento.strip():
+        endereco_completo = f"{endereco_base} - {complemento} - {bairro}"
     else:
-        endereco_completo = f"{endereco_base} - {orcamento.bairro_cliente}"
+        endereco_completo = f"{endereco_base} - {bairro}"
 
-    telefone = orcamento.cliente.telefone
     descricao_servico = orcamento.descricao_servico
-    servicos = [item for item in orcamento.itens if item.get("tipo") == "servico"]
-    total_geral = orcamento.total_geral
+
+    # GARANTE que o total_geral seja sempre um número para evitar erros
+    try:
+        total_geral = float(orcamento.total_geral)
+    except (ValueError, TypeError):
+        total_geral = 0.0
+
     data_validade = orcamento.data_validade
     servicos = [item for item in orcamento.itens if item.get("tipo") == "servico"]
     materiais = [item for item in orcamento.itens if item.get("tipo") == "material"]
