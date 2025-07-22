@@ -17,4 +17,5 @@ crcmod
 httpx
 python-multipart
 pydantic
+pixqrcode
 
