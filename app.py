@@ -278,41 +278,6 @@ async def salvar_orcamento_endpoint(
     return RedirectResponse(url="/orcamentos", status_code=303)
 
 
-@app.get("/orcamento/{orcamento_id}/pdf", response_class=StreamingResponse)
-async def get_pdf_sem_login(orcamento_id: int, session: Session = Depends(get_db_session)):
-    """
-    ESTA ROTA É PÚBLICA e não exige login. Busca o orçamento
-    e seu usuário para gerar o PDF correto.
-    """
-    orcamento = session.get(Orcamento, orcamento_id)
-    if not orcamento:
-        raise HTTPException(status_code=404, detail="Orçamento não encontrado.")
-    
-    # Busca o usuário dono do orçamento para saber qual template de PDF usar
-    user = session.get(User, orcamento.user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuário criador do orçamento não encontrado.")
-    
-    template_name = user.pdf_template_name
-    pdf_function = PDF_GENERATORS.get(template_name, PDF_GENERATORS["default"])
-    
-    pdf_buffer = io.BytesIO()
-    try:
-        pdf_function(file_path=pdf_buffer, orcamento=orcamento)
-    except Exception as e:
-        # Captura erros de geração do PDF para depuração
-        print(f"ERRO ao gerar PDF para o ID {orcamento_id} com o modelo '{template_name}': {e}")
-        raise HTTPException(status_code=500, detail=f"Erro interno ao gerar o PDF.")
-
-    pdf_bytes = pdf_buffer.getvalue()
-
-    # O cabeçalho 'inline' instrui o navegador a tentar abrir o PDF, não baixá-lo.
-    nome_arquivo = f"Orcamento_{orcamento.numero}.pdf"
-    return StreamingResponse(
-        io.BytesIO(pdf_bytes),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{nome_arquivo}"'}
-    )
 
 # ROTA DE API: Lista todos os orçamentos (para o JavaScript)
 @app.get("/api/orcamentos/")
@@ -385,32 +350,97 @@ def delete_item(item_id: int):
         session.commit()
         return
     
+@app.get("/orcamento/{orcamento_id}/pdf", response_class=StreamingResponse)
+async def gerar_e_salvar_pdf_protegido(
+    orcamento_id: int, 
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    ESTA ROTA É PROTEGIDA. Apenas o usuário logado pode gerar/regenerar o PDF e o token.
+    """
+    statement = select(Orcamento).where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
+    orcamento = session.exec(statement).first()
+
+    if not orcamento:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado.")
+    
+    # GARANTE QUE UM TOKEN SECRETO E ÚNICO SEMPRE EXISTA
+    if not orcamento.token_visualizacao:
+        orcamento.token_visualizacao = secrets.token_urlsafe(16)
+        session.add(orcamento)
+        session.commit()
+        session.refresh(orcamento)
+        
+    user = session.get(User, orcamento.user_id)
+    template_name = user.pdf_template_name
+    pdf_function = PDF_GENERATORS.get(template_name, PDF_GENERATORS["default"])
+    
+    pdf_buffer = io.BytesIO()
+    pdf_function(file_path=pdf_buffer, orcamento=orcamento)
+    pdf_bytes = pdf_buffer.getvalue()
+
+    nome_arquivo = f"Orcamento_{orcamento.numero}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{nome_arquivo}"'}
+    )
+
+@app.get("/orcamento/publico/{token}", response_class=StreamingResponse)
+async def get_pdf_publico(token: str, session: Session = Depends(get_db_session)):
+    """
+    ESTA É A ROTA PÚBLICA QUE O CLIENTE USA. ELA SÓ FUNCIONA COM O TOKEN.
+    """
+    statement = select(Orcamento).where(Orcamento.token_visualizacao == token)
+    orcamento = session.exec(statement).first()
+
+    if not orcamento:
+        raise HTTPException(status_code=404, detail="Not Found") # Mensagem genérica por segurança
+
+    user = session.get(User, orcamento.user_id)
+    template_name = user.pdf_template_name
+    pdf_function = PDF_GENERATORS.get(template_name, PDF_GENERATORS["default"])
+
+    pdf_buffer = io.BytesIO()
+    pdf_function(file_path=pdf_buffer, orcamento=orcamento)
+    pdf_bytes = pdf_buffer.getvalue()
+    
+    nome_arquivo = f"Orcamento_{orcamento.numero}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{nome_arquivo}"'}
+    )
+
 @app.get("/orcamento/{orcamento_id}/whatsapp")
 def gerar_link_whatsapp(
     orcamento_id: int, 
     request: Request, 
-    session: Session = Depends(get_db_session)
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
 ):
     orcamento = session.get(Orcamento, orcamento_id)
-    if not orcamento:
-        raise HTTPException(status_code=404, detail="Orçamento não encontrado")
+    if not orcamento or orcamento.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado.")
 
-    # Link direto para a nova rota pública
-    pdf_url = f"{str(request.base_url)}orcamento/{orcamento_id}/pdf"
+    # Verifica se o token existe. Se não, avisa para gerar o PDF primeiro.
+    if not orcamento.token_visualizacao:
+        raise HTTPException(status_code=400, detail="Por favor, clique no ícone de PDF primeiro para gerar o link de compartilhamento.")
+        
+    # MONTA O LINK PÚBLICO E SEGURO USANDO O TOKEN
+    pdf_url = f"{str(request.base_url)}orcamento/publico/{orcamento.token_visualizacao}"
     
     nome_cliente = orcamento.cliente.nome if orcamento.cliente else orcamento.nome_cliente
-    
     mensagem = (
         f"Olá, {nome_cliente}!\n\n"
         f"Segue o seu orçamento de número *{orcamento.numero}*.\n\n"
-        f"*{orcamento.descricao_servico}*\n\n"
-        f"Visualize o orçamento completo em PDF:\n"
+        f"Visualize o orçamento completo no link abaixo:\n"
         f"{pdf_url}\n\n"
         f"Qualquer dúvida, estou à disposição!"
     )
-    mensagem_codificada = quote(mensagem)
     
-    return JSONResponse(content={"whatsapp_message": mensagem_codificada})
+    return JSONResponse(content={"whatsapp_message": quote(mensagem)})
 
 @app.get("/editar-orcamento/{orcamento_id}", response_class=HTMLResponse)
 async def editar_orcamento_page(
