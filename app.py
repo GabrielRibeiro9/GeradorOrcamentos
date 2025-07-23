@@ -708,7 +708,7 @@ def gerar_link_email(
 ):
     statement = (
         select(Orcamento)
-        .options(selectinload(Orcamento.cliente), selectinload(Orcamento.user))
+        .options(selectinload(Orcamento.cliente))
         .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
     )
     orcamento = session.exec(statement).first()
@@ -716,11 +716,16 @@ def gerar_link_email(
     if not orcamento:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado")
     
-    # Monta o link público e direto, sem tokens.
-    pdf_url = f"{str(request.base_url).replace('http://', 'https://')}orcamento/{orcamento_id}/pdf"
-
-    # --- O resto do código continua igual, apenas sem a checagem de token ---
+    # MESMA LÓGICA DO WHATSAPP: VERIFICA SE O TOKEN EXISTE
+    if not orcamento.token_visualizacao:
+        raise HTTPException(
+            status_code=400, 
+            detail="Por favor, clique no ícone de PDF primeiro para gerar o link de compartilhamento."
+        )
     
+    # USA O TOKEN PARA CRIAR O LINK PÚBLICO E SEGURO
+    pdf_url = f"{str(request.base_url).replace('http://', 'https://')}orcamento/publico/{orcamento.token_visualizacao}"
+
     nome_cliente = orcamento.cliente.nome if orcamento.cliente else orcamento.nome_cliente
     assunto = f"Orçamento #{str(orcamento.numero).zfill(4)}"
     
@@ -728,9 +733,7 @@ def gerar_link_email(
 
     Conforme solicitado, segue o seu orçamento de número #{str(orcamento.numero).zfill(4)}.
 
-    Serviço: {orcamento.descricao_servico}
-
-    Você pode visualizar o orçamento completo no link abaixo:
+    Visualize o orçamento completo no link abaixo:
     {pdf_url}
 
     Qualquer dúvida, estou à disposição."""
