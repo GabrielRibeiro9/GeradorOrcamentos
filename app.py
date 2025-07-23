@@ -706,7 +706,6 @@ def gerar_link_email(
     session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user)
 ):
-    # Usa selectinload para garantir que o cliente e o usuário sejam carregados
     statement = (
         select(Orcamento)
         .options(selectinload(Orcamento.cliente), selectinload(Orcamento.user))
@@ -717,16 +716,12 @@ def gerar_link_email(
     if not orcamento:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado")
     
-    if not orcamento.pdf_url or not orcamento.token_visualizacao:
-        raise HTTPException(status_code=400, detail="Gere o PDF primeiro clicando no ícone de PDF para poder compartilhar.")
-    
-   
-    pdf_url = f"{str(request.base_url)}orcamento/publico/{orcamento.token_visualizacao}"
+    # Monta o link público e direto, sem tokens.
+    pdf_url = f"{str(request.base_url).replace('http://', 'https://')}orcamento/{orcamento_id}/pdf"
 
-    # --- MONTAGEM DO LINK mailto: ---
+    # --- O resto do código continua igual, apenas sem a checagem de token ---
     
     nome_cliente = orcamento.cliente.nome if orcamento.cliente else orcamento.nome_cliente
-
     assunto = f"Orçamento #{str(orcamento.numero).zfill(4)}"
     
     corpo_email = f"""Olá {nome_cliente},
@@ -736,19 +731,14 @@ def gerar_link_email(
     Serviço: {orcamento.descricao_servico}
 
     Você pode visualizar o orçamento completo no link abaixo:
-
     {pdf_url}
 
-    Qualquer dúvida, estou à disposição.
-    """
-    # Codifica os componentes para serem usados em uma URL
+    Qualquer dúvida, estou à disposição."""
+    
     assunto_codificado = quote(assunto)
     corpo_codificado = quote(corpo_email)
-
-    # Cria o link final
     mailto_link = f"mailto:{destinatario}?subject={assunto_codificado}&body={corpo_codificado}"
     
-    # Retorna o link para o frontend
     return {"mailto_link": mailto_link}
 
 @app.post("/api/user/update-template")
