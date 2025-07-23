@@ -312,17 +312,32 @@ def listar_orcamentos_api(
 
 
 # --- ROTAS DA API PARA ITENS DE CATÁLOGO ---
-@app.post("/api/item/", response_model=Item)
+@app.post("/api/item/", response_model=Item, status_code=status.HTTP_201_CREATED)
 def create_item(
     item: Item,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db_session)
 ):
+    statement = select(Item).where(
+        func.lower(Item.nome) == func.lower(item.nome),
+        Item.tipo == item.tipo,
+        Item.user_id == current_user.id
+    )
+    existing_item = session.exec(statement).first()
+
+    if existing_item:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"O item '{item.nome}' já existe no catálogo de {item.tipo}s."
+        )
+
     item.user_id = current_user.id
     session.add(item)
     session.commit()
     session.refresh(item)
     return item
+
+
 
 @app.get("/api/servico/", response_model=List[Item])
 def read_servicos(current_user: User = Depends(get_current_user),
@@ -352,7 +367,8 @@ def delete_item(item_id: int):
     
 @app.get("/orcamento/{orcamento_id}/pdf", response_class=StreamingResponse)
 async def gerar_e_salvar_pdf_protegido(
-    orcamento_id: int, 
+    orcamento_id: int,
+    status: str = Query("Orçamento"), 
     session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -364,6 +380,8 @@ async def gerar_e_salvar_pdf_protegido(
 
     if not orcamento:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado.")
+    
+    orcamento.status = status 
     
     # GARANTE QUE UM TOKEN SECRETO E ÚNICO SEMPRE EXISTA
     if not orcamento.token_visualizacao:
@@ -380,7 +398,7 @@ async def gerar_e_salvar_pdf_protegido(
     pdf_function(file_path=pdf_buffer, orcamento=orcamento)
     pdf_bytes = pdf_buffer.getvalue()
 
-    nome_arquivo = f"Orcamento_{orcamento.numero}.pdf"
+    nome_arquivo = f"{orcamento.status.replace(' ', '_')}_{orcamento.numero}.pdf"
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",

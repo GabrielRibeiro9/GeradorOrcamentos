@@ -781,26 +781,42 @@ document.addEventListener("DOMContentLoaded", function() {
                 const resp = await fetch(`${API_BASE_URL}/api/item/`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    // Enviamos um objeto que o backend entende (sem a quantidade)
                     body: JSON.stringify({ nome: nomeVal, valor: valVal, tipo: tipo })
                 });
 
-                if (!resp.ok) throw new Error(await resp.text());
+                // Se a resposta NÃO for OK...
+                if (!resp.ok) {
+                    // ... tentamos ler o detalhe do erro enviado pelo Python.
+                    const errorData = await resp.json(); 
+                    
+                    // Se o status for 409 (Conflict), é a nossa duplicata!
+                    if (resp.status === 409) {
+                        alert(errorData.detail); // Exibe a mensagem exata: "O item 'Solda' já existe..."
+                        return; // IMPORTANTE: Para a execução da função aqui.
+                    }
+                    
+                    // Se for outro tipo de erro, lança para o catch.
+                    throw new Error(errorData.detail || "Erro desconhecido do servidor.");
+                }
+
+                // Se o item foi salvo com sucesso, pegamos a resposta e atualizamos o ID.
+                const itemSalvo = await resp.json();
+                itemParaAdicionar.id = itemSalvo.id;
                 
-                const itemSalvo = await resp.json(); // Pega a resposta do servidor com o ID permanente
-                itemParaAdicionar.id = itemSalvo.id;  // ATUALIZA o ID do nosso item com o ID real do banco
-                
-                await carregarCatalogosAPI(); // Recarrega os catálogos para mostrar o novo item
+                // Recarrega os catálogos para incluir o novo item.
+                await carregarCatalogosAPI();
 
             } catch (error) {
                 console.error("Erro ao salvar item:", error);
-                alert(`Erro ao salvar item no servidor. ${error}. O item será adicionado apenas a este orçamento.`);
-                // Se falhar, mantém o ID temporário que já definimos
+                // Mensagem para erros de rede ou outros problemas inesperados.
+                alert(`Erro ao tentar salvar item no catálogo: ${error.message}`);
+                return; // Também paramos a execução se o salvamento falhar.
             }
         }
         
-        itens.push(itemParaAdicionar); // Adiciona o objeto COMPLETO (com quantidade) à lista
-        adicionarItemNaTela(itemParaAdicionar); // Desenha na tela usando o objeto COMPLETO
+        // 3. Adiciona na lista e na tela (só executa se tudo deu certo)
+        itens.push(itemParaAdicionar);
+        adicionarItemNaTela(itemParaAdicionar);
         limparCamposItem();
     }
 
