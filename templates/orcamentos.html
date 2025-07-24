@@ -130,6 +130,7 @@
               </div>
               <!-- Input oculto para guardar o ID do orçamento -->
               <input type="hidden" id="email-orcamento-id">
+              <input type="hidden" id="email-tipo-documento">
               <button id="btn-enviar-email" class="w-full h-10 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition flex items-center justify-center">
                   
               </button>
@@ -181,6 +182,40 @@
         </div>
     </div>
   </div>
+    <div id="modal-tipo-documento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[60]">
+      <div id="modal-tipo-documento-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm mx-4 transform transition-all -translate-y-10 opacity-0 duration-300">
+          <!-- Título -->
+          <h3 class="text-lg font-medium text-gray-900 text-center">Qual documento deseja enviar?</h3>
+          
+          <!-- Conteúdo/Opções -->
+          <div class="mt-4 space-y-3">
+              <p class="text-sm text-center text-gray-500">
+                  Selecione o tipo de documento que será gerado para o compartilhamento via WhatsApp.
+              </p>
+              <div class="pt-2">
+                  <label class="flex items-center p-3 w-full bg-white border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                      <input type="radio" name="tipo_documento_escolha" value="Orçamento" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" checked>
+                      <span class="ml-3 text-sm font-medium text-gray-800">Enviar como Orçamento</span>
+                  </label>
+              </div>
+              <div>
+                  <label class="flex items-center p-3 w-full bg-white border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                      <input type="radio" name="tipo_documento_escolha" value="Nota de Serviço" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                      <span class="ml-3 text-sm font-medium text-gray-800">Enviar como Nota de Serviço</span>
+                  </label>
+              </div>
+          </div>
+
+          <!-- Botões de Ação -->
+          <div class="mt-6 flex justify-end gap-3">
+              <button type="button" class="btn-fechar-modal-tipo-documento px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
+              <button type="button" id="btn-confirmar-tipo-documento" class="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700">Confirmar</button>
+          </div>
+
+          <!-- ID do orçamento será guardado aqui -->
+          <input type="hidden" id="tipo-documento-orcamento-id">
+      </div>
+    </div>
 
   <script>
 
@@ -199,15 +234,24 @@
     const modalWhatsAppBox = document.getElementById('modal-whatsapp-box');
     const whatsappOrcamentoIdInput = document.getElementById('whatsapp-orcamento-id');
     const btnEnviarWhatsAppFinal = document.getElementById('btn-enviar-whatsapp-final');
+    const modalTipoDocumento = document.getElementById('modal-tipo-documento');
+    const modalTipoDocumentoBox = document.getElementById('modal-tipo-documento-box');
+    const tipoDocumentoOrcamentoIdInput = document.getElementById('tipo-documento-orcamento-id');
+    const btnConfirmarTipoDocumento = document.getElementById('btn-confirmar-tipo-documento');
+    const btnsFecharModalTipoDocumento = document.querySelectorAll('.btn-fechar-modal-tipo-documento');
 
 
-    function abrirModalEmail(orcamentoId, clienteNome, clienteEmail) {
-        emailClienteNome.textContent = clienteNome;
-        emailOrcamentoIdInput.value = orcamentoId;
-        emailInput.value = clienteEmail;
-        modalEmail.classList.remove('hidden');
-        modalEmail.classList.add('flex');
-        setTimeout(() => { modalEmailBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+    function abrirModalEmail(orcamentoId, clienteNome, clienteEmail, tipoDocumento) {
+      emailClienteNome.textContent = clienteNome;
+      emailOrcamentoIdInput.value = orcamentoId;
+      emailInput.value = clienteEmail;
+      
+      // Guarda o tipo de documento que foi escolhido no passo anterior
+      document.getElementById('email-tipo-documento').value = tipoDocumento;
+
+      modalEmail.classList.remove('hidden');
+      modalEmail.classList.add('flex');
+      setTimeout(() => { modalEmailBox.classList.remove('-translate-y-10', 'opacity-0'); emailInput.focus(); }, 50);
     }
 
     function fecharModalEmail() {
@@ -222,38 +266,79 @@
 
     modalEmail.addEventListener('click', (event) => { if (event.target === modalEmail) fecharModalEmail(); });
 
+
+    btnConfirmarTipoDocumento.addEventListener('click', async () => {
+      const orcamentoId = tipoDocumentoOrcamentoIdInput.value;
+      const tipoDocumento = document.querySelector('input[name="tipo_documento_escolha"]:checked').value;
+      const acao = modalTipoDocumento.dataset.acao;
+      
+      fecharModalTipoDocumento();
+
+      try {
+          // ETAPA ESSENCIAL: gera o PDF/token silenciosamente com o tipo correto.
+          await fetch(`/orcamento/${orcamentoId}/pdf?status=${encodeURIComponent(tipoDocumento)}`);
+          
+          if (acao === 'whatsapp') {
+              const orcamentoRes = await fetch('/api/orcamentos/');
+              if (!orcamentoRes.ok) throw new Error("Falha ao buscar dados do orçamento.");
+              const orcamentos = await orcamentoRes.json();
+              const orcamentoAtual = orcamentos.find(o => o.id === parseInt(orcamentoId));
+              
+              // AGORA sim abrimos o modal de seleção de contatos.
+              abrirModalWhatsApp(orcamentoId, orcamentoAtual?.telefone || '');
+
+          } else if (acao === 'email') {
+              const orcamentoRes = await fetch('/api/orcamentos/');
+              if (!orcamentoRes.ok) throw new Error("Falha ao buscar dados.");
+              const orcamentos = await orcamentoRes.json();
+              const orcamentoAtual = orcamentos.find(o => o.id === parseInt(orcamentoId));
+              abrirModalEmail(orcamentoId, orcamentoAtual?.nome || '', '', tipoDocumento);
+          }
+      } catch(e) {
+          alert(e.message);
+      }
+    });
+
+
     async function abrirClienteDeEmail() {
       const orcamentoId = emailOrcamentoIdInput.value;
       const destinatario = emailInput.value.trim();
+      // Pega o tipo de documento que guardamos no input oculto
+      const tipoDocumento = document.getElementById('email-tipo-documento').value;
 
-      if (!destinatario || !destinatario.includes('@')) {
-          alert("Por favor, insira um endereço de e-mail válido.");
+      if (!destinatario) {
+          alert("Por favor, insira o e-mail do destinatário.");
           return;
       }
 
       btnEnviarEmail.disabled = true;
-      btnEnviarEmail.innerHTML = 'Abrindo...';
+      btnEnviarEmail.innerHTML = 'Gerando link...';
 
       try {
-          const formData = new FormData();
-          formData.append('destinatario', destinatario);
-          const response = await fetch(`/orcamento/${orcamentoId}/email/link`, {
-              method: 'POST',
-              body: formData
-          });
+          // Primeiro, gera o PDF silenciosamente com o TIPO CORRETO para criar o link público
+        await fetch(`/orcamento/${orcamentoId}/pdf?status=${encodeURIComponent(tipoDocumento)}`);
 
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.detail);
+        // Agora, gera o link mailto, que já buscará o token recém-criado
+        const formData = new FormData();
+        formData.append('destinatario', destinatario);
+        
+        const response = await fetch(`/orcamento/${orcamentoId}/email/link?status=${encodeURIComponent(tipoDocumento)}`, {
+            method: 'POST',
+            body: formData
+        });
 
-          window.location.href = data.mailto_link;
-          fecharModalEmail();
+        if (!response.ok) throw new Error((await response.json()).detail);
+        const data = await response.json();
+        
+        // Abre o cliente de e-mail do usuário
+        window.location.href = data.mailto_link;
+        fecharModalEmail();
 
       } catch (error) {
-          console.error("Erro ao gerar link de e-mail:", error);
           alert(`Ocorreu um erro: ${error.message}`);
+          fecharModalEmail(); // Fecha o modal mesmo se der erro
       }
     }
-
     // Define o clique e o texto do botão do modal
     document.getElementById('btn-enviar-email').onclick = abrirClienteDeEmail;
     document.getElementById('btn-enviar-email').textContent = "Abrir App de E-mail";
@@ -371,13 +456,13 @@
                   <div class="flex items-center gap-2">
                       <button onclick="editarOrcamento(${orc.id})" title="Editar Orçamento" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
                       <button onclick="abrirModalStatusPDF(${orc.id})" title="Ver PDF" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" /></svg></button>
-                      <button onclick="abrirModalEmail(${orc.id}, '${orc.nome.replace(/'/g, "\\'")}', '')" title="Enviar por E-mail" class="p-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors">
+                      <button onclick="abrirModalTipoDocumento(${orc.id}, 'email')" title="Enviar por E-mail" class="p-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                           <path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" />
                           <path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" />
                         </svg>
                       </button>
-                      <button onclick="abrirModalWhatsApp(${orc.id}, '${orc.telefone || ''}')" title="Enviar por WhatsApp" class="p-2 rounded bg-green-500 text-white hover:bg-green-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
+                      <button onclick="abrirModalTipoDocumento(${orc.id}, 'whatsapp')" title="Enviar por WhatsApp" class="p-2 rounded bg-green-500 text-white hover:bg-green-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
                       <button onclick="deletarOrcamento(${orc.id})" title="Excluir Orçamento" class="p-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
                   </div>
               </div>
@@ -388,6 +473,31 @@
         console.error("Erro ao carregar orçamentos:", e);
         lista.innerHTML = `<div class="py-8 text-center text-red-400">Erro ao carregar orçamentos.</div>`;
       }
+    }
+
+    function abrirModalTipoDocumento(orcamentoId, acao) {
+        // Guarda o ID e a AÇÃO (agora pode ser 'whatsapp' ou 'email')
+        tipoDocumentoOrcamentoIdInput.value = orcamentoId; 
+        
+        // Adiciona a ação a um atributo de dados para usarmos depois
+        modalTipoDocumento.dataset.acao = acao; 
+
+        // Define o texto do botão de confirmação dinamicamente
+        if (acao === 'whatsapp') {
+            btnConfirmarTipoDocumento.textContent = 'Confirmar';
+        } else if (acao === 'email') {
+            btnConfirmarTipoDocumento.textContent = 'Confirmar';
+        }
+        
+        document.querySelector('input[name="tipo_documento_escolha"][value="Orçamento"]').checked = true;
+        modalTipoDocumento.classList.remove('hidden');
+        modalTipoDocumento.classList.add('flex');
+        setTimeout(() => { modalTipoDocumentoBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+    }
+
+    function fecharModalTipoDocumento() {
+        modalTipoDocumentoBox.classList.add('-translate-y-10', 'opacity-0');
+        setTimeout(() => { modalTipoDocumento.classList.add('hidden'); modalTipoDocumento.classList.remove('flex'); }, 300);
     }
 
     function editarOrcamento(id) { window.location.href = `/editar-orcamento/${id}`; }
@@ -431,49 +541,47 @@
       return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
     }
 
-  function abrirModalWhatsApp(orcamentoId, telefonePrincipal) {
+  function abrirModalWhatsApp(orcamentoId, telefonePrincipal, tipoDeDocumento) { // Alteramos o terceiro parâmetro
     whatsappOrcamentoIdInput.value = orcamentoId;
+
+    // Apenas guarda o TIPO de documento escolhido para usar depois.
+    let hiddenTipo = document.getElementById('whatsapp-tipo-documento');
+    if (!hiddenTipo) {
+        hiddenTipo = document.createElement('input');
+        hiddenTipo.type = 'hidden';
+        hiddenTipo.id = 'whatsapp-tipo-documento';
+        modalWhatsAppBox.appendChild(hiddenTipo);
+    }
+    hiddenTipo.value = tipoDeDocumento; 
+
+    // O resto da função é SÓ para mostrar o modal e os contatos
     const listaContatosDiv = document.getElementById('lista-contatos-whatsapp');
     listaContatosDiv.innerHTML = `<p class="text-gray-500 text-sm p-2">Carregando...</p>`;
-
     modalWhatsApp.classList.remove('hidden');
     modalWhatsApp.classList.add('flex');
     setTimeout(() => { modalWhatsAppBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
 
-    // 1. Busca APENAS os contatos extras
     fetch(`/api/orcamento/${orcamentoId}/contatos`)
-        .then(res => res.json())
-        .then(contatosExtras => {
-            listaContatosDiv.innerHTML = '';
-            
-            // 2. Cria a lista completa começando pelos extras
-            let listaCompleta = [...contatosExtras];
-
-            // 3. Adiciona o contato principal (se ele existir) no início da lista
-            if (telefonePrincipal && telefonePrincipal.trim() !== '') {
-                listaCompleta.unshift({ nome: "Contato Principal", telefone: telefonePrincipal });
-            }
-
-            if (listaCompleta.length === 0) {
-                listaContatosDiv.innerHTML = `<p class="text-red-500 text-sm p-2">Nenhum telefone encontrado para este cliente.</p>`;
-                return;
-            }
-
-            // 4. Renderiza a lista completa no modal
-            listaCompleta.forEach(contato => {
-                const label = document.createElement('label');
-                label.className = "flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer";
-                label.innerHTML = `
-                    <input type="checkbox" value="${contato.telefone}" class="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
-                    <span class="text-gray-700">${contato.nome} <span class="text-gray-500 text-xs">(${contato.telefone})</span></span>
-                `;
-                listaContatosDiv.appendChild(label);
-            });
-        })
-        .catch(error => {
-            listaContatosDiv.innerHTML = `<p class="text-red-500 text-sm p-2">Erro ao carregar contatos.</p>`;
-            console.error(error);
+      .then(res => res.json())
+      .then(contatosExtras => {
+        listaContatosDiv.innerHTML = '';
+        let listaCompleta = [...contatosExtras];
+        if (telefonePrincipal && telefonePrincipal.trim() !== '') {
+            listaCompleta.unshift({ nome: "Contato Principal", telefone: telefonePrincipal });
+        }
+        if (listaCompleta.length === 0) {
+            listaContatosDiv.innerHTML = `<p class="text-red-500 text-sm p-2">Nenhum telefone encontrado.</p>`;
+            return;
+        }
+        listaCompleta.forEach(contato => {
+            const label = document.createElement('label');
+            label.className = "flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer";
+            label.innerHTML = `
+                <input type="checkbox" value="${contato.telefone}" class="h-4 w-4 rounded border-gray-300">
+                <span class="text-gray-700">${contato.nome} (${contato.telefone})</span>`;
+            listaContatosDiv.appendChild(label);
         });
+    });
   }
     
 
@@ -482,160 +590,188 @@
     setTimeout(() => { modalWhatsApp.classList.add('hidden'); modalWhatsApp.classList.remove('flex'); }, 300);
   }
 
-  btnEnviarWhatsAppFinal.addEventListener('click', async () => {
-    const orcamentoId = whatsappOrcamentoIdInput.value;
-    const checkboxes = document.querySelectorAll('#lista-contatos-whatsapp input[type="checkbox"]:checked');
-    
-    if (checkboxes.length === 0) {
-        alert("Por favor, selecione pelo menos um contato para enviar.");
+
+  async function deletarOrcamento(id) {
+    if (!confirm(`Tem certeza que deseja excluir o orçamento?`)) return;
+    try {
+      const response = await fetch(`/api/orcamentos/${id}`, { method: 'DELETE' });
+      if (response.status === 204) {
+        const card = document.getElementById(`orcamento-card-${id}`);
+        if (card) {
+          card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+          card.style.opacity = '0';
+          card.style.transform = 'scale(0.95)';
+          setTimeout(() => card.remove(), 500);
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Falha ao excluir o orçamento.");
+      }
+    } catch (error) {
+      console.error("Erro ao deletar orçamento:", error);
+      alert("Ocorreu um erro: " + error.message);
+    }
+  }
+
+  async function resetarContador() {
+      const inputNumero = document.getElementById('novo_numero_inicial');
+      const novoValor = inputNumero.value;
+      if (novoValor === "" || isNaN(parseInt(novoValor)) || parseInt(novoValor) < 0) {
+          alert("Por favor, insira um número válido (0 ou maior)."); return;
+      }
+      if (!confirm(`Tem certeza? O próximo orçamento será o Nº ${parseInt(novoValor) + 1}.`)) return;
+      try {
+          const formData = new FormData();
+          formData.append('novo_inicio', novoValor);
+          const response = await fetch('/api/resetar-contador/', { method: 'POST', body: formData });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.detail || "Erro desconhecido.");
+          alert(result.message);
+          fecharModalConfig();
+      } catch (error) {
+          console.error("Erro ao resetar contador:", error);
+          alert(`Ocorreu um erro: ${error.message}`);
+      }
+  }
+
+  async function atualizarModeloPDF() {
+    const select = document.getElementById('admin-template-select');
+    const novoModelo = select.value;
+
+    if (!confirm(`Tem certeza que deseja mudar seu modelo de PDF para '${novoModelo.charAt(0).toUpperCase() + novoModelo.slice(1)}'?`)) {
         return;
     }
 
+    const formData = new FormData();
+    formData.append('new_template', novoModelo);
+
     try {
-        const response = await fetch(`/orcamento/${orcamentoId}/whatsapp`);
-        if (!response.ok) throw new Error("Não foi possível gerar a mensagem.");
-        const data = await response.json();
-        const mensagemBase = data.whatsapp_message; // Supondo que a API retorna isso
-
-        checkboxes.forEach((check, index) => {
-            const telefoneLimpo = check.value.replace(/\D/g, '');
-            if (!telefoneLimpo) return;
-
-            const telefoneFinal = telefoneLimpo.startsWith("55") ? telefoneLimpo : "55" + telefoneLimpo;
-            const urlFinal = `https://wa.me/${telefoneFinal}?text=${mensagemBase}`;
-            
-            setTimeout(() => { window.open(urlFinal, '_blank'); }, index * 300);
+        const response = await fetch('/api/user/update-template', {
+            method: 'POST',
+            body: formData
         });
 
-        fecharModalWhatsApp();
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.detail || "Ocorreu um erro desconhecido.");
+        }
+
+        alert(result.message);
+        fecharModalConfig(); // Fecha o modal após o sucesso
+
     } catch (error) {
-        alert("Ocorreu um erro: " + error.message);
+        console.error("Erro ao atualizar modelo de PDF:", error);
+        alert(`Ocorreu um erro: ${error.message}`);
     }
-  });
-
-  modalWhatsApp.addEventListener('click', (event) => { if (event.target === modalWhatsApp) fecharModalWhatsApp(); });
+  }
 
 
-    async function deletarOrcamento(id) {
-      if (!confirm(`Tem certeza que deseja excluir o orçamento?`)) return;
-      try {
-        const response = await fetch(`/api/orcamentos/${id}`, { method: 'DELETE' });
-        if (response.status === 204) {
-          const card = document.getElementById(`orcamento-card-${id}`);
-          if (card) {
-            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            card.style.opacity = '0';
-            card.style.transform = 'scale(0.95)';
-            setTimeout(() => card.remove(), 500);
-          }
-        } else {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || "Falha ao excluir o orçamento.");
-        }
-      } catch (error) {
-        console.error("Erro ao deletar orçamento:", error);
-        alert("Ocorreu um erro: " + error.message);
-      }
+  async function cadastrarNovoUsuario() {
+    const usernameInput = document.getElementById('new-username');
+    const passwordInput = document.getElementById('new-password');
+    const templateInput = document.getElementById('new-template'); // Pega o elemento <select>
+
+    // 1. Pega TODOS os valores dos campos PRIMEIRO
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
+    const template = templateInput.value; // Pega o valor selecionado (ex: "joao" ou "cacador")
+
+    if (!username || !password) {
+        alert("Por favor, preencha o nome de usuário e a senha.");
+        return;
     }
 
-    async function resetarContador() {
-        const inputNumero = document.getElementById('novo_numero_inicial');
-        const novoValor = inputNumero.value;
-        if (novoValor === "" || isNaN(parseInt(novoValor)) || parseInt(novoValor) < 0) {
-            alert("Por favor, insira um número válido (0 ou maior)."); return;
+    // 2. Cria o objeto FormData UMA ÚNICA VEZ
+    const formData = new FormData();
+
+    // 3. Adiciona TODOS os dados ao mesmo objeto FormData
+    formData.append('username', username);
+    formData.append('password', password);
+    formData.append('pdf_template_name', template); // Adiciona o modelo de PDF
+
+    try {
+        const response = await fetch('/api/users/', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.detail || "Erro desconhecido ao cadastrar usuário.");
         }
-        if (!confirm(`Tem certeza? O próximo orçamento será o Nº ${parseInt(novoValor) + 1}.`)) return;
-        try {
-            const formData = new FormData();
-            formData.append('novo_inicio', novoValor);
-            const response = await fetch('/api/resetar-contador/', { method: 'POST', body: formData });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.detail || "Erro desconhecido.");
-            alert(result.message);
-            fecharModalConfig();
-        } catch (error) {
-            console.error("Erro ao resetar contador:", error);
-            alert(`Ocorreu um erro: ${error.message}`);
-        }
+
+        alert(result.message);
+        usernameInput.value = '';
+        passwordInput.value = '';
+
+    } catch (error) {
+        console.error("Erro ao cadastrar usuário:", error);
+        alert(`Ocorreu um erro: ${error.message}`);
     }
+  }
 
-    async function atualizarModeloPDF() {
-      const select = document.getElementById('admin-template-select');
-      const novoModelo = select.value;
+  function inicializar() {
+    // Listeners dos Modais
+    document.getElementById('btn-enviar-email').onclick = abrirClienteDeEmail;
+    modalEmail.addEventListener('click', (e) => { if (e.target === modalEmail) fecharModalEmail(); });
+    modal.addEventListener('click', (e) => { if (e.target === modal) fecharModalConfig(); });
+    
+    // Listeners do modal antigo de status PDF/Email
+    document.getElementById('btn-gerar-orcamento').addEventListener('click', () => { window.open(`/orcamento/${pdfOrcamentoIdInput.value}/pdf?status=Orçamento`, "_blank"); fecharModalStatusPDF(); });
+    document.getElementById('btn-gerar-nota').addEventListener('click', () => { window.open(`/orcamento/${pdfOrcamentoIdInput.value}/pdf?status=Nota de Serviço`, "_blank"); fecharModalStatusPDF(); });
+    modalStatusPdf.addEventListener('click', (e) => { if (e.target === modalStatusPdf) fecharModalStatusPDF(); });
 
-      if (!confirm(`Tem certeza que deseja mudar seu modelo de PDF para '${novoModelo.charAt(0).toUpperCase() + novoModelo.slice(1)}'?`)) {
+    // Listeners do modal de SELEÇÃO DE CONTATO WhatsApp
+    btnEnviarWhatsAppFinal.addEventListener('click', async () => {
+      const orcamentoId = whatsappOrcamentoIdInput.value;
+      const checkboxes = document.querySelectorAll('#lista-contatos-whatsapp input[type="checkbox"]:checked');
+
+      if (checkboxes.length === 0) {
+          alert("Por favor, selecione pelo menos um contato para enviar.");
           return;
       }
 
-      const formData = new FormData();
-      formData.append('new_template', novoModelo);
-
       try {
-          const response = await fetch('/api/user/update-template', {
-              method: 'POST',
-              body: formData
+          const response = await fetch(`/orcamento/${orcamentoId}/whatsapp`);
+          if (!response.ok) throw new Error("Não foi possível gerar a mensagem.");
+          const data = await response.json();
+          const mensagemBase = data.whatsapp_message;
+
+          checkboxes.forEach((check, index) => {
+            const telefoneLimpo = check.value.replace(/\D/g, '');
+            if (!telefoneLimpo) return;
+            const telefoneFinal = telefoneLimpo.startsWith("55") ? telefoneLimpo : "55" + telefoneLimpo;
+            const urlFinal = `https://wa.me/${telefoneFinal}?text=${mensagemBase}`;
+            // Simples assim: isso funciona perfeito em PC e mobile!
+            setTimeout(() => { 
+              if (isMobile()) {
+                // Tenta abrir o app via window.open
+                let win = window.open(`whatsapp://send?phone=${telefoneFinal}&text=${encodeURIComponent(mensagemBase)}`);
+                // Fallback via wa.me se não funcionar em 700ms
+                setTimeout(() => {
+                  if (!win || win.closed || typeof win.closed === 'undefined') {
+                    window.open(urlFinal, '_blank');
+                  }
+                }, 700);
+              } else {
+                window.open(urlFinal, '_blank');
+              }
+            }, index * 300);
           });
 
-          const result = await response.json();
-
-          if (!response.ok) {
-              throw new Error(result.detail || "Ocorreu um erro desconhecido.");
-          }
-
-          alert(result.message);
-          fecharModalConfig(); // Fecha o modal após o sucesso
-
+          fecharModalWhatsApp();
       } catch (error) {
-          console.error("Erro ao atualizar modelo de PDF:", error);
-          alert(`Ocorreu um erro: ${error.message}`);
+          alert("Ocorreu um erro: " + error.message);
       }
-    }
+    });
 
+    modalWhatsApp.addEventListener('click', (e) => { if (e.target === modalWhatsApp) fecharModalWhatsApp(); });
 
-    async function cadastrarNovoUsuario() {
-      const usernameInput = document.getElementById('new-username');
-      const passwordInput = document.getElementById('new-password');
-      const templateInput = document.getElementById('new-template'); // Pega o elemento <select>
-
-      // 1. Pega TODOS os valores dos campos PRIMEIRO
-      const username = usernameInput.value.trim();
-      const password = passwordInput.value.trim();
-      const template = templateInput.value; // Pega o valor selecionado (ex: "joao" ou "cacador")
-
-      if (!username || !password) {
-          alert("Por favor, preencha o nome de usuário e a senha.");
-          return;
-      }
-
-      // 2. Cria o objeto FormData UMA ÚNICA VEZ
-      const formData = new FormData();
-
-      // 3. Adiciona TODOS os dados ao mesmo objeto FormData
-      formData.append('username', username);
-      formData.append('password', password);
-      formData.append('pdf_template_name', template); // Adiciona o modelo de PDF
-
-      try {
-          const response = await fetch('/api/users/', {
-              method: 'POST',
-              body: formData
-          });
-
-          const result = await response.json();
-
-          if (!response.ok) {
-              throw new Error(result.detail || "Erro desconhecido ao cadastrar usuário.");
-          }
-
-          alert(result.message);
-          usernameInput.value = '';
-          passwordInput.value = '';
-
-      } catch (error) {
-          console.error("Erro ao cadastrar usuário:", error);
-          alert(`Ocorreu um erro: ${error.message}`);
-      }
-    }
+    // **NOVO**: Listeners para o novo modal de ESCOLHA do WhatsApp
+    btnsFecharModalTipoDocumento.forEach(btn => btn.addEventListener('click', fecharModalTipoDocumento));
+    modalTipoDocumento.addEventListener('click', (e) => { if (e.target === modalTipoDocumento) fecharModalTipoDocumento(); });
 
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('atualizado')) {
@@ -645,9 +781,10 @@
         document.body.appendChild(notificacao);
         setTimeout(() => { notificacao.remove(); window.history.replaceState({}, document.title, "/orcamentos"); }, 3000);
     }
-
+     carregarOrcamentos();
+  }
     // Carrega os orçamentos assim que o script é lido
-    carregarOrcamentos();
+    inicializar();
   </script>
 </body>
 </html> 

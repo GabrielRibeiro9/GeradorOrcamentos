@@ -434,7 +434,8 @@ async def get_pdf_publico(token: str, session: Session = Depends(get_db_session)
 @app.get("/orcamento/{orcamento_id}/whatsapp")
 def gerar_link_whatsapp(
     orcamento_id: int, 
-    request: Request, 
+    request: Request,
+    status: str = Query("Orçamento"), 
     session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -450,12 +451,19 @@ def gerar_link_whatsapp(
     pdf_url = f"{str(request.base_url)}orcamento/publico/{orcamento.token_visualizacao}"
     
     nome_cliente = orcamento.cliente.nome if orcamento.cliente else orcamento.nome_cliente
+    if status == "Nota de Serviço":
+        assunto_msg = "a sua nota de serviço"
+        saudacao = "Serviço finalizado!"
+    else: # Padrão é "Orçamento"
+        assunto_msg = "o seu orçamento"
+        saudacao = "Qualquer dúvida, estou à disposição!"
+
     mensagem = (
         f"Olá, {nome_cliente}!\n\n"
-        f"Segue o seu orçamento de número *{orcamento.numero}*.\n\n"
-        f"Visualize o orçamento completo no link abaixo:\n"
+        f"Segue {assunto_msg} de número *{orcamento.numero}*.\n\n"
+        f"Visualize o documento completo no link abaixo:\n"
         f"{pdf_url}\n\n"
-        f"Qualquer dúvida, estou à disposição!"
+        f"{saudacao}"
     )
     
     return JSONResponse(content={"whatsapp_message": quote(mensagem)})
@@ -738,7 +746,8 @@ def deletar_cliente(
 def gerar_link_email(
     orcamento_id: int,
     request: Request,
-    destinatario: str = Form(...),
+    destinatario: str = Form(""),
+    status: str = Query("Orçamento"),
     session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -763,13 +772,25 @@ def gerar_link_email(
     pdf_url = f"{str(request.base_url).replace('http://', 'https://')}orcamento/publico/{orcamento.token_visualizacao}"
 
     nome_cliente = orcamento.cliente.nome if orcamento.cliente else orcamento.nome_cliente
-    assunto = f"Orçamento #{str(orcamento.numero).zfill(4)}"
-    
-    corpo_email = f"""Olá {nome_cliente},
+
+    # Lógica condicional para personalizar a mensagem
+    if status == "Nota de Serviço":
+        assunto = f"Nota de Serviço #{str(orcamento.numero).zfill(4)}"
+        corpo_email = f"""Olá {nome_cliente},
+
+    Segue a sua nota de serviço de número #{str(orcamento.numero).zfill(4)}, referente ao trabalho finalizado.
+
+    Visualize o documento completo no link abaixo:
+    {pdf_url}
+
+    Agradecemos pela preferência!"""
+    else: # Padrão para "Orçamento"
+        assunto = f"Orçamento #{str(orcamento.numero).zfill(4)}"
+        corpo_email = f"""Olá {nome_cliente},
 
     Conforme solicitado, segue o seu orçamento de número #{str(orcamento.numero).zfill(4)}.
 
-    Visualize o orçamento completo no link abaixo:
+    Visualize o documento completo no link abaixo:
     {pdf_url}
 
     Qualquer dúvida, estou à disposição."""
