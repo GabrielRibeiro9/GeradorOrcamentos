@@ -494,12 +494,16 @@ async def atualizar_orcamento_submit(
 ):
     form_data = await request.form()
     
-    # 1. Busca o orçamento que será atualizado
-    orcamento_db = session.exec(select(Orcamento).where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)).first()
+    # 1. Busca o orçamento que será atualizado, garantindo que pertence ao usuário
+    orcamento_db = session.exec(
+        select(Orcamento).options(selectinload(Orcamento.cliente).selectinload(Cliente.contatos))
+        .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
+    ).first()
+    
     if not orcamento_db:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado para atualizar")
 
-    # 2. ATUALIZA OS DADOS DO CLIENTE ASSOCIADO
+    # 2. ATUALIZA OS DADOS DO CLIENTE ASSOCIADO (se houver um)
     # Acessamos o cliente através da relação orcamento_db.cliente
     cliente_db = orcamento_db.cliente
     if cliente_db:
@@ -512,6 +516,8 @@ async def atualizar_orcamento_submit(
         cliente_db.bairro = form_data.get("bairro")
         cliente_db.cidade_uf = form_data.get("cidade_uf")
 
+        # ESTRATÉGIA DE ATUALIZAÇÃO DOS CONTATOS: Apaga os antigos e recria
+        # Isso simplifica a lógica e evita erros
         for contato_existente in cliente_db.contatos:
             session.delete(contato_existente)
 
@@ -521,21 +527,33 @@ async def atualizar_orcamento_submit(
             novo_contato = Contato(
                 nome=contato_info['nome'], 
                 telefone=contato_info['telefone'],
-                cliente_id=cliente_db.id
+                cliente_id=cliente_db.id  # Associa ao cliente correto
             )
             session.add(novo_contato)
 
-        session.add(cliente_db)    
+        session.add(cliente_db) # Adiciona o cliente atualizado à sessão
 
     # 3. ATUALIZA OS DADOS DO PRÓPRIO ORÇAMENTO
     orcamento_db.numero = form_data.get("numero_orcamento").strip()
     orcamento_db.descricao_servico = form_data.get("descricao_servico")
     
+    # Adiciona as informações complementares que vêm dos campos ocultos
+    orcamento_db.condicao_pagamento=form_data.get("condicao_pagamento")
+    orcamento_db.prazo_entrega=form_data.get("prazo_entrega")
+    orcamento_db.garantia=form_data.get("garantia")
+    orcamento_db.observacoes=form_data.get("observacoes")
+
     itens_data = json.loads(form_data.get("itens"))
     orcamento_db.itens = itens_data
-    orcamento_db.total_geral = sum(int(i['quantidade']) * float(i['valor']) for i in itens_data)
+    # Recalcula o total geral com base nos itens atuais
+    orcamento_db.total_geral = sum(
+        (int(i.get('quantidade', 0)) * float(i.get('valor', 0))) for i in itens_data
+    )
     
-    # 4. Salva tudo e redireciona
+    # Adiciona o orçamento atualizado à sessão
+    session.add(orcamento_db)
+    
+    # 4. Salva todas as alterações no banco de dados e redireciona
     session.commit()
     return RedirectResponse(url="/orcamentos?atualizado=true", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -828,6 +846,30 @@ def delete_user(
     session.delete(user_to_delete)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@app.get("/api/cliente/verificar/")
+def verificar_cliente_existente(
+    nome: str = Query(..., min_length=3),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    """
+    Verifica se um cliente com um nome específico já existe para o usuário logado.
+    A busca não diferencia maiúsculas de minúsculas.
+    """
+    cliente_existente = session.exec(
+        select(Cliente).where(
+            func.lower(Cliente.nome) == func.lower(nome),
+            Cliente.user_id == current_user.id
+        )
+    ).first()
+    
+    if cliente_existente:
+        # Se encontrou, retorna o cliente existente para o frontend
+        return cliente_existente
+    
+    # Se não encontrou, retorna um objeto vazio para indicar que o nome está livre
+    return {}
 
 @app.get("/api/cliente/verificar/")
 def verificar_cliente_existente(

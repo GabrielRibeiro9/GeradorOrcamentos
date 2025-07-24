@@ -49,7 +49,12 @@ class CacadorPDF(FPDF):
         self.set_text_color(0, 0, 0)
 
     def footer(self):
-        pass
+        # Vai para 1.5 cm do final da página
+        self.set_y(-15)
+        self.set_font("Arial", "I", 8)
+        self.set_text_color(128) # Cor cinza
+        # Usa page_no() para o número atual e o alias '{nb}' para o total
+        self.cell(0, 10, f"Página {self.page_no()}/{{nb}}", 0, 0, 'C')
 
 # FIM DA CLASSE MyPDF
 # A função abaixo começa SEM INDENTAÇÃO
@@ -72,6 +77,7 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
         bairro = orcamento.bairro_cliente
 
     pdf = CacadorPDF(format='A4', orcamento=orcamento)
+    pdf.alias_nb_pages()
     pdf.add_page()
 
     # Bloco 2: Montagem das Variáveis para o PDF
@@ -237,43 +243,49 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
 
     pdf.ln(2)
 
-    if orcamento.condicao_pagamento:
-        pdf.set_x(start_x)
-        pdf.set_font("Arial", "B", 9)
-        pdf.cell(total_width, 5, "Pagamento:", 0, 1, 'C')
-        pdf.set_font("Arial", "", 9)
-        pdf.set_x(start_x)
-        pdf.multi_cell(total_width, 5, orcamento.condicao_pagamento, 0, 'C')
-        pdf.ln(1)
+    def draw_term_line(label, value):
+        """
+        Função para desenhar uma linha de termo com rótulo e valor,
+        com quebra de linha do valor recuada para a posição do rótulo.
+        """
+        if not value: # Não faz nada se não houver valor
+            return
 
-    # --- Prazo de Entrega ---
-    if orcamento.prazo_entrega:
         pdf.set_x(start_x)
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(total_width, 5, "Prazo:", 0, 1, 'C')
+        label_with_space = f"{label}: " # Adiciona os dois pontos e o espaço
+        pdf.cell(pdf.get_string_width(label_with_space), 5, label_with_space, 0, 0, 'L')
+        
+        # Lógica de quebra de linha que você já tem para as observações
+        value_x_start = pdf.get_x()
+        first_line_width = pdf.w - pdf.r_margin - value_x_start
+        subsequent_lines_width = pdf.w - pdf.r_margin - start_x
+        text = str(value).replace("\n", " ") # Garante que o valor é uma string
+        
         pdf.set_font("Arial", "", 9)
-        pdf.set_x(start_x)
-        pdf.multi_cell(total_width, 5, orcamento.prazo_entrega, 0, 'C')
-        pdf.ln(1)
+        lines = pdf.multi_cell(first_line_width, 5, text, split_only=True)
+        
+        if lines:
+            current_y = pdf.get_y()
+            pdf.set_xy(value_x_start, current_y)
+            pdf.cell(first_line_width, 5, lines[0], 0, 1, 'L')
+            
+            remaining_text = " ".join(lines[1:])
+            if remaining_text:
+                pdf.set_x(start_x)
+                pdf.multi_cell(subsequent_lines_width, 5, remaining_text, 0, 'L')
+        else:
+             pdf.ln() # Se não tiver linhas (valor vazio), só pula a linha
 
-    # --- Garantia ---
-    if orcamento.garantia:
-        pdf.set_x(start_x)
-        pdf.set_font("Arial", "B", 9)
-        pdf.cell(total_width, 5, "Garantia:", 0, 1, 'C')
-        pdf.set_font("Arial", "", 9)
-        pdf.set_x(start_x)
-        pdf.multi_cell(total_width, 5, orcamento.garantia, 0, 'C')
-        pdf.ln(1)
 
-    if orcamento.observacoes:
-        pdf.set_x(start_x)
-        pdf.set_font("Arial", "B", 9)
-        pdf.cell(total_width, 5, "Observações:", 0, 1, 'C')
-        pdf.set_font("Arial", "I", 9) # Usando Itálico aqui também
-        pdf.set_x(start_x)
-        pdf.multi_cell(total_width, 5, orcamento.observacoes, 0, 'C')
-        pdf.ln(1) 
+    # --- USO DA FUNÇÃO PARA TODOS OS CAMPOS ---
+    draw_term_line("Pagamento", orcamento.condicao_pagamento)
+    draw_term_line("Prazo", orcamento.prazo_entrega)
+    draw_term_line("Garantia", orcamento.garantia)
+    draw_term_line("Observações", orcamento.observacoes)
+
+    pdf.ln(1) # Espaçamento final geral
+
 
     if orcamento.status == "Nota de Serviço":    
 
@@ -332,6 +344,11 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
             img.save(tmp_qr_file, format="PNG")
             tmp_qr_path = tmp_qr_file.name
 
+        REQUIRED_PIX_HEIGHT = 75 
+
+        if pdf.get_y() + REQUIRED_PIX_HEIGHT > pdf.page_break_trigger:
+            pdf.add_page()    
+
         # Adiciona ao PDF (em uma nova página, ou abaixo do total)
         pdf.ln(5)
         pdf.set_font("Arial", "B", 11)
@@ -339,12 +356,13 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
 
         # Coordenadas (ajuste conforme layout)
         x_qr = (pdf.w - 40) / 2
-        y_qr = pdf.get_y()
-        pdf.image(tmp_qr_path, x=x_qr, y=y_qr, w=40, h=40)
+        y_pos_before_image = pdf.get_y()
+        pdf.image(tmp_qr_path, x=x_qr, y=y_pos_before_image, w=40, h=40)
 
         os.unlink(tmp_qr_path)
 
-        pdf.ln(45)
+        pdf.set_y(y_pos_before_image + 40 + 5)
+
         pdf.set_font("Arial", "", 9)
         pdf.multi_cell(0, 6, f"Chave Pix Copia e Cola:\n{payload_pix}", align="C")
 

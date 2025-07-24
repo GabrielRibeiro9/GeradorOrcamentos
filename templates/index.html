@@ -360,6 +360,25 @@
             </div>
         </div>
     </div>
+        <div id="modal-catalogo" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[60] transition-opacity duration-300">
+        <div id="modal-catalogo-box" class="bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[90vh] transform transition-all -translate-y-10 opacity-0 duration-300">
+            <!-- Cabeçalho do Modal -->
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 id="modal-catalogo-titulo" class="text-xl font-semibold text-gray-800">Buscar no Catálogo</h3>
+                <button id="btn-fechar-modal-catalogo" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
+            </div>
+            
+            <!-- Campo de Busca -->
+            <div class="p-4 border-b">
+                <input type="text" id="filtro-catalogo-input" class="w-full h-10 px-3 border border-zinc-300 rounded-md shadow-sm" placeholder="Digite para buscar...">
+            </div>
+            
+            <!-- Lista de Itens (com rolagem) -->
+            <div id="lista-catalogo-modal" class="p-2 overflow-y-auto">
+                <!-- A lista de itens do catálogo será inserida aqui pelo JavaScript -->
+            </div>
+        </div>
+    </div>
 
 <script>
 
@@ -406,6 +425,12 @@ document.addEventListener("DOMContentLoaded", function() {
     const btnFecharModalContato = document.getElementById('btn-fechar-modal-contato');
     const btnSalvarContatoModal = document.getElementById('btn-salvar-contato-modal');
     const listaContatosVisivel = document.getElementById('lista-contatos-visivel');
+    const modalCatalogo = document.getElementById('modal-catalogo');
+    const modalCatalogoBox = document.getElementById('modal-catalogo-box');
+    const modalCatalogoTitulo = document.getElementById('modal-catalogo-titulo');
+    const btnFecharModalCatalogo = document.getElementById('btn-fechar-modal-catalogo');
+    const filtroCatalogoInput = document.getElementById('filtro-catalogo-input');
+    const listaCatalogoModal = document.getElementById('lista-catalogo-modal');
     
     
     const icons = {
@@ -515,17 +540,26 @@ document.addEventListener("DOMContentLoaded", function() {
         const placeholder = tipo === "servico" ? "-- Selecione um Serviço --" : "-- Selecione um Material --";
         const icon = icons[tipo];
         
-        // Apenas renderiza o select com o ícone, sem botões extras
+        // O HTML agora inclui o botão de busca (a lupa)
         container.innerHTML = `
             <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">${icon}</div>
-            <select class="select-catalogo h-10 w-full ps-10 pe-4 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400 appearance-none">
+            <select class="select-catalogo h-10 w-full ps-10 pe-20 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400 appearance-none">
                 <option value="">${placeholder}</option>
                 ${catalogo.map(item => `<option value="${item.id}">${item.nome}</option>`).join("")}
             </select>
+            <button type="button" data-tipo-catalogo="${tipo}" class="btn-abrir-modal-catalogo absolute inset-y-0 end-0 flex items-center justify-center px-3 border-l border-zinc-300 text-zinc-600 hover:bg-zinc-100 transition-colors rounded-e-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clip-rule="evenodd" /></svg>
+            </button>
         `;
 
-        // Adiciona o listener de evento ao select recém-criado
+        // Listener de evento para o <select> (como antes)
         container.querySelector("select").addEventListener("change", (e) => handleSelecaoCatalogo(e, tipo));
+        
+        // NOVO: Listener de evento para o botão da LUPA
+        container.querySelector(".btn-abrir-modal-catalogo").addEventListener("click", (e) => {
+            const tipoCatalogo = e.currentTarget.dataset.tipoCatalogo;
+            abrirModalCatalogo(tipoCatalogo);
+        });
     }
 
 
@@ -630,7 +664,85 @@ document.addEventListener("DOMContentLoaded", function() {
     window.removerContatoExtra = (index) => {
         contatosExtras.splice(index, 1);
         renderizarTagsDeContato(); // Atualiza as tags visíveis
-    };    
+    };
+    
+    function abrirModalCatalogo(tipo) {
+        // Define o título do modal dinamicamente
+        modalCatalogoTitulo.textContent = `Buscar em ${tipo === 'servico' ? 'Serviços' : 'Materiais'}`;
+        
+        // Guarda o tipo de catálogo que estamos buscando (para saber onde procurar)
+        modalCatalogo.dataset.tipoAtual = tipo;
+        
+        // Carrega a lista de itens no modal
+        popularListaModalCatalogo(tipo, '');
+        
+        // Abre o modal
+        modalCatalogo.classList.remove('hidden');
+        modalCatalogo.classList.add('flex');
+        setTimeout(() => { 
+            modalCatalogoBox.classList.remove('-translate-y-10', 'opacity-0');
+            filtroCatalogoInput.focus(); // Foca no campo de busca
+        }, 50);
+    }
+
+    function fecharModalCatalogo() {
+        modalCatalogoBox.classList.add('-translate-y-10', 'opacity-0');
+        setTimeout(() => { 
+            modalCatalogo.classList.add('hidden'); 
+            modalCatalogo.classList.remove('flex');
+            filtroCatalogoInput.value = ''; // Limpa a busca ao fechar
+        }, 300);
+    }
+
+    function popularListaModalCatalogo(tipo, filtro) {
+        const catalogo = tipo === 'servico' ? servicosCatalogo : materiaisCatalogo;
+        const termoBusca = filtro.toLowerCase();
+        
+        // Filtra o catálogo com base no termo de busca
+        const itensFiltrados = catalogo.filter(item => item.nome.toLowerCase().includes(termoBusca));
+        
+        listaCatalogoModal.innerHTML = ''; // Limpa a lista
+        
+        if (itensFiltrados.length === 0) {
+            listaCatalogoModal.innerHTML = '<p class="p-4 text-center text-gray-400">Nenhum item encontrado.</p>';
+            return;
+        }
+        
+        itensFiltrados.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'p-3 flex justify-between items-center rounded-lg hover:bg-emerald-50 cursor-pointer border-b last:border-b-0';
+            itemDiv.innerHTML = `
+                <div class="flex flex-col flex-grow cursor-pointer">
+                    <span class="font-semibold text-gray-800">${item.nome}</span>
+                    <span class="text-sm text-gray-500">${item.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                </div>
+                <button type="button" class="btn-excluir-item-catalogo p-2 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600">
+                    <svg class="size-4 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.474.14l-.5-5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .71.787l-.5 5a.75.75 0 1 1-1.474-.14l.5-5a.75.75 0 0 1 .764-.647Z" clip-rule="evenodd" /></svg>
+                </button>
+            `;
+            // Adiciona o evento de clique que seleciona o item e fecha o modal
+            itemDiv.querySelector(".flex-grow").addEventListener('click', () => selecionarItemDoModal(item.id, tipo));
+            // Clique no BOTÃO LIXEIRA para excluir
+            itemDiv.querySelector(".btn-excluir-item-catalogo").addEventListener('click', (e) => {
+                e.stopPropagation(); // Impede que o clique na lixeira selecione o item
+                confirmarExclusao(item.id, item.nome);
+            });
+            listaCatalogoModal.appendChild(itemDiv);
+        });
+    }
+
+    function selecionarItemDoModal(itemId, tipo) {
+        // Simula a seleção no dropdown original
+        const selectId = tipo === 'servico' ? 'containerServico' : 'containerMaterial';
+        const select = document.querySelector(`#${selectId} select`);
+        select.value = itemId;
+        
+        // Dispara o evento 'change' manualmente para que a função handleSelecaoCatalogo seja chamada
+        // e preencha os campos (Item, Valor, etc.)
+        select.dispatchEvent(new Event('change'));
+        
+        fecharModalCatalogo();
+    }
 
     // --- FUNÇÕES DE LÓGICA E EVENTOS ---
 
@@ -655,11 +767,6 @@ document.addEventListener("DOMContentLoaded", function() {
     function handleSelecaoCatalogo(e, tipo) {
         const selectElement = e.target;
         const id = selectElement.value;
-        const container = selectElement.parentElement;
-
-        const lixeiraAntiga = container.querySelector("[data-action='excluir-do-catalogo']");
-
-        if (lixeiraAntiga) lixeiraAntiga.remove();
 
         if (!id) { // Se o usuário selecionou "-- Selecione --"
             itemInput.value = '';
@@ -681,46 +788,80 @@ document.addEventListener("DOMContentLoaded", function() {
         // 2. Foca no campo de quantidade para agilizar
         itemQtdInput.focus();
         
-        const btnExcluir = document.createElement('button');
-        btnExcluir.type = "button";
-        btnExcluir.title = `Excluir "${itemSelecionado.nome}" do catálogo`;
-        btnExcluir.dataset.action = "excluir-do-catalogo";
-        btnExcluir.className = "absolute inset-y-0 end-0 flex items-center justify-center px-3 border-l border-zinc-300 text-zinc-600 hover:bg-red-100 hover:text-red-600 transition-colors rounded-e-lg";
-        btnExcluir.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.474.14l-.5-5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .71.787l-.5 5a.75.75 0 1 1-1.474-.14l.5-5a.75.75 0 0 1 .764-.647Z" clip-rule="evenodd" /></svg>`;
-        
-        // Adiciona o evento de clique que chama a função de exclusão
-        btnExcluir.addEventListener('click', () => confirmarExclusao(itemSelecionado.id, itemSelecionado.nome));
-        
-        container.appendChild(btnExcluir);
         
     }
+
+
+    async function handleVerificacaoCliente() {
+        const nome = nomeInput.value.trim();
+        // Só faz a verificação se o campo tiver pelo menos 3 caracteres e se nenhum cliente já foi selecionado (ID está vazio)
+        if (nome.length < 3 || clienteIdInput.value !== '') {
+            return;
+        }
+
+        try {
+            // Chama nossa nova API, passando o nome do cliente como parâmetro de busca
+            const response = await fetch(`/api/cliente/verificar/?nome=${encodeURIComponent(nome)}`);
+            const clienteEncontrado = await response.json();
+
+            // Se o objeto retornado NÃO estiver vazio (ou seja, a API encontrou um cliente)
+            if (Object.keys(clienteEncontrado).length > 0) {
+                
+                // Pergunta ao usuário o que ele deseja fazer
+                const querCarregar = confirm(
+                    `Um cliente chamado "${clienteEncontrado.nome}" já existe.\n\nDeseja carregar os dados dele para editar ou adicionar informações?`
+                );
+
+                if (querCarregar) {
+                    // Se o usuário clicar "OK", nós usamos a função que já existe para popular o formulário!
+                    selecionarCliente(clienteEncontrado.id);
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao verificar cliente:', error);
+            // Não mostramos um alert para não atrapalhar, mas registramos o erro no console.
+        }
+    }
+
         
     
     async function confirmarExclusao(itemId, itemName) {
-        if (!confirm(`Tem certeza que deseja excluir o item "${itemName}" do catálogo? Esta ação não pode ser desfeita.`)) {
+        if (!confirm(`Tem certeza que deseja excluir "${itemName}" do catálogo?`)) {
             return;
         }
         
         try {
             const response = await fetch(`${API_BASE_URL}/api/item/${itemId}`, { method: 'DELETE' });
 
-            if (response.status !== 204) { // 204 No Content é o sucesso para DELETE
+            if (response.status !== 204) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.detail || "Falha ao excluir item do servidor.");
+                throw new Error(errorData.detail || "Falha ao excluir o item.");
             }
             
-            alert(`Item "${itemName}" removido com sucesso!`);
+            // --- ATUALIZAÇÃO AUTOMÁTICA ---
+            // 1. Limpa os campos de item caso o item excluído esteja neles
+            if(itemInput.value === itemName) {
+                limparCamposItem();
+            }
             
-            // Limpa os campos de item e recarrega os catálogos para atualizar a lista
-            limparCamposItem();
-            await carregarCatalogosAPI();
-
+            // 2. Recarrega os catálogos da API para atualizar a lista de dados
+            await carregarCatalogosAPI(); 
+            
+            // 3. Redesenha a lista DENTRO DO MODAL com a lista atualizada
+            // (ele pega o termo de busca atual e o tipo de catálogo para se redesenhar)
+            const tipoAtual = modalCatalogo.dataset.tipoAtual;
+            const filtroAtual = filtroCatalogoInput.value;
+            popularListaModalCatalogo(tipoAtual, filtroAtual);
+            
+            // 4. (Opcional, mas recomendado) Envia um alerta de sucesso
+            // alert(`Item "${itemName}" removido com sucesso.`);
+            
         } catch (error) {
             console.error("Erro ao excluir item:", error);
-            alert(`Erro: ${error.message}`);
+            alert(`Ocorreu um erro: ${error.message}`);
         }
     }
-    
+        
     async function consultarCep(e) {
         const cep = e.target.value.replace(/\D/g, "");
         if (cep.length === 8) {
@@ -940,13 +1081,20 @@ document.addEventListener("DOMContentLoaded", function() {
         adicionarItemBtn.addEventListener("click", adicionarItem);
         btnAdicionarContato.addEventListener("click", abrirModalContato);
         btnFecharModalContato.addEventListener('click', fecharModalContato);
-        btnSalvarContatoModal.addEventListener('click', salvarContatoDoModal); 
+        btnSalvarContatoModal.addEventListener('click', salvarContatoDoModal);
+        nomeInput.addEventListener("blur", handleVerificacaoCliente); 
 
         btnAbrirModalClientes.addEventListener('click', abrirModalDeClientes);
         btnFecharModalClientes.addEventListener('click', fecharModalDeClientes);
         btnAbrirModalInfo.addEventListener('click', abrirModalInfo);
         btnFecharModalInfo.addEventListener('click', fecharModalInfo);
         btnSalvarInfo.addEventListener('click', salvarInfoModal);
+        btnFecharModalCatalogo.addEventListener('click', fecharModalCatalogo);
+        modalCatalogo.addEventListener('click', (event) => { if (event.target === modalCatalogo) fecharModalCatalogo(); });
+        filtroCatalogoInput.addEventListener('input', (e) => {
+            const tipoAtual = modalCatalogo.dataset.tipoAtual;
+            popularListaModalCatalogo(tipoAtual, e.target.value);
+        });    
 
         modalInfo.addEventListener('click', (event) => {
             if (event.target === modalInfo) {
