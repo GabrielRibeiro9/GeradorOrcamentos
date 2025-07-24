@@ -466,7 +466,7 @@ def gerar_link_whatsapp(
         f"{saudacao}"
     )
     
-    return JSONResponse(content={"whatsapp_message": quote(mensagem)})
+    return JSONResponse(content={"whatsapp_message": mensagem})
 
 @app.get("/editar-orcamento/{orcamento_id}", response_class=HTMLResponse)
 async def editar_orcamento_page(
