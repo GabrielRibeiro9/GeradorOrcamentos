@@ -406,7 +406,7 @@ async def gerar_e_salvar_pdf_protegido(
     )
 
 @app.get("/orcamento/publico/{token}", response_class=StreamingResponse)
-async def get_pdf_publico(token: str, session: Session = Depends(get_db_session)):
+async def get_pdf_publico(token: str, status: str = Query("Orçamento"), session: Session = Depends(get_db_session)):
     """
     ESTA É A ROTA PÚBLICA QUE O CLIENTE USA. ELA SÓ FUNCIONA COM O TOKEN.
     """
@@ -415,6 +415,8 @@ async def get_pdf_publico(token: str, session: Session = Depends(get_db_session)
 
     if not orcamento:
         raise HTTPException(status_code=404, detail="Not Found") # Mensagem genérica por segurança
+    
+    orcamento.status = status
 
     user = session.get(User, orcamento.user_id)
     template_name = user.pdf_template_name
@@ -439,33 +441,37 @@ def gerar_link_whatsapp(
     session: Session = Depends(get_db_session),
     current_user: User = Depends(get_current_user)
 ):
+    print("STATUS RECEBIDO NO BACKEND:", status)
+    
     orcamento = session.get(Orcamento, orcamento_id)
     if not orcamento or orcamento.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado.")
 
-    # Verifica se o token existe. Se não, avisa para gerar o PDF primeiro.
     if not orcamento.token_visualizacao:
         raise HTTPException(status_code=400, detail="Por favor, clique no ícone de PDF primeiro para gerar o link de compartilhamento.")
         
-    # MONTA O LINK PÚBLICO E SEGURO USANDO O TOKEN
-    pdf_url = f"{str(request.base_url)}orcamento/publico/{orcamento.token_visualizacao}"
+    pdf_url = f"{str(request.base_url)}orcamento/publico/{orcamento.token_visualizacao}?status={quote(status)}"
     
     nome_cliente = orcamento.cliente.nome if orcamento.cliente else orcamento.nome_cliente
-    if status == "Nota de Serviço":
-        assunto_msg = "a sua nota de serviço"
-        saudacao = "Serviço finalizado!"
-    else: # Padrão é "Orçamento"
-        assunto_msg = "o seu orçamento"
-        saudacao = "Qualquer dúvida, estou à disposição!"
 
-    mensagem = (
-        f"Olá, {nome_cliente}!\n\n"
-        f"Segue {assunto_msg} de número *{orcamento.numero}*.\n\n"
-        f"Visualize o documento completo no link abaixo:\n"
-        f"{pdf_url}\n\n"
-        f"{saudacao}"
-    )
-    
+    if status == "Nota de Serviço":
+        mensagem = (
+            f"Olá, {nome_cliente}!\n\n"
+            f"Segue a sua *Nota de Serviço* nº *{orcamento.numero}* referente ao serviço finalizado.\n\n"
+            f"Você pode visualizar o documento completo no link abaixo:\n"
+            f"{pdf_url}\n\n"
+            f"Muito obrigado pela confiança!"
+        )
+    else:
+        mensagem = (
+            f"Olá, {nome_cliente}!\n\n"
+            f"Segue o seu *Orçamento* nº *{orcamento.numero}*.\n\n"
+            f"Você pode visualizar o documento completo no link abaixo:\n"
+            f"{pdf_url}\n\n"
+            f"Qualquer dúvida, estou à disposição!"
+        )
+
+    # NÃO FAÇA O ENCODE AQUI!
     return JSONResponse(content={"whatsapp_message": mensagem})
 
 @app.get("/editar-orcamento/{orcamento_id}", response_class=HTMLResponse)
@@ -769,7 +775,7 @@ def gerar_link_email(
         )
     
     # USA O TOKEN PARA CRIAR O LINK PÚBLICO E SEGURO
-    pdf_url = f"{str(request.base_url).replace('http://', 'https://')}orcamento/publico/{orcamento.token_visualizacao}"
+    pdf_url = f"{str(request.base_url).replace('http://', 'https://')}orcamento/publico/{orcamento.token_visualizacao}?status={quote(status)}"
 
     nome_cliente = orcamento.cliente.nome if orcamento.cliente else orcamento.nome_cliente
 
@@ -915,6 +921,7 @@ def verificar_cliente_existente(
     
     # Se não encontrou, retorna um objeto vazio para indicar que o nome está livre
     return {}
+
 
 
  

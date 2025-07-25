@@ -89,6 +89,47 @@ class JoaoPDF(FPDF):
             total = quantidade * valor
             self.cell(TABLE_COL_WIDTHS[4], row_height, format_brl(total), border=1, align="R", ln=1)
 
+    def draw_info_line(self, label, value, is_italic=False):
+        """
+        Desenha uma linha de informação com rótulo e valor,
+        com quebra de linha do valor recuada sob o rótulo.
+        """
+        if not value:
+            return
+            
+        self.set_x(10)
+        self.set_font("Arial", "B", 10)
+        self.set_text_color(0, 51, 102)
+        
+        label_text = f"{label}:"
+        self.cell(self.get_string_width(label_text) + 2, 5, label_text, 0, 0, 'L')
+        
+        # 1. Calcula os espaços disponíveis
+        value_x_start = self.get_x()
+        first_line_width = self.w - self.r_margin - value_x_start
+        subsequent_lines_width = self.w - self.r_margin - 10 # 10 é a margem inicial (start_x)
+        
+        text = str(value).replace("\n", " ")
+        
+        # 2. Define a fonte do valor e pré-calcula as linhas
+        font_style = "I" if is_italic else ""
+        self.set_font("Arial", font_style, 10)
+        self.set_text_color(0, 0, 0)
+        lines = self.multi_cell(first_line_width, 5, text, split_only=True)
+        
+        # 3. Desenha o conteúdo linha a linha com controle total da posição
+        if lines:
+            current_y = self.get_y()
+            self.set_xy(value_x_start, current_y)
+            self.cell(first_line_width, 5, lines[0], ln=1) # Usa ln=1 para pular para a próxima linha
+
+            remaining_text = " ".join(lines[1:])
+            if remaining_text:
+                self.set_x(10) # Recua para o início da margem
+                self.multi_cell(subsequent_lines_width, 5, remaining_text, 0, 'L')
+        
+        self.ln(1) # Espaço final  
+
     # A função agora não recebe mais 'orcamento' como parâmetro, pois já o tem
     def draw_content(self):
         orcamento = self.orcamento
@@ -164,45 +205,15 @@ class JoaoPDF(FPDF):
         self.cell(TABLE_COL_WIDTHS[-1], 8, format_brl(orcamento.total_geral), 0, 1, "R", fill=True)
         self.set_y(230) 
         
-        # --- Condição de Pagamento ---
-        if orcamento.condicao_pagamento:
-            self.set_x(10)
-            self.set_font("Arial", "B", 10)
-            self.set_text_color(0, 51, 102)
-            self.cell(40, 5, "Condição de Pagamento:")
-            self.set_font("Arial", "", 10)
-            self.set_text_color(0, 0, 0)
-            self.cell(0, 5, orcamento.condicao_pagamento, ln=True)
 
-        # --- Prazo de Entrega ---
-        if orcamento.prazo_entrega:
-            self.set_x(10)
-            self.set_font("Arial", "B", 10)
-            self.set_text_color(0, 51, 102)
-            self.cell(40, 5, "Prazo de Entrega:")
-            self.set_font("Arial", "", 10)
-            self.set_text_color(0, 0, 0)
-            self.cell(0, 5, orcamento.prazo_entrega, ln=True)
+        self.set_y(230) 
 
-        # --- Garantia ---
-        if orcamento.garantia:
-            self.set_x(10)
-            self.set_font("Arial", "B", 10)
-            self.set_text_color(0, 51, 102)
-            self.cell(40, 5, "Garantia:")
-            self.set_font("Arial", "", 10)
-            self.set_text_color(0, 0, 0)
-            self.cell(0, 5, orcamento.garantia, ln=True)
-
-        if orcamento.observacoes:
-            self.set_x(10)
-            self.set_font("Arial", "B", 10)
-            self.set_text_color(0, 51, 102)
-            self.cell(40, 5, "Observações:")
-            self.set_font("Arial", "I", 10) # 'I' para Itálico, para diferenciar
-            self.set_text_color(0, 0, 0)
-            # Usamos multi_cell para que o texto quebre a linha automaticamente
-            self.multi_cell(0, 5, orcamento.observacoes, align='L')    
+        # Chama a nova função para cada item, indicando se deve ser em itálico
+        self.draw_info_line("Condição de Pagamento", orcamento.condicao_pagamento)
+        self.draw_info_line("Prazo de Entrega", orcamento.prazo_entrega)
+        self.draw_info_line("Garantia", orcamento.garantia)
+        self.draw_info_line("Observações", orcamento.observacoes, is_italic=True)
+        
 
 
         self.set_y(-30); self.set_font("Arial", "B", 10); self.set_text_color(0, 51, 102)

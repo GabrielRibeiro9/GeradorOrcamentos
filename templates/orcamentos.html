@@ -285,7 +285,7 @@
               const orcamentoAtual = orcamentos.find(o => o.id === parseInt(orcamentoId));
               
               // AGORA sim abrimos o modal de seleção de contatos.
-              abrirModalWhatsApp(orcamentoId, orcamentoAtual?.telefone || '');
+              abrirModalWhatsApp(orcamentoId, orcamentoAtual?.telefone || '', tipoDocumento);
 
           } else if (acao === 'email') {
               const orcamentoRes = await fetch('/api/orcamentos/');
@@ -321,10 +321,10 @@
         // Agora, gera o link mailto, que já buscará o token recém-criado
         const formData = new FormData();
         formData.append('destinatario', destinatario);
-        
+
         const response = await fetch(`/orcamento/${orcamentoId}/email/link?status=${encodeURIComponent(tipoDocumento)}`, {
-            method: 'POST',
-            body: formData
+          method: 'POST',
+          body: formData
         });
 
         if (!response.ok) throw new Error((await response.json()).detail);
@@ -733,8 +733,11 @@
           return;
       }
 
+      const tipoDocumento = document.getElementById('whatsapp-tipo-documento').value;
+      console.log("Tipo selecionado para WhatsApp:", tipoDocumento)
+
       try {
-          const response = await fetch(`/orcamento/${orcamentoId}/whatsapp`);
+          const response = await fetch(`/orcamento/${orcamentoId}/whatsapp?status=${encodeURIComponent(tipoDocumento)}`);
           if (!response.ok) throw new Error("Não foi possível gerar a mensagem.");
           const data = await response.json();
           const mensagemBase = data.whatsapp_message;
@@ -743,7 +746,7 @@
             const telefoneLimpo = check.value.replace(/\D/g, '');
             if (!telefoneLimpo) return;
             const telefoneFinal = telefoneLimpo.startsWith("55") ? telefoneLimpo : "55" + telefoneLimpo;
-            const urlFinal = `https://wa.me/${telefoneFinal}?text=${mensagemBase}`;
+            const urlFinal = `https://wa.me/${telefoneFinal}?text=${encodeURIComponent(mensagemBase)}`;
             // Simples assim: isso funciona perfeito em PC e mobile!
             setTimeout(() => { 
               if (isMobile()) {
