@@ -54,7 +54,6 @@ class Orcamento(SQLModel, table=True):
     data_validade: str
     pdf_url: Optional[str] = Field(default=None)
     token_visualizacao: Optional[str] = Field(default=None, index=True) 
-    cliente_id: Optional[int] = Field(default=None, foreign_key="cliente.id")
     nome_cliente: Optional[str] = None
     telefone_cliente: Optional[str] = None
     cep_cliente: Optional[str] = None
@@ -68,6 +67,7 @@ class Orcamento(SQLModel, table=True):
     garantia: Optional[str] = Field(default=None)
     observacoes: Optional[str] = Field(default=None)
     status: Optional[str] = Field(default="Orçamento", index=True)
+    contatos_extras: List["ContatoOrcamento"] = Relationship(back_populates="orcamento", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     
     user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     user: Optional["User"] = Relationship(back_populates="orcamentos")
@@ -80,6 +80,7 @@ class Contato(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nome: str = Field(index=True)
     telefone: str
+    email: Optional[str] = Field(default=None)
     
     # Chave estrangeira para ligar o contato ao cliente.
     cliente_id: Optional[int] = Field(default=None, foreign_key="cliente.id")
@@ -87,6 +88,15 @@ class Contato(SQLModel, table=True):
     # A Relação que permite, a partir de um Contato,
     # saber a qual Cliente ele pertence.
     cliente: Optional["Cliente"] = Relationship(back_populates="contatos")
+
+class ContatoOrcamento(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nome: str
+    telefone: str
+    email: Optional[str] = Field(default=None)
+
+    orcamento_id: Optional[int] = Field(default=None, foreign_key="orcamento.id")
+    orcamento: Optional["Orcamento"] = Relationship(back_populates="contatos_extras")    
 
 
  

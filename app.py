@@ -30,7 +30,7 @@ import cloudinary.uploader
 import cloudinary.api
 
 # --- Import dos seus modelos de dados ---
-from models import Orcamento, Item, User, Cliente, Contato
+from models import Orcamento, Item, User, Cliente, Contato, ContatoOrcamento
 
 # --- Import do nosso módulo de segurança ---
 from security import get_password_hash, verify_password
@@ -206,19 +206,46 @@ async def salvar_orcamento_endpoint(
     contatos_json = form_data.get("contatos", "[]") 
     contatos_data = json.loads(contatos_json)
 
-    cliente_db = None
+    cliente_para_orcamento = None
     cliente_id_para_orcamento = None
 
-    # Se usuário selecionou um cliente existente
-    if cliente_id_str:
-        # Se um cliente existente foi selecionado
-        cliente_db = session.get(Cliente, int(cliente_id_str))
-        if not cliente_db or cliente_db.user_id != current_user.id:
+    if cliente_id_str and salvar_cliente_flag:
+        cliente_existente = session.get(Cliente, int(cliente_id_str))
+        if not cliente_existente or cliente_existente.user_id != current_user.id:
             raise HTTPException(status_code=404, detail="Cliente selecionado inválido.")
-        cliente_id_para_orcamento = cliente_db.id
+        
+        # ATUALIZA os dados do cliente existente com o que veio do formulário
+        cliente_existente.nome = form_data.get("nome")
+        cliente_existente.telefone = form_data.get("telefone")
+        cliente_existente.cep = form_data.get("cep")
+        cliente_existente.logradouro = form_data.get("logradouro")
+        cliente_existente.numero_casa = form_data.get("numero_casa")
+        cliente_existente.complemento = form_data.get("complemento")
+        cliente_existente.bairro = form_data.get("bairro")
+        cliente_existente.cidade_uf = form_data.get("cidade_uf")
 
-    elif nome_cliente and salvar_cliente_flag:
-        cliente_db = Cliente(
+        # Apaga os contatos antigos e recria com a nova lista (mesma lógica da tela de edição)
+        for contato in cliente_existente.contatos:
+            session.delete(contato)
+        
+        for contato_info in contatos_data:
+            session.add(Contato(
+                nome=contato_info['nome'],
+                telefone=contato_info['telefone'],
+                email=contato_info.get('email'),
+                cliente_id=cliente_existente.id
+            ))
+        
+        session.add(cliente_existente)
+        session.commit()
+        session.refresh(cliente_existente)
+        
+        cliente_para_orcamento = cliente_existente
+        cliente_id_para_orcamento = cliente_existente.id
+
+    # CASO 2: Um cliente NOVO está sendo criado e salvo
+    elif not cliente_id_str and nome_cliente and salvar_cliente_flag:
+        cliente_novo = Cliente(
             nome=nome_cliente,
             telefone=form_data.get("telefone"),
             cep=form_data.get("cep"),
@@ -229,22 +256,29 @@ async def salvar_orcamento_endpoint(
             cidade_uf=form_data.get("cidade_uf"),
             user_id=current_user.id
         )
-        session.add(cliente_db)
+        session.add(cliente_novo)
+        session.commit() # Salva o cliente para obter um ID
+        session.refresh(cliente_novo)
+
+        # Agora cria os contatos vinculados ao novo cliente
+        for contato_info in contatos_data:
+            session.add(Contato(
+                nome=contato_info['nome'],
+                telefone=contato_info['telefone'],
+                email=contato_info.get('email'),
+                cliente_id=cliente_novo.id
+            ))
 
         session.commit()
-        session.refresh(cliente_db)
+        session.refresh(cliente_novo)
 
-        cliente_id_para_orcamento = cliente_db.id
-    
-        for contato_info in contatos_data:
-            novo_contato = Contato(
-                nome=contato_info.get('nome'),
-                telefone=contato_info.get('telefone'),
-                 cliente_id=cliente_id_para_orcamento # Linkamos ao cliente
-            )
-            session.add(novo_contato)
+        cliente_para_orcamento = cliente_novo
+        cliente_id_para_orcamento = cliente_novo.id
 
-        session.commit()    
+    # CASO 3: Um cliente existente foi selecionado, mas NENHUMA alteração foi feita/salva
+    elif cliente_id_str:
+        cliente_para_orcamento = session.get(Cliente, int(cliente_id_str))
+        cliente_id_para_orcamento = cliente_para_orcamento.id    
 
     # --- LÓGICA DO ORÇAMENTO (como já estava)
     itens_data = json.loads(form_data.get("itens"))
@@ -259,6 +293,7 @@ async def salvar_orcamento_endpoint(
         data_validade=(datetime.now() + timedelta(days=7)).strftime('%d/%m/%Y'),
         user_id=current_user.id,
         cliente_id=cliente_id_para_orcamento,
+
         nome_cliente=form_data.get("nome"),
         telefone_cliente=form_data.get("telefone"),
         cep_cliente=form_data.get("cep"),
@@ -272,6 +307,18 @@ async def salvar_orcamento_endpoint(
         garantia=form_data.get("garantia"),
         observacoes=form_data.get("observacoes"),
     )
+
+    contatos_json = form_data.get("contatos", "[]") 
+    contatos_data = json.loads(contatos_json)
+
+    for contato_info in contatos_data:
+        contato_orc = ContatoOrcamento(
+            nome=contato_info['nome'],
+            telefone=contato_info['telefone'],
+            email=contato_info.get('email')
+        )
+        orcamento_db.contatos_extras.append(contato_orc)
+
     session.add(orcamento_db)
     session.commit()
     
@@ -508,66 +555,50 @@ async def atualizar_orcamento_submit(
 ):
     form_data = await request.form()
     
-    # 1. Busca o orçamento que será atualizado, garantindo que pertence ao usuário
     orcamento_db = session.exec(
-        select(Orcamento).options(selectinload(Orcamento.cliente).selectinload(Cliente.contatos))
+        select(Orcamento).options(selectinload(Orcamento.contatos_extras)) # Carrega os contatos antigos do ORÇAMENTO
         .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
     ).first()
-    
     if not orcamento_db:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado para atualizar")
 
-    # 2. ATUALIZA OS DADOS DO CLIENTE ASSOCIADO (se houver um)
-    # Acessamos o cliente através da relação orcamento_db.cliente
-    cliente_db = orcamento_db.cliente
-    if cliente_db:
-        cliente_db.nome = form_data.get("nome")
-        cliente_db.telefone = form_data.get("telefone")
-        cliente_db.cep = form_data.get("cep")
-        cliente_db.logradouro = form_data.get("logradouro")
-        cliente_db.numero_casa = form_data.get("numero_casa")
-        cliente_db.complemento = form_data.get("complemento")
-        cliente_db.bairro = form_data.get("bairro")
-        cliente_db.cidade_uf = form_data.get("cidade_uf")
-
-        # ESTRATÉGIA DE ATUALIZAÇÃO DOS CONTATOS: Apaga os antigos e recria
-        # Isso simplifica a lógica e evita erros
-        for contato_existente in cliente_db.contatos:
-            session.delete(contato_existente)
-
-        contatos_json = form_data.get("contatos", "[]")
-        contatos_data = json.loads(contatos_json)
-        for contato_info in contatos_data:
-            novo_contato = Contato(
-                nome=contato_info['nome'], 
-                telefone=contato_info['telefone'],
-                cliente_id=cliente_db.id  # Associa ao cliente correto
-            )
-            session.add(novo_contato)
-
-        session.add(cliente_db) # Adiciona o cliente atualizado à sessão
-
-    # 3. ATUALIZA OS DADOS DO PRÓPRIO ORÇAMENTO
+    # ATUALIZA OS DADOS DE FALLBACK (copiados para o orçamento)
+    orcamento_db.nome_cliente = form_data.get("nome")
+    orcamento_db.telefone_cliente = form_data.get("telefone")
+    orcamento_db.cep_cliente = form_data.get("cep")
+    orcamento_db.logradouro_cliente = form_data.get("logradouro")
+    orcamento_db.numero_casa_cliente = form_data.get("numero_casa")
+    orcamento_db.complemento_cliente = form_data.get("complemento")
+    orcamento_db.bairro_cliente = form_data.get("bairro")
+    orcamento_db.cidade_uf_cliente = form_data.get("cidade_uf")
+    
+    # ATUALIZA OS DADOS DO ORÇAMENTO
     orcamento_db.numero = form_data.get("numero_orcamento").strip()
     orcamento_db.descricao_servico = form_data.get("descricao_servico")
     
-    # Adiciona as informações complementares que vêm dos campos ocultos
-    orcamento_db.condicao_pagamento=form_data.get("condicao_pagamento")
-    orcamento_db.prazo_entrega=form_data.get("prazo_entrega")
-    orcamento_db.garantia=form_data.get("garantia")
-    orcamento_db.observacoes=form_data.get("observacoes")
-
     itens_data = json.loads(form_data.get("itens"))
     orcamento_db.itens = itens_data
-    # Recalcula o total geral com base nos itens atuais
-    orcamento_db.total_geral = sum(
-        (int(i.get('quantidade', 0)) * float(i.get('valor', 0))) for i in itens_data
-    )
+    orcamento_db.total_geral = sum(int(i.get('quantidade', 0)) * float(i.get('valor', 0)) for i in itens_data)
     
-    # Adiciona o orçamento atualizado à sessão
+    orcamento_db.condicao_pagamento = form_data.get("condicao_pagamento")
+    orcamento_db.prazo_entrega = form_data.get("prazo_entrega")
+    orcamento_db.garantia = form_data.get("garantia")
+    orcamento_db.observacoes = form_data.get("observacoes")
+
+    # ATUALIZA A LISTA DE CONTATOS DO ORÇAMENTO
+    orcamento_db.contatos_extras.clear()
+    contatos_json = form_data.get("contatos", "[]")
+    contatos_data = json.loads(contatos_json)
+    for contato_info in contatos_data:
+        orcamento_db.contatos_extras.append(
+            ContatoOrcamento(
+                nome=contato_info['nome'], 
+                telefone=contato_info['telefone'],
+                email=contato_info.get('email')
+            )
+        )
+    
     session.add(orcamento_db)
-    
-    # 4. Salva todas as alterações no banco de dados e redireciona
     session.commit()
     return RedirectResponse(url="/orcamentos?atualizado=true", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -665,9 +696,10 @@ def get_orcamento_do_usuario(session, orcamento_id, user_id):
     return orcamento
 
 class ContatoResponse(BaseModel):
-    id: Optional[int]
+    id: Optional[int] = None
     nome: str
     telefone: str
+    email: Optional[str] = None
 
 class ClienteComContatosResponse(BaseModel):
     id: Optional[int]
@@ -682,6 +714,8 @@ class ClienteComContatosResponse(BaseModel):
     contatos: List[ContatoResponse] = []
 
 # --- ROTAS DA API PARA CLIENTES ---
+# SUBSTITUA esta função de API inteira no app.py
+
 @app.get("/api/orcamento/{orcamento_id}/contatos", response_model=List[ContatoResponse])
 def get_orcamento_contatos(
     orcamento_id: int, 
@@ -689,21 +723,39 @@ def get_orcamento_contatos(
     session: Session = Depends(get_db_session)
 ):
     """
-    Busca um orçamento pelo ID e retorna a lista de contatos 
-    do cliente associado a ele.
+    Busca um orçamento pelo ID e retorna uma lista limpa de contatos 
+    (o principal e os extras salvos NO ORÇAMENTO).
     """
     orcamento = session.exec(
-        select(Orcamento).options(
-            selectinload(Orcamento.cliente).selectinload(Cliente.contatos)
-        )
+        select(Orcamento).options(selectinload(Orcamento.contatos_extras)) # Só precisamos carregar os contatos do orçamento
         .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
     ).first()
     
-    # Se não encontrar o orçamento ou o cliente, retorna uma lista vazia
-    if not orcamento or not orcamento.cliente:
+    if not orcamento:
         return []
-    
-    return orcamento.cliente.contatos
+
+    telefones_adicionados = set()
+    contatos_unicos = []
+
+    # 1. Adiciona o contato principal (o que foi salvo/digitado para o orçamento)
+    if orcamento.telefone_cliente:
+        telefone_normalizado = "".join(filter(str.isdigit, orcamento.telefone_cliente))
+        if telefone_normalizado and telefone_normalizado not in telefones_adicionados:
+            contatos_unicos.append(
+                ContatoResponse(id=None, nome=orcamento.nome_cliente, telefone=orcamento.telefone_cliente)
+            )
+            telefones_adicionados.add(telefone_normalizado)
+        
+    # 2. Adiciona os contatos extras que foram salvos COM o orçamento
+    for contato in orcamento.contatos_extras:
+        telefone_normalizado = "".join(filter(str.isdigit, contato.telefone))
+        if telefone_normalizado and telefone_normalizado not in telefones_adicionados:
+            contatos_unicos.append(
+                ContatoResponse(id=contato.id, nome=contato.nome, telefone=contato.telefone, email=contato.email)
+            )
+            telefones_adicionados.add(telefone_normalizado)
+            
+    return contatos_unicos
 
 @app.get("/api/clientes/", response_model=List[ClienteComContatosResponse]) 
 def listar_clientes_api(
@@ -921,6 +973,30 @@ def verificar_cliente_existente(
     
     # Se não encontrou, retorna um objeto vazio para indicar que o nome está livre
     return {}
+
+class ContatoEmailResponse(BaseModel):
+    nome: str
+    email: str
+
+@app.get("/api/orcamento/{orcamento_id}/emails", response_model=List[ContatoEmailResponse])
+def get_orcamento_emails(
+    orcamento_id: int, 
+    current_user: User = Depends(get_current_user), 
+    session: Session = Depends(get_db_session)
+):
+    orcamento = session.exec(
+        select(Orcamento).options(selectinload(Orcamento.contatos_extras))
+        .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
+    ).first()
+    if not orcamento: return []
+    
+    lista_emails = []
+    # Percorre apenas os contatos extras e adiciona aqueles que têm e-mail
+    for contato in orcamento.contatos_extras:
+        if contato.email:
+            lista_emails.append(ContatoEmailResponse(nome=contato.nome, email=contato.email))
+    
+    return lista_emails
 
 
 

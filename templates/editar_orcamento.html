@@ -357,6 +357,18 @@
                         <input type="tel" id="modal-contato-telefone" placeholder="(99) 99999-9999" class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" maxlength="15" oninput="mascara(event, '(##) #####-####')">
                     </div>
                 </div>
+                <div>
+                <label for="modal-contato-email" class="block text-sm font-medium text-gray-700">E-mail (Opcional):</label>
+                <div class="relative mt-1">
+                    <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-400">
+                           <path d="M3 4a2 2 0 0 0-2 2v1.161l8.441 4.221a1.25 1.25 0 0 0 1.118 0L19 7.162V6a2 2 0 0 0-2-2H3Z" />
+                           <path d="M19 8.839l-7.77 3.885a2.75 2.75 0 0 1-2.46 0L1 8.839V14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.839Z" />
+                       </svg>
+                    </div>
+                    <input type="email" id="modal-contato-email" placeholder="email@exemplo.com" class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400">
+                </div>
+            </div>
 
             </div>
             <div class="mt-6 text-right">
@@ -385,16 +397,66 @@
             </div>
         </div>
     </div>
+        <div id="modal-tipo-documento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[60]">
+        <div id="modal-tipo-documento-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm mx-4 transform transition-all -translate-y-10 opacity-0 duration-300">
+            <!-- Título -->
+            <h3 class="text-lg font-medium text-gray-900 text-center">Qual documento deseja enviar?</h3>
+            
+            <!-- Conteúdo/Opções -->
+            <div class="mt-4 space-y-3">
+                <p class="text-sm text-center text-gray-500">
+                    Selecione o tipo de documento que será gerado para o compartilhamento.
+                </p>
+                <div class="pt-2">
+                    <label class="flex items-center p-3 w-full bg-white border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                        <input type="radio" name="tipo_documento_escolha" value="Orçamento" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" checked>
+                        <span class="ml-3 text-sm font-medium text-gray-800">Enviar como Orçamento</span>
+                    </label>
+                </div>
+                <div>
+                    <label class="flex items-center p-3 w-full bg-white border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                        <input type="radio" name="tipo_documento_escolha" value="Nota de Serviço" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                        <span class="ml-3 text-sm font-medium text-gray-800">Enviar como Nota de Serviço</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" class="btn-fechar-modal-tipo-documento px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
+                <button type="button" id="btn-confirmar-tipo-documento" class="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700">Confirmar e Continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Envio via WhatsApp -->
+    <div id="modal-whatsapp" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div id="modal-whatsapp-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md transform transition-all -translate-y-10 opacity-0 duration-300">
+            <div class="flex items-center justify-between pb-3 border-b">
+                <h3 class="text-xl font-semibold text-gray-800">Enviar por WhatsApp</h3>
+                <button onclick="fecharModalWhatsApp()" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
+            </div>
+            <div class="mt-4 space-y-4">
+                <p class="text-sm">Selecione os contatos para enviar:</p>
+                <div id="lista-contatos-whatsapp" class="space-y-2 border-t border-b py-3 max-h-48 overflow-y-auto">
+                    <!-- A lista de contatos com checkboxes vai aqui -->
+                </div>
+                <button id="btn-enviar-whatsapp-final" class="w-full h-10 px-4 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 transition flex items-center justify-center gap-2">
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                    Enviar para Selecionados
+                </button>
+            </div>
+        </div>
+    </div>
 
 <script>
-
-
 document.addEventListener("DOMContentLoaded", function() {
     
     // --- 1. VARIÁVEIS GLOBAIS ---
     const API_BASE_URL = window.location.origin;
     let itens = orcamentoData.itens || [];
-    let contatosExtras = (orcamentoData.cliente && orcamentoData.cliente.contatos) ? orcamentoData.cliente.contatos : [];
+    // AQUI ESTÁ A MUDANÇA: Inicia como um array vazio. Será populado via API.
+    let contatosExtras = []; 
     let servicosCatalogo = [];
     let materiaisCatalogo = [];
 
@@ -421,7 +483,6 @@ document.addEventListener("DOMContentLoaded", function() {
     const btnSalvarInfo = document.getElementById('btn-salvar-info');
     const tipoItemIconDiv = document.getElementById("tipoItemIcon");
 
-    // ELEMENTOS DO MODAL DE CATÁLOGO
     const modalCatalogo = document.getElementById('modal-catalogo');
     const modalCatalogoBox = document.getElementById('modal-catalogo-box');
     const modalCatalogoTitulo = document.getElementById('modal-catalogo-titulo');
@@ -437,13 +498,28 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // --- 3. FUNÇÕES ---
 
+    // -- AQUI ESTÁ A NOVA FUNÇÃO PARA CARREGAR OS CONTATOS ---
+    async function carregarContatosExtras(orcamentoId) {
+        try {
+            const response = await fetch(`/api/orcamento/${orcamentoId}/contatos`);
+            if (response.ok) {
+                const contatos = await response.json();
+                contatosExtras = contatos; // Popula a variável global com os dados da API
+                renderizarTagsDeContato(); // Renderiza as tags verdes com os contatos carregados
+            } else {
+                console.error("Falha ao carregar os contatos extras do orçamento.");
+            }
+        } catch (error) {
+            console.error("Erro na requisição dos contatos extras:", error);
+        }
+    }
+    
     function formatarMoeda(e) { let v = e.target.value.replace(/\D/g,""); e.target.value = !v ? "" : (parseFloat(v)/100).toLocaleString("pt-BR", {minimumFractionDigits: 2}); }
     window.mascara = (e,p) => { let i=0, v=e.target.value.replace(/\D/g,""); e.target.value = p.replace(/#/g, ()=> v[i++]||""); };
     const updateTableVisibility = () => tableContainer.classList.toggle("hidden", itens.length === 0);
     function limparCamposItem() { itemInput.value = ""; itemQtdInput.value = "1"; itemValorInput.value = ""; tipoItemSelect.value = "default"; updateTipoItemIcon(); itemInput.focus(); }
     const updateTipoItemIcon = () => tipoItemIconDiv.innerHTML = icons[tipoItemSelect.value] || icons.default;
 
-    // --- Funções do Modal de Catálogo ---
     function abrirModalCatalogo(tipo) {
         modalCatalogoTitulo.textContent = `Buscar em ${tipo === 'servico' ? 'Serviços' : 'Materiais'}`;
         modalCatalogo.dataset.tipoAtual = tipo;
@@ -452,23 +528,19 @@ document.addEventListener("DOMContentLoaded", function() {
         modalCatalogo.classList.add('flex');
         setTimeout(() => { modalCatalogoBox.classList.remove('-translate-y-10', 'opacity-0'); filtroCatalogoInput.focus(); }, 50);
     }
-
     function fecharModalCatalogo() {
         modalCatalogoBox.classList.add('-translate-y-10', 'opacity-0');
         setTimeout(() => { modalCatalogo.classList.add('hidden'); modalCatalogo.classList.remove('flex'); filtroCatalogoInput.value = ''; }, 300);
     }
-
     function popularListaModalCatalogo(tipo, filtro) {
         const catalogo = tipo === 'servico' ? servicosCatalogo : materiaisCatalogo;
         const termoBusca = filtro.toLowerCase();
         const itensFiltrados = catalogo.filter(item => item.nome.toLowerCase().includes(termoBusca));
-        
         listaCatalogoModal.innerHTML = '';
         if (itensFiltrados.length === 0) {
             listaCatalogoModal.innerHTML = '<p class="p-4 text-center text-gray-400">Nenhum item encontrado.</p>';
             return;
         }
-        
         itensFiltrados.forEach(item => {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'p-3 flex justify-between items-center rounded-lg hover:bg-emerald-50 border-b last:border-b-0';
@@ -482,14 +554,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 </button>
             `;
             itemDiv.querySelector(".flex-grow").addEventListener('click', () => selecionarItemDoModal(item.id, tipo));
-            itemDiv.querySelector(".btn-excluir-item-catalogo").addEventListener('click', (e) => {
-                e.stopPropagation();
-                confirmarExclusao(item.id, item.nome);
-            });
+            itemDiv.querySelector(".btn-excluir-item-catalogo").addEventListener('click', (e) => { e.stopPropagation(); confirmarExclusao(item.id, item.nome); });
             listaCatalogoModal.appendChild(itemDiv);
         });
     }
-
     function selecionarItemDoModal(itemId, tipo) {
         const selectId = tipo === 'servico' ? 'containerServico' : 'containerMaterial';
         const select = document.querySelector(`#${selectId} select`);
@@ -497,7 +565,6 @@ document.addEventListener("DOMContentLoaded", function() {
         select.dispatchEvent(new Event('change'));
         fecharModalCatalogo();
     }
-
     async function confirmarExclusao(itemId, itemName) {
         if (!confirm(`Tem certeza que deseja excluir "${itemName}" do catálogo?`)) return;
         try {
@@ -516,8 +583,6 @@ document.addEventListener("DOMContentLoaded", function() {
             alert(`Ocorreu um erro: ${error.message}`);
         }
     }
-
-    // --- Funções do Catálogo (Renderização no formulário) ---
     async function carregarCatalogosAPI() {
         try {
             const [respServ, respMat] = await Promise.all([ fetch(`${API_BASE_URL}/api/servico/`), fetch(`${API_BASE_URL}/api/materiais/`) ]);
@@ -528,7 +593,6 @@ document.addEventListener("DOMContentLoaded", function() {
             renderizarSeletor("material");
         } catch (error) { console.error(error); }
     }
-    
     function renderizarSeletor(tipo) {
         const container = document.getElementById(tipo === "servico" ? "containerServico" : "containerMaterial");
         const catalogo = tipo === "servico" ? servicosCatalogo : materiaisCatalogo;
@@ -543,11 +607,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clip-rule="evenodd" /></svg>
             </button>`;
         container.querySelector("select").addEventListener("change", (e) => handleSelecaoCatalogo(e, tipo));
-        container.querySelector(".btn-abrir-modal-catalogo").addEventListener("click", (e) => {
-            abrirModalCatalogo(e.currentTarget.dataset.tipoCatalogo);
-        });
+        container.querySelector(".btn-abrir-modal-catalogo").addEventListener("click", (e) => { abrirModalCatalogo(e.currentTarget.dataset.tipoCatalogo); });
     }
-
     function handleSelecaoCatalogo(e, tipo) {
         const selectElement = e.target;
         const id = selectElement.value;
@@ -561,8 +622,6 @@ document.addEventListener("DOMContentLoaded", function() {
             itemQtdInput.focus();
         }
     }
-    
-    // --- Funções de Itens do Orçamento ---
     function adicionarItemNaTela(item) {
         const rowId = item.id || `temp-${Date.now()}`;
         item.id = rowId;
@@ -579,34 +638,102 @@ document.addEventListener("DOMContentLoaded", function() {
         tr.querySelector("[data-action='remover-item']").addEventListener("click", () => removerItem(rowId));
         itensContainer.appendChild(tr);
     }
-
     function renderizarItensNaTabela() {
         itensContainer.innerHTML = "";
         itens.forEach(item => adicionarItemNaTela(item));
         updateTableVisibility();
     }
-    
     function removerItem(rowId) {
         itens = itens.filter(item => String(item.id) !== String(rowId));
         renderizarItensNaTabela();
     }
-
     function adicionarItem() {
         const nomeVal = itemInput.value.trim(), qtdVal = parseInt(itemQtdInput.value, 10), valStr = itemValorInput.value, tipoVal = tipoItemSelect.value;
         if (!nomeVal || isNaN(qtdVal) || !valStr || tipoVal === "default") { alert("Preencha todos os campos do item."); return; }
         const valVal = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
-        // Na tela de edição, não salvamos itens novos no catálogo
         itens.push({ id: `temp-${Date.now()}`, nome: nomeVal, quantidade: qtdVal, valor: valVal, tipo: tipoVal });
         renderizarItensNaTabela();
         limparCamposItem();
     }
-
-
-    // --- Funções de Contatos Extras e Modal de Info (SEM ALTERAÇÃO) ---
-    function abrirModalContato() { document.getElementById('modal-contato-nome').value=''; document.getElementById('modal-contato-telefone').value=''; modalContato.classList.remove('hidden'); modalContato.classList.add('flex'); setTimeout(()=>modalContatoBox.classList.remove('-translate-y-10','opacity-0'),50); }
+    function abrirModalContato() { 
+        document.getElementById('modal-contato-nome').value=''; 
+        document.getElementById('modal-contato-telefone').value=''; 
+        document.getElementById('modal-contato-email').value = ''; 
+        modalContato.classList.remove('hidden'); 
+        modalContato.classList.add('flex'); 
+        setTimeout(()=>modalContatoBox.classList.remove('-translate-y-10','opacity-0'),50); }
     function fecharModalContato() { modalContatoBox.classList.add('-translate-y-10','opacity-0'); setTimeout(()=>{ modalContato.classList.add('hidden'); modalContato.classList.remove('flex');},300); }
-    function salvarContatoDoModal() { const n=document.getElementById('modal-contato-nome').value.trim(), t=document.getElementById('modal-contato-telefone').value.trim(); if(!n||!t){alert("Preencha nome e telefone.");return} contatosExtras.push({id:null,nome:n,telefone:t}); renderizarTagsDeContato(); fecharModalContato(); }
-    function renderizarTagsDeContato() { listaContatosVisivel.innerHTML=''; contatosExtras.forEach((c,i)=>{const d=document.createElement('div'); d.className="flex items-center gap-2 bg-emerald-100 text-emerald-800 text-sm font-semibold px-3 py-1 rounded-full"; d.innerHTML=`<span>${c.nome} - ${c.telefone}</span><button type="button" onclick="removerContatoExtra(${i})" class="text-emerald-600 hover:text-emerald-900"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path d="M2.22 2.22a.75.75 0 0 1 1.06 0L8 6.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L9.06 8l4.72 4.72a.75.75 0 1 1-1.06 1.06L8 9.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L6.94 8 2.22 3.28a.75.75 0 0 1 0-1.06Z" /></svg></button>`; listaContatosVisivel.appendChild(d);}); }
+
+    function salvarContatoDoModal() {
+        const nome = document.getElementById('modal-contato-nome').value.trim();
+        const telefone = document.getElementById('modal-contato-telefone').value.trim();
+        const email = document.getElementById('modal-contato-email').value.trim(); 
+
+        if (!nome || !telefone) {
+            alert("Por favor, preencha o nome e o telefone do contato.");
+            return;
+        }
+
+        const novoTelefoneNormalizado = telefone.replace(/\D/g, '');
+        const telefonePrincipal = document.getElementById('telefone').value.trim();
+        const telefonePrincipalNormalizado = telefonePrincipal.replace(/\D/g, '');
+        
+        
+        const contatoExistente = contatosExtras.find(
+        c => c.telefone.replace(/\D/g, '') === novoTelefoneNormalizado
+    );
+
+        // 2. AVALIA o que foi encontrado
+        if (contatoExistente) {
+            // CASO 1: O NÚMERO EXISTE NA LISTA DE CONTATOS EXTRAS
+            const querAtualizar = confirm(
+                `Este telefone já pertence ao contato "${contatoExistente.nome}".\n\nDeseja atualizar as informações dele com os novos dados?`
+            );
+
+            if (querAtualizar) {
+                // Se o usuário confirmar, atualizamos o nome e o e-mail do objeto existente
+                contatoExistente.nome = nome;
+                contatoExistente.email = email;
+            } else {
+                // Se o usuário cancelar, não fazemos nada
+                return;
+            }
+
+        } else if (novoTelefoneNormalizado === telefonePrincipalNormalizado && telefonePrincipalNormalizado !== '') {
+            // CASO 2: O NÚMERO É IGUAL AO TELEFONE PRINCIPAL
+            alert("Este telefone já está definido como o contato principal do cliente e não pode ser adicionado como um contato extra.");
+            return; // Bloqueia a adição
+
+        } else {
+            // CASO 3: É UM NÚMERO TOTALMENTE NOVO
+            contatosExtras.push({ nome: nome, telefone: telefone, email: email });
+        }
+        renderizarTagsDeContato();
+        fecharModalContato();
+    }
+
+
+    function renderizarTagsDeContato() {
+        listaContatosVisivel.innerHTML = ''; // Limpa a lista antes de redesenhar
+        contatosExtras.forEach((contato, index) => {
+            const tagDiv = document.createElement('div');
+            tagDiv.className = "flex items-center gap-2 bg-emerald-100 text-emerald-800 text-sm font-semibold px-3 py-1 rounded-full";
+            
+            // Constrói o texto do contato dinamicamente
+            let infoContato = `${contato.nome} - ${contato.telefone}`;
+            if (contato.email) {
+                infoContato += ` (${contato.email})`; // Adiciona o e-mail se ele existir
+            }
+
+            tagDiv.innerHTML = `
+                <span>${infoContato}</span>
+                <button type="button" onclick="removerContatoExtra(${index})" class="text-emerald-600 hover:text-emerald-900">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path d="M2.22 2.22a.75.75 0 0 1 1.06 0L8 6.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L9.06 8l4.72 4.72a.75.75 0 1 1-1.06 1.06L8 9.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L6.94 8 2.22 3.28a.75.75 0 0 1 0-1.06Z" /></svg>
+                </button>
+            `;
+            listaContatosVisivel.appendChild(tagDiv);
+        });
+    }
     window.removerContatoExtra = (i) => { contatosExtras.splice(i,1); renderizarTagsDeContato(); };
     function abrirModalInfo() { document.getElementById('info-condicao-pagamento').value = document.getElementById('hidden_condicao_pagamento').value; document.getElementById('info-prazo-entrega').value = document.getElementById('hidden_prazo_entrega').value; document.getElementById('info-garantia').value = document.getElementById('hidden_garantia').value; document.getElementById('info-observacoes').value = document.getElementById('hidden_observacoes').value; modalInfo.classList.remove('hidden'); modalInfo.classList.add('flex'); setTimeout(()=>modalInfoBox.classList.remove('-translate-y-10','opacity-0'),50); }
     function fecharModalInfo() { modalInfoBox.classList.add('-translate-y-10','opacity-0'); setTimeout(() => { modalInfo.classList.add('hidden'); modalInfo.classList.remove('flex'); }, 300); }
@@ -623,6 +750,12 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById('complemento').value = cliente?.complemento || orcamentoData.complemento_cliente || '';
         document.getElementById('bairro').value = cliente?.bairro || orcamentoData.bairro_cliente || '';
         document.getElementById('cidade_uf').value = cliente?.cidade_uf || orcamentoData.cidade_uf_cliente || '';
+
+        if (orcamentoData.cliente && orcamentoData.cliente.id) {
+            document.getElementById('cliente_id').value = orcamentoData.cliente.id;
+        }
+
+
         document.getElementById('numero_orcamento').value = orcamentoData.numero;
         document.getElementById('descricaoServico').value = orcamentoData.descricao_servico;
         document.getElementById('hidden_condicao_pagamento').value = orcamentoData.condicao_pagamento || '';
@@ -638,21 +771,22 @@ document.addEventListener("DOMContentLoaded", function() {
         carregarCatalogosAPI();
         updateTipoItemIcon();
 
+        // AQUI ESTÁ A CHAMADA PARA A NOVA FUNÇÃO
+        if (orcamentoData && orcamentoData.id) {
+            carregarContatosExtras(orcamentoData.id);
+        }
+
         // Listeners
         adicionarItemBtn.addEventListener("click", adicionarItem);
         itemValorInput.addEventListener("input", formatarMoeda);
         telefoneInput.addEventListener("input", (e) => mascara(e, "(##) #####-####"));
         tipoItemSelect.addEventListener("change", updateTipoItemIcon);
-
         btnAbrirModalInfo.addEventListener('click', abrirModalInfo);
         btnFecharModalInfo.addEventListener('click', fecharModalInfo);
         btnSalvarInfo.addEventListener('click', salvarInfoModal);
-        
         btnAdicionarContato.addEventListener('click', abrirModalContato);
         btnFecharModalContato.addEventListener('click', fecharModalContato);
         btnSalvarContatoModal.addEventListener('click', salvarContatoDoModal);
-
-        // Listeners do Modal de Catálogo
         btnFecharModalCatalogo.addEventListener('click', fecharModalCatalogo);
         modalCatalogo.addEventListener('click', (event) => { if (event.target === modalCatalogo) fecharModalCatalogo(); });
         filtroCatalogoInput.addEventListener('input', (e) => {

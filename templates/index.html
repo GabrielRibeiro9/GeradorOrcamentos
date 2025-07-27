@@ -357,6 +357,19 @@
                     </div>
                 </div>
 
+                <div>
+                <label for="modal-contato-email" class="block text-sm font-medium text-gray-700">E-mail (Opcional):</label>
+                <div class="relative mt-1">
+                    <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-400">
+                           <path d="M3 4a2 2 0 0 0-2 2v1.161l8.441 4.221a1.25 1.25 0 0 0 1.118 0L19 7.162V6a2 2 0 0 0-2-2H3Z" />
+                           <path d="M19 8.839l-7.77 3.885a2.75 2.75 0 0 1-2.46 0L1 8.839V14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.839Z" />
+                       </svg>
+                    </div>
+                    <input type="email" id="modal-contato-email" placeholder="email@exemplo.com" class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400">
+                </div>
+            </div>
+
             </div>
             <div class="mt-6 text-right">
                 <button id="btn-salvar-contato-modal" class="bg-emerald-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-emerald-700 transition-colors">
@@ -618,6 +631,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // Limpa os campos do modal antes de abrir
         document.getElementById('modal-contato-nome').value = '';
         document.getElementById('modal-contato-telefone').value = '';
+        document.getElementById('modal-contato-email').value = ''; 
         
         modalContato.classList.remove('hidden');
         modalContato.classList.add('flex');
@@ -638,13 +652,47 @@ document.addEventListener("DOMContentLoaded", function() {
     function salvarContatoDoModal() {
         const nome = document.getElementById('modal-contato-nome').value.trim();
         const telefone = document.getElementById('modal-contato-telefone').value.trim();
+        const email = document.getElementById('modal-contato-email').value.trim(); 
 
         if (!nome || !telefone) {
             alert("Por favor, preencha o nome e o telefone do contato.");
             return;
         }
 
-        contatosExtras.push({ nome: nome, telefone: telefone });
+        const novoTelefoneNormalizado = telefone.replace(/\D/g, '');
+        const telefonePrincipal = document.getElementById('telefone').value.trim();
+        const telefonePrincipalNormalizado = telefonePrincipal.replace(/\D/g, '');
+        
+        
+        const contatoExistente = contatosExtras.find(
+        c => c.telefone.replace(/\D/g, '') === novoTelefoneNormalizado
+    );
+
+        // 2. AVALIA o que foi encontrado
+        if (contatoExistente) {
+            // CASO 1: O NÚMERO EXISTE NA LISTA DE CONTATOS EXTRAS
+            const querAtualizar = confirm(
+                `Este telefone já pertence ao contato "${contatoExistente.nome}".\n\nDeseja atualizar as informações dele com os novos dados?`
+            );
+
+            if (querAtualizar) {
+                // Se o usuário confirmar, atualizamos o nome e o e-mail do objeto existente
+                contatoExistente.nome = nome;
+                contatoExistente.email = email;
+            } else {
+                // Se o usuário cancelar, não fazemos nada
+                return;
+            }
+
+        } else if (novoTelefoneNormalizado === telefonePrincipalNormalizado && telefonePrincipalNormalizado !== '') {
+            // CASO 2: O NÚMERO É IGUAL AO TELEFONE PRINCIPAL
+            alert("Este telefone já está definido como o contato principal do cliente e não pode ser adicionado como um contato extra.");
+            return; // Bloqueia a adição
+
+        } else {
+            // CASO 3: É UM NÚMERO TOTALMENTE NOVO
+            contatosExtras.push({ nome: nome, telefone: telefone, email: email });
+        }
         renderizarTagsDeContato();
         fecharModalContato();
     }
@@ -655,6 +703,11 @@ document.addEventListener("DOMContentLoaded", function() {
         contatosExtras.forEach((contato, index) => {
             const tagDiv = document.createElement('div');
             tagDiv.className = "flex items-center gap-2 bg-emerald-100 text-emerald-800 text-sm font-semibold px-3 py-1 rounded-full";
+            let infoContato = `${contato.nome} - ${contato.telefone}`;
+
+            if (contato.email) {
+            infoContato += ` (${contato.email})`; // Adiciona o e-mail se ele existir
+            }
             tagDiv.innerHTML = `
                 <span>${contato.nome} - ${contato.telefone} </span>
                 <button type="button" onclick="removerContatoExtra(${index})" class="text-emerald-600 hover:text-emerald-900">

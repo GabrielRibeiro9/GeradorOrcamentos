@@ -123,16 +123,19 @@
               <button onclick="fecharModalEmail()" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
           </div>
           <div class="mt-4 space-y-4">
-              <p class="text-sm">Enviando orçamento para: <strong id="email-cliente-nome"></strong></p>
-              <div>
-                  <label for="email-destinatario" class="block text-sm font-medium text-gray-700">E-mail do Destinatário:</label>
-                  <input type="email" id="email-destinatario" placeholder="exemplo@email.com" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+              <p class="text-sm"> Selecione os destinatários para o envio: <strong id="email-cliente-nome"></strong></p>
+              <div id="lista-contatos-email" class="space-y-2 border-t border-b py-3 max-h-48 overflow-y-auto">
+                <!-- A lista de contatos com checkboxes de e-mail vai aqui -->
               </div>
               <!-- Input oculto para guardar o ID do orçamento -->
               <input type="hidden" id="email-orcamento-id">
               <input type="hidden" id="email-tipo-documento">
-              <button id="btn-enviar-email" class="w-full h-10 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition flex items-center justify-center">
-                  
+              <button id="btn-enviar-email-final" class="w-full h-10 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" />
+                  <path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" />
+                </svg>
+                Enviar para Selecionados
               </button>
           </div>
       </div>
@@ -218,333 +221,185 @@
     </div>
 
   <script>
+const modalEmail = document.getElementById('modal-email');
+const modalEmailBox = document.getElementById('modal-email-box');
+const modalBox = document.getElementById('modal-box');
+const modal = document.getElementById('modal-config');
+const modalStatusPdf = document.getElementById('modal-status-pdf');
+const modalStatusPdfBox = document.getElementById('modal-status-pdf-box');
+const pdfOrcamentoIdInput = document.getElementById('pdf-orcamento-id');
+const modalWhatsApp = document.getElementById('modal-whatsapp');
+const modalWhatsAppBox = document.getElementById('modal-whatsapp-box');
+const whatsappOrcamentoIdInput = document.getElementById('whatsapp-orcamento-id');
+const btnEnviarWhatsAppFinal = document.getElementById('btn-enviar-whatsapp-final');
+const modalTipoDocumento = document.getElementById('modal-tipo-documento');
+const modalTipoDocumentoBox = document.getElementById('modal-tipo-documento-box');
+const tipoDocumentoOrcamentoIdInput = document.getElementById('tipo-documento-orcamento-id');
+const btnConfirmarTipoDocumento = document.getElementById('btn-confirmar-tipo-documento');
+const btnsFecharModalTipoDocumento = document.querySelectorAll('.btn-fechar-modal-tipo-documento');
 
-    const modalEmail = document.getElementById('modal-email');
-    const modalEmailBox = document.getElementById('modal-email-box');
-    const emailClienteNome = document.getElementById('email-cliente-nome');
-    const emailInput = document.getElementById('email-destinatario');
-    const emailOrcamentoIdInput = document.getElementById('email-orcamento-id');
-    const btnEnviarEmail = document.getElementById('btn-enviar-email');
-    const modalBox = document.getElementById('modal-box');
-    const modal = document.getElementById('modal-config');
-    const modalStatusPdf = document.getElementById('modal-status-pdf');
-    const modalStatusPdfBox = document.getElementById('modal-status-pdf-box');
-    const pdfOrcamentoIdInput = document.getElementById('pdf-orcamento-id');
-    const modalWhatsApp = document.getElementById('modal-whatsapp');
-    const modalWhatsAppBox = document.getElementById('modal-whatsapp-box');
-    const whatsappOrcamentoIdInput = document.getElementById('whatsapp-orcamento-id');
-    const btnEnviarWhatsAppFinal = document.getElementById('btn-enviar-whatsapp-final');
-    const modalTipoDocumento = document.getElementById('modal-tipo-documento');
-    const modalTipoDocumentoBox = document.getElementById('modal-tipo-documento-box');
-    const tipoDocumentoOrcamentoIdInput = document.getElementById('tipo-documento-orcamento-id');
-    const btnConfirmarTipoDocumento = document.getElementById('btn-confirmar-tipo-documento');
-    const btnsFecharModalTipoDocumento = document.querySelectorAll('.btn-fechar-modal-tipo-documento');
-
-
-    function abrirModalEmail(orcamentoId, clienteNome, clienteEmail, tipoDocumento) {
-      emailClienteNome.textContent = clienteNome;
-      emailOrcamentoIdInput.value = orcamentoId;
-      emailInput.value = clienteEmail;
-      
-      // Guarda o tipo de documento que foi escolhido no passo anterior
-      document.getElementById('email-tipo-documento').value = tipoDocumento;
-
-      modalEmail.classList.remove('hidden');
-      modalEmail.classList.add('flex');
-      setTimeout(() => { modalEmailBox.classList.remove('-translate-y-10', 'opacity-0'); emailInput.focus(); }, 50);
-    }
-
-    function fecharModalEmail() {
-      modalEmailBox.classList.add('-translate-y-10', 'opacity-0');
-      setTimeout(() => { 
-          modalEmail.classList.add('hidden'); 
-          modalEmail.classList.remove('flex'); 
-          btnEnviarEmail.disabled = false;
-          btnEnviarEmail.innerHTML = 'Abrir App de E-mail';
-      }, 300);
-    }
-
-    modalEmail.addEventListener('click', (event) => { if (event.target === modalEmail) fecharModalEmail(); });
-
-
-    btnConfirmarTipoDocumento.addEventListener('click', async () => {
-      const orcamentoId = tipoDocumentoOrcamentoIdInput.value;
-      const tipoDocumento = document.querySelector('input[name="tipo_documento_escolha"]:checked').value;
-      const acao = modalTipoDocumento.dataset.acao;
-      
-      fecharModalTipoDocumento();
-
-      try {
-          // ETAPA ESSENCIAL: gera o PDF/token silenciosamente com o tipo correto.
-          await fetch(`/orcamento/${orcamentoId}/pdf?status=${encodeURIComponent(tipoDocumento)}`);
-          
-          if (acao === 'whatsapp') {
-              const orcamentoRes = await fetch('/api/orcamentos/');
-              if (!orcamentoRes.ok) throw new Error("Falha ao buscar dados do orçamento.");
-              const orcamentos = await orcamentoRes.json();
-              const orcamentoAtual = orcamentos.find(o => o.id === parseInt(orcamentoId));
-              
-              // AGORA sim abrimos o modal de seleção de contatos.
-              abrirModalWhatsApp(orcamentoId, orcamentoAtual?.telefone || '', tipoDocumento);
-
-          } else if (acao === 'email') {
-              const orcamentoRes = await fetch('/api/orcamentos/');
-              if (!orcamentoRes.ok) throw new Error("Falha ao buscar dados.");
-              const orcamentos = await orcamentoRes.json();
-              const orcamentoAtual = orcamentos.find(o => o.id === parseInt(orcamentoId));
-              abrirModalEmail(orcamentoId, orcamentoAtual?.nome || '', '', tipoDocumento);
-          }
-      } catch(e) {
-          alert(e.message);
-      }
-    });
-
-
-    async function abrirClienteDeEmail() {
-      const orcamentoId = emailOrcamentoIdInput.value;
-      const destinatario = emailInput.value.trim();
-      // Pega o tipo de documento que guardamos no input oculto
-      const tipoDocumento = document.getElementById('email-tipo-documento').value;
-
-      if (!destinatario) {
-          alert("Por favor, insira o e-mail do destinatário.");
-          return;
-      }
-
-      btnEnviarEmail.disabled = true;
-      btnEnviarEmail.innerHTML = 'Gerando link...';
-
-      try {
-          // Primeiro, gera o PDF silenciosamente com o TIPO CORRETO para criar o link público
-        await fetch(`/orcamento/${orcamentoId}/pdf?status=${encodeURIComponent(tipoDocumento)}`);
-
-        // Agora, gera o link mailto, que já buscará o token recém-criado
-        const formData = new FormData();
-        formData.append('destinatario', destinatario);
-
-        const response = await fetch(`/orcamento/${orcamentoId}/email/link?status=${encodeURIComponent(tipoDocumento)}`, {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!response.ok) throw new Error((await response.json()).detail);
-        const data = await response.json();
-        
-        // Abre o cliente de e-mail do usuário
-        window.location.href = data.mailto_link;
-        fecharModalEmail();
-
-      } catch (error) {
-          alert(`Ocorreu um erro: ${error.message}`);
-          fecharModalEmail(); // Fecha o modal mesmo se der erro
-      }
-    }
-    // Define o clique e o texto do botão do modal
-    document.getElementById('btn-enviar-email').onclick = abrirClienteDeEmail;
-    document.getElementById('btn-enviar-email').textContent = "Abrir App de E-mail";
-
-
-    // --- FUNÇÕES DE CONTROLE DO MODAL DE CONFIGURAÇÕES (sem alteração) ---
-    function abrirModalConfig() {
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      setTimeout(() => { modalBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
-      
-      if ("{{ user.username }}" === "{{ admin_username_from_env }}") {
-          carregarListaUsuarios();
-      }
-    }
-    function fecharModalConfig() {
-      modalBox.classList.add('-translate-y-10', 'opacity-0');
-      setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
-    }
-    modal.addEventListener('click', (event) => { if (event.target === modal) fecharModalConfig(); });
-
-    async function carregarListaUsuarios() {
-      const container = document.getElementById('lista-usuarios');
-      container.innerHTML = `<p class="text-gray-500 text-sm">Carregando...</p>`;
-
-      try {
-        const response = await fetch('/api/users/');
-        if (!response.ok) {
-            // Se a resposta não for OK, pode ser um erro de permissão (403) ou outro
-            const errorData = await response.json();
-            throw new Error(errorData.detail || "Falha ao carregar usuários.");
-        }
-        const users = await response.json();
-        
-        container.innerHTML = ''; // Limpa o container
-
-        if (users.length <= 1) { // Só o admin existe
-            container.innerHTML = `<p class="text-gray-400 text-sm">Nenhum outro usuário cadastrado.</p>`;
-            return;
-        }
-          
-        users.forEach(user => {
-          // Não mostra o próprio admin na lista de "apagáveis"
-          if (user.username === "{{ user.username }}") return;
-
-          const userDiv = document.createElement('div');
-          userDiv.className = 'flex items-center justify-between p-2 bg-white rounded-md border';
-          userDiv.id = `user-row-${user.id}`;
-          
-          userDiv.innerHTML = `
-              <span class="text-gray-700 font-medium">${user.username}</span>
-              <button onclick="deletarUsuario(${user.id}, '${user.username}')" class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-md hover:bg-red-200">
-                  Apagar
-              </button>
-          `;
-          container.appendChild(userDiv);
-        });
-
-      } catch (error) {
-        console.error("Erro ao carregar usuários:", error);
-        container.innerHTML = `<p class="text-red-500 text-sm">${error.message}</p>`;
-      }
-    }
-
-    async function deletarUsuario(userId, username) {
-        if (!confirm(`Tem certeza que deseja apagar permanentemente o usuário "${username}"?\nTODOS os orçamentos e clientes deste usuário serão perdidos.`)) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/users/${userId}`, {
-                method: 'DELETE'
-            });
-
-            if (response.status === 204) {
-                alert(`Usuário "${username}" apagado com sucesso!`);
-                const userRow = document.getElementById(`user-row-${userId}`);
-                if (userRow) {
-                    userRow.remove();
-                }
-            } else {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || "Falha ao apagar o usuário.");
-            }
-        } catch (error) {
-            console.error("Erro ao apagar usuário:", error);
-            alert(`Ocorreu um erro: ${error.message}`);
-        }
-      }
-
-    // --- FUNÇÕES DE LÓGICA DA PÁGINA ---
-    async function carregarOrcamentos() {
-      const lista = document.getElementById('lista');
-      lista.innerHTML = `<div class="py-8 text-center text-gray-400">Carregando...</div>`;
-      try {
+// --- LÓGICA DE CARREGAMENTO DOS ORÇAMENTOS ---
+async function carregarOrcamentos() {
+    const lista = document.getElementById('lista');
+    lista.innerHTML = `<div class="py-8 text-center text-gray-400">Carregando...</div>`;
+    try {
         const res = await fetch('/api/orcamentos/');
         if (!res.ok) throw new Error('Falha ao carregar os dados.');
         const orcamentos = await res.json();
         lista.innerHTML = "";
         if (!orcamentos.length) {
-          lista.innerHTML = `<div class="py-8 text-center text-gray-400">Nenhum orçamento encontrado.</div>`;
-          return;
+            lista.innerHTML = `<div class="py-8 text-center text-gray-400">Nenhum orçamento encontrado.</div>`;
+            return;
         }
         orcamentos.forEach(orc => {
-          const totalFormatado = parseFloat(orc.total_geral).toLocaleString('pt-BR', {minimumFractionDigits: 2});
-          lista.innerHTML += `
+            const totalFormatado = parseFloat(orc.total_geral).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            lista.innerHTML += `
             <div id="orcamento-card-${orc.id}" class="bg-white shadow-md rounded-lg px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-gray-200">
-              <div class="flex items-center gap-4 flex-grow min-w-0">
-                <span class="font-bold text-emerald-600">#${String(orc.numero).padStart(4, '0')}</span>
-                <span class="text-gray-800 truncate" title="${orc.nome}">${orc.nome}</span>
-                <span class="text-xs text-gray-400 whitespace-nowrap">(${orc.data_emissao})</span>
-              </div>
-              <div class="flex items-center justify-between flex-grow sm:flex-grow-0 sm:w-80">
-                  <span class="text-emerald-600 font-bold text-lg">R$ ${totalFormatado}</span>
-                  <div class="flex items-center gap-2">
-                      <button onclick="editarOrcamento(${orc.id})" title="Editar Orçamento" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
-                      <button onclick="abrirModalStatusPDF(${orc.id})" title="Ver PDF" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" /></svg></button>
-                      <button onclick="abrirModalTipoDocumento(${orc.id}, 'email')" title="Enviar por E-mail" class="p-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" />
-                          <path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" />
-                        </svg>
-                      </button>
-                      <button onclick="abrirModalTipoDocumento(${orc.id}, 'whatsapp')" title="Enviar por WhatsApp" class="p-2 rounded bg-green-500 text-white hover:bg-green-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
-                      <button onclick="deletarOrcamento(${orc.id})" title="Excluir Orçamento" class="p-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
-                  </div>
-              </div>
-            </div>
-          `;
+                <div class="flex items-center gap-4 flex-grow min-w-0">
+                    <span class="font-bold text-emerald-600">#${String(orc.numero).padStart(4, '0')}</span>
+                    <span class="text-gray-800 truncate" title="${orc.nome}">${orc.nome}</span>
+                    <span class="text-xs text-gray-400 whitespace-nowrap">(${orc.data_emissao})</span>
+                </div>
+                <div class="flex items-center justify-between flex-grow sm:flex-grow-0 sm:w-80">
+                    <span class="text-emerald-600 font-bold text-lg">R$ ${totalFormatado}</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="editarOrcamento(${orc.id})" title="Editar Orçamento" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
+                        <button onclick="abrirModalStatusPDF(${orc.id})" title="Ver PDF" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" /></svg></button>
+                        <button onclick="abrirModalTipoDocumento(${orc.id}, 'email')" title="Enviar por E-mail" class="p-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" /><path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" /></svg>
+                        </button>
+                        <button onclick="abrirModalTipoDocumento(${orc.id}, 'whatsapp')" title="Enviar por WhatsApp" class="p-2 rounded bg-green-500 text-white hover:bg-green-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
+                        <button onclick="deletarOrcamento(${orc.id})" title="Excluir Orçamento" class="p-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
+                    </div>
+                </div>
+            </div>`;
         });
-      } catch (e) {
+    } catch (e) {
         console.error("Erro ao carregar orçamentos:", e);
         lista.innerHTML = `<div class="py-8 text-center text-red-400">Erro ao carregar orçamentos.</div>`;
-      }
     }
+}
 
-    function abrirModalTipoDocumento(orcamentoId, acao) {
-        // Guarda o ID e a AÇÃO (agora pode ser 'whatsapp' ou 'email')
-        tipoDocumentoOrcamentoIdInput.value = orcamentoId; 
+// --- FUNÇÕES GERAIS ---
+function editarOrcamento(id) { window.location.href = `/editar-orcamento/${id}`; }
+function isMobile() { return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent); }
+
+// --- MODAL DE SELEÇÃO DE DOCUMENTO (EMAIL/WHATSAPP) ---
+function abrirModalTipoDocumento(orcamentoId, acao) {
+    tipoDocumentoOrcamentoIdInput.value = orcamentoId;
+    modalTipoDocumento.dataset.acao = acao;
+    btnConfirmarTipoDocumento.textContent = 'Confirmar';
+    document.querySelector('input[name="tipo_documento_escolha"][value="Orçamento"]').checked = true;
+    modalTipoDocumento.classList.remove('hidden');
+    modalTipoDocumento.classList.add('flex');
+    setTimeout(() => { modalTipoDocumentoBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+}
+
+function fecharModalTipoDocumento() {
+    modalTipoDocumentoBox.classList.add('-translate-y-10', 'opacity-0');
+    setTimeout(() => { modalTipoDocumento.classList.add('hidden'); modalTipoDocumento.classList.remove('flex'); }, 300);
+}
+
+// --- MODAL DE PDF (GERAR NOTA/ORÇAMENTO) ---
+function abrirModalStatusPDF(orcamentoId) {
+    pdfOrcamentoIdInput.value = orcamentoId;
+    modalStatusPdf.classList.remove('hidden');
+    modalStatusPdf.classList.add('flex');
+    setTimeout(() => { modalStatusPdfBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+}
+
+function fecharModalStatusPDF() {
+    modalStatusPdfBox.classList.add('-translate-y-10', 'opacity-0');
+    setTimeout(() => { modalStatusPdf.classList.add('hidden'); modalStatusPdf.classList.remove('flex'); }, 300);
+}
+
+// --- MODAL DE E-MAIL (Nova lógica) ---
+function abrirModalEmail(orcamentoId, tipoDocumento) {
+    document.getElementById('email-orcamento-id').value = orcamentoId;
+    document.getElementById('email-tipo-documento').value = tipoDocumento;
+    
+    const listaContatosDiv = document.getElementById('lista-contatos-email');
+    listaContatosDiv.innerHTML = `<p class="text-gray-500 text-sm p-2">Carregando...</p>`;
+
+    modalEmail.classList.remove('hidden');
+    modalEmail.classList.add('flex');
+    setTimeout(() => { modalEmailBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+
+    fetch(`/api/orcamento/${orcamentoId}/emails`)
+        .then(res => res.ok ? res.json() : Promise.reject('Falha na resposta da API'))
+        .then(contatosComEmail => {
+            listaContatosDiv.innerHTML = '';
+            if (contatosComEmail.length === 0) {
+                listaContatosDiv.innerHTML = `<p class="text-red-500 text-sm p-2">Nenhum e-mail encontrado para este cliente.</p>`;
+                return;
+            }
+            contatosComEmail.forEach(contato => {
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer";
+                label.innerHTML = `
+                    <input type="checkbox" value="${contato.email}" class="h-4 w-4 rounded border-gray-300">
+                    <span class="text-gray-700">${contato.nome} (${contato.email})</span>`;
+                listaContatosDiv.appendChild(label);
+            });
+        })
+        .catch(error => {
+            console.error("Erro ao buscar e-mails:", error);
+            listaContatosDiv.innerHTML = `<p class="text-red-500 text-sm p-2">Erro ao carregar lista de e-mails.</p>`;
+        });
+}
+
+function fecharModalEmail() {
+    modalEmailBox.classList.add('-translate-y-10', 'opacity-0');
+    setTimeout(() => { modalEmail.classList.add('hidden'); modalEmail.classList.remove('flex'); }, 300);
+}
+
+async function enviarEmailsSelecionados() {
+    const orcamentoId = document.getElementById('email-orcamento-id').value;
+    const tipoDocumento = document.getElementById('email-tipo-documento').value;
+    const checkboxes = document.querySelectorAll('#lista-contatos-email input[type="checkbox"]:checked');
+    if (checkboxes.length === 0) { alert("Por favor, selecione pelo menos um destinatário."); return; }
+    const btn = document.getElementById('btn-enviar-email-final');
+    btn.disabled = true;
+    btn.innerHTML = 'Gerando...';
+
+    const destinatarios = Array.from(checkboxes).map(cb => cb.value).join(',');
+
+    try {
+      await fetch(`/orcamento/${orcamentoId}/pdf?status=${encodeURIComponent(tipoDocumento)}`);
         
-        // Adiciona a ação a um atributo de dados para usarmos depois
-        modalTipoDocumento.dataset.acao = acao; 
+      const formData = new FormData();
+          formData.append('destinatario', destinatarios);
 
-        // Define o texto do botão de confirmação dinamicamente
-        if (acao === 'whatsapp') {
-            btnConfirmarTipoDocumento.textContent = 'Confirmar';
-        } else if (acao === 'email') {
-            btnConfirmarTipoDocumento.textContent = 'Confirmar';
-        }
-        
-        document.querySelector('input[name="tipo_documento_escolha"][value="Orçamento"]').checked = true;
-        modalTipoDocumento.classList.remove('hidden');
-        modalTipoDocumento.classList.add('flex');
-        setTimeout(() => { modalTipoDocumentoBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
-    }
+          const response = await fetch(`/orcamento/${orcamentoId}/email/link?status=${encodeURIComponent(tipoDocumento)}`, {
+              method: 'POST',
+              body: formData
+          });
 
-    function fecharModalTipoDocumento() {
-        modalTipoDocumentoBox.classList.add('-translate-y-10', 'opacity-0');
-        setTimeout(() => { modalTipoDocumento.classList.add('hidden'); modalTipoDocumento.classList.remove('flex'); }, 300);
-    }
-
-    function editarOrcamento(id) { window.location.href = `/editar-orcamento/${id}`; }
-
-    function abrirModalStatusPDF(orcamentoId) {
-      pdfOrcamentoIdInput.value = orcamentoId; // Guarda o ID do orçamento
-      modalStatusPdf.classList.remove('hidden');
-      modalStatusPdf.classList.add('flex');
-      setTimeout(() => { modalStatusPdfBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
-    }
-
-    function fecharModalStatusPDF() {
-      modalStatusPdfBox.classList.add('-translate-y-10', 'opacity-0');
-      setTimeout(() => { modalStatusPdf.classList.add('hidden'); modalStatusPdf.classList.remove('flex'); }, 300);
-    }
-
-    document.getElementById('btn-gerar-orcamento').addEventListener('click', () => {
-      const id = pdfOrcamentoIdInput.value;
-      // Abre o PDF com o status padrão 'Orçamento'
-      window.open(`/orcamento/${id}/pdf?status=Orçamento`, "_blank");
-      fecharModalStatusPDF();
-    });
-
-    document.getElementById('btn-gerar-nota').addEventListener('click', () => {
-      const id = pdfOrcamentoIdInput.value;
-      // Abre o PDF com o status 'Nota de Serviço'
-      window.open(`/orcamento/${id}/pdf?status=Nota de Serviço`, "_blank");
-      fecharModalStatusPDF();
-    });
-
-    // Listener para fechar o modal clicando fora
-    modalStatusPdf.addEventListener('click', (event) => {
-      if(event.target === modalStatusPdf) {
-          fecharModalStatusPDF();
+          if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.detail || "Falha ao gerar o link de e-mail.");
+          }
+          
+          const data = await response.json();
+          
+          // 4. ABRE DIRETAMENTE O APP DE E-MAIL!
+          //    O navegador entende o link `mailto:` e abre o cliente padrão do usuário.
+          window.location.href = data.mailto_link;
+          
+      } catch (error) {
+          alert(`Ocorreu um erro: ${error.message}`);
+      } finally {
+          // Sempre fecha o modal e reativa o botão
+          fecharModalEmail();
+          btn.disabled = false;
+          btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" /><path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" /></svg> Enviar para Selecionados`;
       }
-    });
+}
 
-    function baixarPDF(id) { window.open(`/orcamento/${id}/pdf`, "_blank"); }
 
-    function isMobile() {
-      return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
-    }
-
-  function abrirModalWhatsApp(orcamentoId, telefonePrincipal, tipoDeDocumento) { // Alteramos o terceiro parâmetro
+// --- MODAL DE WHATSAPP ---
+function abrirModalWhatsApp(orcamentoId, telefonePrincipal, tipoDeDocumento, nomeCliente) {
     whatsappOrcamentoIdInput.value = orcamentoId;
-
-    // Apenas guarda o TIPO de documento escolhido para usar depois.
     let hiddenTipo = document.getElementById('whatsapp-tipo-documento');
     if (!hiddenTipo) {
         hiddenTipo = document.createElement('input');
@@ -552,9 +407,8 @@
         hiddenTipo.id = 'whatsapp-tipo-documento';
         modalWhatsAppBox.appendChild(hiddenTipo);
     }
-    hiddenTipo.value = tipoDeDocumento; 
+    hiddenTipo.value = tipoDeDocumento;
 
-    // O resto da função é SÓ para mostrar o modal e os contatos
     const listaContatosDiv = document.getElementById('lista-contatos-whatsapp');
     listaContatosDiv.innerHTML = `<p class="text-gray-500 text-sm p-2">Carregando...</p>`;
     modalWhatsApp.classList.remove('hidden');
@@ -562,13 +416,11 @@
     setTimeout(() => { modalWhatsAppBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
 
     fetch(`/api/orcamento/${orcamentoId}/contatos`)
-      .then(res => res.json())
+      .then(res => res.ok ? res.json() : Promise.reject('Falha na API'))
       .then(contatosExtras => {
         listaContatosDiv.innerHTML = '';
         let listaCompleta = [...contatosExtras];
-        if (telefonePrincipal && telefonePrincipal.trim() !== '') {
-            listaCompleta.unshift({ nome: "Contato Principal", telefone: telefonePrincipal });
-        }
+
         if (listaCompleta.length === 0) {
             listaContatosDiv.innerHTML = `<p class="text-red-500 text-sm p-2">Nenhum telefone encontrado.</p>`;
             return;
@@ -578,23 +430,23 @@
             label.className = "flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer";
             label.innerHTML = `
                 <input type="checkbox" value="${contato.telefone}" class="h-4 w-4 rounded border-gray-300">
-                <span class="text-gray-700">${contato.nome} (${contato.telefone})</span>`;
+                <span class="text-gray-700">${contato.nome} - ${contato.telefone}</span>`;
             listaContatosDiv.appendChild(label);
         });
     });
-  }
-    
+}
 
-  function fecharModalWhatsApp() {
+function fecharModalWhatsApp() {
     modalWhatsAppBox.classList.add('-translate-y-10', 'opacity-0');
     setTimeout(() => { modalWhatsApp.classList.add('hidden'); modalWhatsApp.classList.remove('flex'); }, 300);
-  }
+}
 
-
-  async function deletarOrcamento(id) {
+async function deletarOrcamento(id) {
     if (!confirm(`Tem certeza que deseja excluir o orçamento?`)) return;
+
     try {
       const response = await fetch(`/api/orcamentos/${id}`, { method: 'DELETE' });
+
       if (response.status === 204) {
         const card = document.getElementById(`orcamento-card-${id}`);
         if (card) {
@@ -611,171 +463,238 @@
       console.error("Erro ao deletar orçamento:", error);
       alert("Ocorreu um erro: " + error.message);
     }
+}
+function abrirModalConfig() {
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  setTimeout(() => { modalBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+  
+  // A variável 'admin_username_from_env' é injetada pelo Jinja2 no seu HTML
+  if ("{{ user.username }}" === "{{ admin_username_from_env }}") {
+      carregarListaUsuarios();
   }
+}
 
-  async function resetarContador() {
-      const inputNumero = document.getElementById('novo_numero_inicial');
-      const novoValor = inputNumero.value;
-      if (novoValor === "" || isNaN(parseInt(novoValor)) || parseInt(novoValor) < 0) {
-          alert("Por favor, insira um número válido (0 ou maior)."); return;
-      }
-      if (!confirm(`Tem certeza? O próximo orçamento será o Nº ${parseInt(novoValor) + 1}.`)) return;
-      try {
-          const formData = new FormData();
-          formData.append('novo_inicio', novoValor);
-          const response = await fetch('/api/resetar-contador/', { method: 'POST', body: formData });
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.detail || "Erro desconhecido.");
-          alert(result.message);
-          fecharModalConfig();
-      } catch (error) {
-          console.error("Erro ao resetar contador:", error);
-          alert(`Ocorreu um erro: ${error.message}`);
-      }
+function fecharModalConfig() {
+  modalBox.classList.add('-translate-y-10', 'opacity-0');
+  setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+}
+
+async function carregarListaUsuarios() {
+  const container = document.getElementById('lista-usuarios');
+  container.innerHTML = `<p class="text-gray-500 text-sm">Carregando...</p>`;
+  try {
+    const response = await fetch('/api/users/');
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Falha ao carregar usuários.");
+    }
+    const users = await response.json();
+    
+    container.innerHTML = '';
+    if (users.length <= 1) {
+        container.innerHTML = `<p class="text-gray-400 text-sm">Nenhum outro usuário cadastrado.</p>`;
+        return;
+    }
+      
+    users.forEach(user => {
+      if (user.username === "{{ user.username }}") return;
+
+      const userDiv = document.createElement('div');
+      userDiv.className = 'flex items-center justify-between p-2 bg-white rounded-md border';
+      userDiv.id = `user-row-${user.id}`;
+      userDiv.innerHTML = `
+          <span class="text-gray-700 font-medium">${user.username}</span>
+          <button onclick="deletarUsuario(${user.id}, '${user.username}')" class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-md hover:bg-red-200">
+              Apagar
+          </button>
+      `;
+      container.appendChild(userDiv);
+    });
+  } catch (error) {
+    console.error("Erro ao carregar usuários:", error);
+    container.innerHTML = `<p class="text-red-500 text-sm">${error.message}</p>`;
   }
+}
 
-  async function atualizarModeloPDF() {
+async function deletarUsuario(userId, username) {
+    if (!confirm(`Tem certeza que deseja apagar permanentemente o usuário "${username}"?\nTODOS os orçamentos e clientes deste usuário serão perdidos.`)) {
+        return;
+    }
+    try {
+        const response = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
+        if (response.status === 204) {
+            alert(`Usuário "${username}" apagado com sucesso!`);
+            const userRow = document.getElementById(`user-row-${userId}`);
+            if (userRow) userRow.remove();
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || "Falha ao apagar o usuário.");
+        }
+    } catch (error) {
+        console.error("Erro ao apagar usuário:", error);
+        alert(`Ocorreu um erro: ${error.message}`);
+    }
+}
+
+async function resetarContador() {
+    const inputNumero = document.getElementById('novo_numero_inicial');
+    const novoValor = inputNumero.value;
+    if (novoValor === "" || isNaN(parseInt(novoValor)) || parseInt(novoValor) < 0) {
+        alert("Por favor, insira um número válido (0 ou maior)."); return;
+    }
+    if (!confirm(`Tem certeza? O próximo orçamento será o Nº ${String(parseInt(novoValor) + 1).padStart(4, '0')}.`)) return;
+    try {
+        const formData = new FormData();
+        formData.append('novo_inicio', novoValor);
+        const response = await fetch('/api/resetar-contador/', { method: 'POST', body: formData });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.detail || "Erro desconhecido.");
+        alert(result.message);
+        fecharModalConfig();
+    } catch (error) {
+        console.error("Erro ao resetar contador:", error);
+        alert(`Ocorreu um erro: ${error.message}`);
+    }
+}
+
+async function atualizarModeloPDF() {
     const select = document.getElementById('admin-template-select');
     const novoModelo = select.value;
-
     if (!confirm(`Tem certeza que deseja mudar seu modelo de PDF para '${novoModelo.charAt(0).toUpperCase() + novoModelo.slice(1)}'?`)) {
         return;
     }
-
     const formData = new FormData();
     formData.append('new_template', novoModelo);
-
     try {
-        const response = await fetch('/api/user/update-template', {
-            method: 'POST',
-            body: formData
-        });
-
+        const response = await fetch('/api/user/update-template', { method: 'POST', body: formData });
         const result = await response.json();
-
         if (!response.ok) {
             throw new Error(result.detail || "Ocorreu um erro desconhecido.");
         }
-
         alert(result.message);
-        fecharModalConfig(); // Fecha o modal após o sucesso
-
+        fecharModalConfig();
     } catch (error) {
         console.error("Erro ao atualizar modelo de PDF:", error);
         alert(`Ocorreu um erro: ${error.message}`);
     }
-  }
+}
 
-
-  async function cadastrarNovoUsuario() {
+async function cadastrarNovoUsuario() {
     const usernameInput = document.getElementById('new-username');
     const passwordInput = document.getElementById('new-password');
-    const templateInput = document.getElementById('new-template'); // Pega o elemento <select>
-
-    // 1. Pega TODOS os valores dos campos PRIMEIRO
+    const templateInput = document.getElementById('new-template');
     const username = usernameInput.value.trim();
     const password = passwordInput.value.trim();
-    const template = templateInput.value; // Pega o valor selecionado (ex: "joao" ou "cacador")
-
+    const template = templateInput.value;
     if (!username || !password) {
         alert("Por favor, preencha o nome de usuário e a senha.");
         return;
     }
-
-    // 2. Cria o objeto FormData UMA ÚNICA VEZ
     const formData = new FormData();
-
-    // 3. Adiciona TODOS os dados ao mesmo objeto FormData
     formData.append('username', username);
     formData.append('password', password);
-    formData.append('pdf_template_name', template); // Adiciona o modelo de PDF
-
+    formData.append('pdf_template_name', template);
     try {
-        const response = await fetch('/api/users/', {
-            method: 'POST',
-            body: formData
-        });
-
+        const response = await fetch('/api/users/', { method: 'POST', body: formData });
         const result = await response.json();
-
         if (!response.ok) {
             throw new Error(result.detail || "Erro desconhecido ao cadastrar usuário.");
         }
-
         alert(result.message);
         usernameInput.value = '';
         passwordInput.value = '';
-
+        carregarListaUsuarios(); // Recarrega a lista para mostrar o novo usuário
     } catch (error) {
         console.error("Erro ao cadastrar usuário:", error);
         alert(`Ocorreu um erro: ${error.message}`);
     }
-  }
+}
 
-  function inicializar() {
-    // Listeners dos Modais
-    document.getElementById('btn-enviar-email').onclick = abrirClienteDeEmail;
-    modalEmail.addEventListener('click', (e) => { if (e.target === modalEmail) fecharModalEmail(); });
+// --- FUNÇÃO DE INICIALIZAÇÃO (PONTO CENTRAL) ---
+function inicializar() {
+    // Listeners Globais para Fechamento de Modais
     modal.addEventListener('click', (e) => { if (e.target === modal) fecharModalConfig(); });
-    
-    // Listeners do modal antigo de status PDF/Email
-    document.getElementById('btn-gerar-orcamento').addEventListener('click', () => { window.open(`/orcamento/${pdfOrcamentoIdInput.value}/pdf?status=Orçamento`, "_blank"); fecharModalStatusPDF(); });
-    document.getElementById('btn-gerar-nota').addEventListener('click', () => { window.open(`/orcamento/${pdfOrcamentoIdInput.value}/pdf?status=Nota de Serviço`, "_blank"); fecharModalStatusPDF(); });
-    modalStatusPdf.addEventListener('click', (e) => { if (e.target === modalStatusPdf) fecharModalStatusPDF(); });
-
-    // Listeners do modal de SELEÇÃO DE CONTATO WhatsApp
-    btnEnviarWhatsAppFinal.addEventListener('click', async () => {
-      const orcamentoId = whatsappOrcamentoIdInput.value;
-      const checkboxes = document.querySelectorAll('#lista-contatos-whatsapp input[type="checkbox"]:checked');
-
-      if (checkboxes.length === 0) {
-          alert("Por favor, selecione pelo menos um contato para enviar.");
-          return;
-      }
-
-      const tipoDocumento = document.getElementById('whatsapp-tipo-documento').value;
-      console.log("Tipo selecionado para WhatsApp:", tipoDocumento)
-
-      try {
-          const response = await fetch(`/orcamento/${orcamentoId}/whatsapp?status=${encodeURIComponent(tipoDocumento)}`);
-          if (!response.ok) throw new Error("Não foi possível gerar a mensagem.");
-          const data = await response.json();
-          const mensagemBase = data.whatsapp_message;
-
-          checkboxes.forEach((check, index) => {
-            const telefoneLimpo = check.value.replace(/\D/g, '');
-            if (!telefoneLimpo) return;
-            const telefoneFinal = telefoneLimpo.startsWith("55") ? telefoneLimpo : "55" + telefoneLimpo;
-            const urlFinal = `https://wa.me/${telefoneFinal}?text=${encodeURIComponent(mensagemBase)}`;
-            // Simples assim: isso funciona perfeito em PC e mobile!
-            setTimeout(() => { 
-              if (isMobile()) {
-                // Tenta abrir o app via window.open
-                let win = window.open(`whatsapp://send?phone=${telefoneFinal}&text=${encodeURIComponent(mensagemBase)}`);
-                // Fallback via wa.me se não funcionar em 700ms
-                setTimeout(() => {
-                  if (!win || win.closed || typeof win.closed === 'undefined') {
-                    window.open(urlFinal, '_blank');
-                  }
-                }, 700);
-              } else {
-                window.open(urlFinal, '_blank');
-              }
-            }, index * 300);
-          });
-
-          fecharModalWhatsApp();
-      } catch (error) {
-          alert("Ocorreu um erro: " + error.message);
-      }
-    });
-
+    modalStatusPdf.addEventListener('click', (e) => { if(e.target === modalStatusPdf) fecharModalStatusPDF(); });
+    modalEmail.addEventListener('click', (e) => { if (e.target === modalEmail) fecharModalEmail(); });
     modalWhatsApp.addEventListener('click', (e) => { if (e.target === modalWhatsApp) fecharModalWhatsApp(); });
-
-    // **NOVO**: Listeners para o novo modal de ESCOLHA do WhatsApp
     btnsFecharModalTipoDocumento.forEach(btn => btn.addEventListener('click', fecharModalTipoDocumento));
     modalTipoDocumento.addEventListener('click', (e) => { if (e.target === modalTipoDocumento) fecharModalTipoDocumento(); });
+    
+    // Listeners de Ação dos Modais
+    btnConfirmarTipoDocumento.addEventListener('click', async () => {
+        const orcamentoId = tipoDocumentoOrcamentoIdInput.value;
+        const tipoDocumento = document.querySelector('input[name="tipo_documento_escolha"]:checked').value;
+        const acao = modalTipoDocumento.dataset.acao;
+        fecharModalTipoDocumento();
+        try {
+            await fetch(`/orcamento/${orcamentoId}/pdf?status=${encodeURIComponent(tipoDocumento)}`);
+            const orcamentoRes = await fetch('/api/orcamentos/');
+            if (!orcamentoRes.ok) throw new Error("Falha ao buscar dados.");
+            const orcamentos = await orcamentoRes.json();
+            const orcamentoAtual = orcamentos.find(o => o.id === parseInt(orcamentoId));
+            
+            if (acao === 'whatsapp') {
+                abrirModalWhatsApp(orcamentoId, orcamentoAtual?.telefone || '', tipoDocumento, orcamentoAtual?.nome || '');
+            } else if (acao === 'email') {
+                abrirModalEmail(orcamentoId, tipoDocumento); // Chamada simplificada
+            }
+        } catch(e) {
+            alert(e.message);
+        }
+    });
 
+    document.getElementById('btn-gerar-orcamento').addEventListener('click', () => {
+        const id = pdfOrcamentoIdInput.value;
+        window.open(`/orcamento/${id}/pdf?status=Orçamento`, "_blank");
+        fecharModalStatusPDF();
+    });
+
+    document.getElementById('btn-gerar-nota').addEventListener('click', () => {
+        const id = pdfOrcamentoIdInput.value;
+        window.open(`/orcamento/${id}/pdf?status=Nota de Serviço`, "_blank");
+        fecharModalStatusPDF();
+    });
+
+    btnEnviarWhatsAppFinal.addEventListener('click', async () => {
+        const orcamentoId = whatsappOrcamentoIdInput.value;
+        const checkboxes = document.querySelectorAll('#lista-contatos-whatsapp input[type="checkbox"]:checked');
+        if (checkboxes.length === 0) { alert("Selecione ao menos um contato."); return; }
+        
+        const tipoDocumento = document.getElementById('whatsapp-tipo-documento').value;
+        try {
+            const response = await fetch(`/orcamento/${orcamentoId}/whatsapp?status=${encodeURIComponent(tipoDocumento)}`);
+            if (!response.ok) throw new Error("Não foi possível gerar a mensagem.");
+            const data = await response.json();
+            const mensagemBase = data.whatsapp_message;
+            checkboxes.forEach((check, index) => {
+                const telefoneLimpo = check.value.replace(/\D/g, '');
+                if (!telefoneLimpo) return;
+                const telefoneFinal = telefoneLimpo.startsWith("55") ? telefoneLimpo : "55" + telefoneLimpo;
+                const mensagemCodificada = encodeURIComponent(mensagemBase);
+                const urlFinal = `https://wa.me/${telefoneFinal}?text=${mensagemCodificada}`;
+                setTimeout(() => {
+                    if (isMobile()) {
+                        let win = window.open(`whatsapp://send?phone=${telefoneFinal}&text=${mensagemCodificada}`);
+                        setTimeout(() => {
+                            if (!win || win.closed || typeof win.closed === 'undefined') {
+                                window.open(urlFinal, '_blank');
+                            }
+                        }, 700);
+                    } else {
+                        window.open(urlFinal, '_blank');
+                    }
+                }, index * 400);
+            });
+            fecharModalWhatsApp();
+        } catch (error) {
+            alert("Ocorreu um erro: " + error.message);
+        }
+    });
+    
+    document.getElementById('btn-enviar-email-final').onclick = enviarEmailsSelecionados;
+
+    // Checagem de Notificação de Sucesso na URL
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('atualizado')) {
         const notificacao = document.createElement('div');
@@ -784,10 +703,14 @@
         document.body.appendChild(notificacao);
         setTimeout(() => { notificacao.remove(); window.history.replaceState({}, document.title, "/orcamentos"); }, 3000);
     }
-     carregarOrcamentos();
-  }
-    // Carrega os orçamentos assim que o script é lido
-    inicializar();
-  </script>
+    
+    // CARGA INICIAL DOS DADOS DA PÁGINA
+    carregarOrcamentos();
+}
+
+// INICIA TUDO QUANDO A PÁGINA ESTÁ PRONTA
+document.addEventListener('DOMContentLoaded', inicializar);
+
+</script>
 </body>
-</html> 
+</html>
