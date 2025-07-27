@@ -123,7 +123,12 @@
               <button onclick="fecharModalEmail()" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
           </div>
           <div class="mt-4 space-y-4">
-              <p class="text-sm"> Selecione os destinatários para o envio: <strong id="email-cliente-nome"></strong></p>
+              <p class="text-sm"> Selecione ou adicione os destinatários para o envio: <strong id="email-cliente-nome"></strong></p>
+              <div class="relative">
+                <input type="email" id="email-manual-input" 
+                  placeholder="Ou digite um novo e-mail aqui"
+                  class="h-10 w-full rounded-md border border-gray-300 bg-gray-50 px-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-400">
+              </div>
               <div id="lista-contatos-email" class="space-y-2 border-t border-b py-3 max-h-48 overflow-y-auto">
                 <!-- A lista de contatos com checkboxes de e-mail vai aqui -->
               </div>
@@ -173,7 +178,14 @@
             <button onclick="fecharModalWhatsApp()" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
         </div>
         <div class="mt-4 space-y-4">
-            <p class="text-sm">Selecione os contatos para enviar o orçamento:</p>
+            <p class="text-sm">Selecione ou adicione os contatos para enviar:</p>
+            <div class="relative">
+              <input type="tel" id="whatsapp-manual-input" 
+                oninput="mascara(event, '(##) #####-####')"
+                maxlength="15"
+                placeholder="Ou digite um novo número aqui"
+                class="h-10 w-full rounded-md border border-gray-300 bg-gray-50 px-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            </div>
             <div id="lista-contatos-whatsapp" class="space-y-2 border-t border-b py-3 max-h-48 overflow-y-auto">
                 <!-- A lista de contatos com checkboxes vai aqui -->
             </div>
@@ -283,7 +295,11 @@ async function carregarOrcamentos() {
 // --- FUNÇÕES GERAIS ---
 function editarOrcamento(id) { window.location.href = `/editar-orcamento/${id}`; }
 function isMobile() { return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent); }
-
+window.mascara = function(e, pattern) {
+  let i = 0;
+  const v = e.target.value.replace(/\D/g, "");
+  e.target.value = pattern.replace(/#/g, () => v[i++] || "");
+}
 // --- MODAL DE SELEÇÃO DE DOCUMENTO (EMAIL/WHATSAPP) ---
 function abrirModalTipoDocumento(orcamentoId, acao) {
     tipoDocumentoOrcamentoIdInput.value = orcamentoId;
@@ -317,6 +333,7 @@ function fecharModalStatusPDF() {
 function abrirModalEmail(orcamentoId, tipoDocumento) {
     document.getElementById('email-orcamento-id').value = orcamentoId;
     document.getElementById('email-tipo-documento').value = tipoDocumento;
+    document.getElementById('email-manual-input').value = ''; 
     
     const listaContatosDiv = document.getElementById('lista-contatos-email');
     listaContatosDiv.innerHTML = `<p class="text-gray-500 text-sm p-2">Carregando...</p>`;
@@ -357,18 +374,32 @@ async function enviarEmailsSelecionados() {
     const orcamentoId = document.getElementById('email-orcamento-id').value;
     const tipoDocumento = document.getElementById('email-tipo-documento').value;
     const checkboxes = document.querySelectorAll('#lista-contatos-email input[type="checkbox"]:checked');
-    if (checkboxes.length === 0) { alert("Por favor, selecione pelo menos um destinatário."); return; }
+    
     const btn = document.getElementById('btn-enviar-email-final');
+    const emailsSelecionados = Array.from(checkboxes).map(cb => cb.value);
+    const emailManual = document.getElementById('email-manual-input').value.trim();
+
+    let destinatariosFinais = [...emailsSelecionados];
+    if (emailManual) {
+        destinatariosFinais.push(emailManual);
+    }
+
+    if (destinatariosFinais.length === 0) {
+        alert("Por favor, selecione ou digite pelo menos um e-mail para enviar.");
+        return;
+    }
+    
+
     btn.disabled = true;
     btn.innerHTML = 'Gerando...';
 
-    const destinatarios = Array.from(checkboxes).map(cb => cb.value).join(',');
+    const destinatariosString = destinatariosFinais.join(',');
 
     try {
       await fetch(`/orcamento/${orcamentoId}/pdf?status=${encodeURIComponent(tipoDocumento)}`);
         
       const formData = new FormData();
-          formData.append('destinatario', destinatarios);
+          formData.append('destinatario', destinatariosString);
 
           const response = await fetch(`/orcamento/${orcamentoId}/email/link?status=${encodeURIComponent(tipoDocumento)}`, {
               method: 'POST',
@@ -399,6 +430,7 @@ async function enviarEmailsSelecionados() {
 
 // --- MODAL DE WHATSAPP ---
 function abrirModalWhatsApp(orcamentoId, telefonePrincipal, tipoDeDocumento, nomeCliente) {
+    document.getElementById('whatsapp-manual-input').value = ''; 
     whatsappOrcamentoIdInput.value = orcamentoId;
     let hiddenTipo = document.getElementById('whatsapp-tipo-documento');
     if (!hiddenTipo) {
@@ -620,7 +652,7 @@ function inicializar() {
     modalWhatsApp.addEventListener('click', (e) => { if (e.target === modalWhatsApp) fecharModalWhatsApp(); });
     btnsFecharModalTipoDocumento.forEach(btn => btn.addEventListener('click', fecharModalTipoDocumento));
     modalTipoDocumento.addEventListener('click', (e) => { if (e.target === modalTipoDocumento) fecharModalTipoDocumento(); });
-    
+    document.getElementById('whatsapp-manual-input').addEventListener('input', (e) => mascara(e, '(##) #####-####'));
     // Listeners de Ação dos Modais
     btnConfirmarTipoDocumento.addEventListener('click', async () => {
         const orcamentoId = tipoDocumentoOrcamentoIdInput.value;
@@ -656,41 +688,66 @@ function inicializar() {
         fecharModalStatusPDF();
     });
 
-    btnEnviarWhatsAppFinal.addEventListener('click', async () => {
-        const orcamentoId = whatsappOrcamentoIdInput.value;
-        const checkboxes = document.querySelectorAll('#lista-contatos-whatsapp input[type="checkbox"]:checked');
-        if (checkboxes.length === 0) { alert("Selecione ao menos um contato."); return; }
-        
-        const tipoDocumento = document.getElementById('whatsapp-tipo-documento').value;
-        try {
-            const response = await fetch(`/orcamento/${orcamentoId}/whatsapp?status=${encodeURIComponent(tipoDocumento)}`);
-            if (!response.ok) throw new Error("Não foi possível gerar a mensagem.");
-            const data = await response.json();
-            const mensagemBase = data.whatsapp_message;
-            checkboxes.forEach((check, index) => {
-                const telefoneLimpo = check.value.replace(/\D/g, '');
-                if (!telefoneLimpo) return;
-                const telefoneFinal = telefoneLimpo.startsWith("55") ? telefoneLimpo : "55" + telefoneLimpo;
-                const mensagemCodificada = encodeURIComponent(mensagemBase);
-                const urlFinal = `https://wa.me/${telefoneFinal}?text=${mensagemCodificada}`;
+    // SUBSTITUA O BLOCO INTEIRO
+
+  btnEnviarWhatsAppFinal.addEventListener('click', async () => {
+    const orcamentoId = whatsappOrcamentoIdInput.value;
+    
+    // 1. Pega os números dos checkboxes
+    const checkboxes = document.querySelectorAll('#lista-contatos-whatsapp input[type="checkbox"]:checked');
+    const telefonesSelecionados = Array.from(checkboxes).map(check => check.value);
+
+    // 2. Pega o número do campo manual
+    const telefoneManual = document.getElementById('whatsapp-manual-input').value.trim();
+
+    // 3. Cria a lista final unificada
+    let telefonesParaEnviar = [...telefonesSelecionados];
+    if (telefoneManual) {
+        telefonesParaEnviar.push(telefoneManual);
+    }
+    
+    // 4. Faz UMA ÚNICA validação na lista final
+    if (telefonesParaEnviar.length === 0) {
+        alert("Por favor, selecione ou digite pelo menos um número para enviar.");
+        return;
+    }
+    
+    const tipoDocumento = document.getElementById('whatsapp-tipo-documento').value;
+
+    try {
+        const response = await fetch(`/orcamento/${orcamentoId}/whatsapp?status=${encodeURIComponent(tipoDocumento)}`);
+        if (!response.ok) throw new Error("Não foi possível gerar a mensagem.");
+        const data = await response.json();
+        const mensagemBase = data.whatsapp_message;
+
+        // 5. O loop agora itera sobre a LISTA CORRETA (telefonesParaEnviar)
+        telefonesParaEnviar.forEach((telefone, index) => {
+          const telefoneLimpo = telefone.replace(/\D/g, '');
+          if (!telefoneLimpo) return;
+
+          const telefoneFinal = telefoneLimpo.startsWith("55") ? telefoneLimpo : "55" + telefoneLimpo;
+          const mensagemCodificada = encodeURIComponent(mensagemBase);
+          const urlFinal = `https://wa.me/${telefoneFinal}?text=${mensagemCodificada}`;
+            
+          setTimeout(() => {
+            if (isMobile()) {
+              let win = window.open(`whatsapp://send?phone=${telefoneFinal}&text=${mensagemCodificada}`);
                 setTimeout(() => {
-                    if (isMobile()) {
-                        let win = window.open(`whatsapp://send?phone=${telefoneFinal}&text=${mensagemCodificada}`);
-                        setTimeout(() => {
-                            if (!win || win.closed || typeof win.closed === 'undefined') {
-                                window.open(urlFinal, '_blank');
-                            }
-                        }, 700);
-                    } else {
-                        window.open(urlFinal, '_blank');
-                    }
-                }, index * 400);
-            });
-            fecharModalWhatsApp();
-        } catch (error) {
-            alert("Ocorreu um erro: " + error.message);
-        }
-    });
+                  if (!win || win.closed || typeof win.closed === 'undefined') {
+                    window.open(urlFinal, '_blank');
+                  }
+                  }, 700);
+                } else {
+                  window.open(urlFinal, '_blank');
+                }
+          }, index * 400);
+        });
+
+        fecharModalWhatsApp();
+    } catch (error) {
+        alert("Ocorreu um erro: " + error.message);
+    }
+  });
     
     document.getElementById('btn-enviar-email-final').onclick = enviarEmailsSelecionados;
 
