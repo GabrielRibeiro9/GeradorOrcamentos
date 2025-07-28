@@ -571,6 +571,35 @@ async def atualizar_orcamento_submit(
     orcamento_db.complemento_cliente = form_data.get("complemento")
     orcamento_db.bairro_cliente = form_data.get("bairro")
     orcamento_db.cidade_uf_cliente = form_data.get("cidade_uf")
+
+    if orcamento_db.cliente:
+        cliente = orcamento_db.cliente  # Pega o objeto do cliente relacionado
+        cliente.nome = form_data.get("nome")
+        cliente.telefone = form_data.get("telefone")
+        cliente.cep = form_data.get("cep")
+        cliente.logradouro = form_data.get("logradouro")
+        cliente.numero_casa = form_data.get("numero_casa")
+        cliente.complemento = form_data.get("complemento")
+        cliente.bairro = form_data.get("bairro")
+        cliente.cidade_uf = form_data.get("cidade_uf")
+
+        # Também sincroniza os contatos extras para o registro do cliente
+        # Primeiro, remove os contatos antigos do cliente
+        cliente.contatos.clear()
+        
+        # Depois, adiciona os novos contatos (vindos do formulário) ao cliente
+        contatos_json = form_data.get("contatos", "[]")
+        contatos_data = json.loads(contatos_json)
+        for contato_info in contatos_data:
+            cliente.contatos.append(
+                Contato(
+                    nome=contato_info['nome'], 
+                    telefone=contato_info['telefone'],
+                    email=contato_info.get('email')
+                )
+            )
+        
+        session.add(cliente)
     
     # ATUALIZA OS DADOS DO ORÇAMENTO
     orcamento_db.numero = form_data.get("numero_orcamento").strip()
@@ -713,6 +742,23 @@ class ClienteComContatosResponse(BaseModel):
     cidade_uf: Optional[str] = None
     contatos: List[ContatoResponse] = []
 
+class ContatoUpdate(BaseModel):
+    id: Optional[int] = None
+    nome: str
+    telefone: str
+    email: Optional[str] = None
+
+class ClienteUpdate(BaseModel):
+    nome: str
+    telefone: Optional[str] = None
+    cep: Optional[str] = None
+    logradouro: Optional[str] = None
+    numero_casa: Optional[str] = None
+    complemento: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade_uf: Optional[str] = None
+    contatos: List[ContatoUpdate] = []
+
 # --- ROTAS DA API PARA CLIENTES ---
 # SUBSTITUA esta função de API inteira no app.py
 
@@ -799,6 +845,65 @@ def deletar_cliente(
     session.delete(cliente)
     session.commit()
     return Response(status_code=204)
+
+@app.put("/api/clientes/{cliente_id}", response_model=ClienteComContatosResponse)
+def atualizar_cliente(
+    cliente_id: int,
+    cliente_update_data: ClienteUpdate,
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Atualiza um cliente e seus contatos associados.
+    """
+    # Busca o cliente existente no banco, garantindo que ele pertença ao usuário logado
+    cliente_db = session.exec(
+        select(Cliente)
+        .options(selectinload(Cliente.contatos)) # Carrega os contatos existentes para edição
+        .where(Cliente.id == cliente_id, Cliente.user_id == current_user.id)
+    ).first()
+
+    if not cliente_db:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado.")
+
+    update_data = cliente_update_data.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        if key != "contatos": # O campo 'contatos' será tratado separadamente
+            setattr(cliente_db, key, value)
+
+
+ 
+    contatos_recebidos = {c.id for c in cliente_update_data.contatos if c.id}
+    contatos_no_banco = {c.id for c in cliente_db.contatos}
+    
+    # Apaga contatos que não vieram na lista
+    for contato in list(cliente_db.contatos):
+        if contato.id not in contatos_recebidos:
+            session.delete(contato)
+
+    # Atualiza contatos existentes ou cria novos
+    for contato_data in cliente_update_data.contatos:
+        if contato_data.id: # Se tem ID, atualiza
+            contato_existente = session.get(Contato, contato_data.id)
+            if contato_existente:
+                contato_existente.nome = contato_data.nome
+                contato_existente.telefone = contato_data.telefone
+                contato_existente.email = contato_data.email
+        else: # Se não tem ID, cria um novo
+            novo_contato = Contato(
+                nome=contato_data.nome,
+                telefone=contato_data.telefone,
+                email=contato_data.email,
+                cliente_id=cliente_db.id
+            )
+            session.add(novo_contato)
+
+    session.add(cliente_db)
+    session.commit()
+    session.refresh(cliente_db)
+
+    return cliente_db
 
 @app.post("/orcamento/{orcamento_id}/email/link")
 def gerar_link_email(

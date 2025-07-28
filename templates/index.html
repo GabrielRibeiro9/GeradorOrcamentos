@@ -696,6 +696,32 @@ document.addEventListener("DOMContentLoaded", function() {
         renderizarTagsDeContato();
         fecharModalContato();
     }
+
+    function adicionarContato(contato) {
+        if (!contato || !contato.nome || !contato.telefone) return;
+
+        const tagDiv = document.createElement('div');
+        tagDiv.className = "flex items-center gap-2 bg-emerald-100 text-emerald-800 text-sm font-semibold px-3 py-1 rounded-full";
+        
+        // Usa os dados do objeto 'contato' recebido para criar a tag
+        tagDiv.innerHTML = `
+            <span>${contato.nome} - ${contato.telefone}</span>
+            <button type="button" class="text-emerald-600 hover:text-emerald-900 contact-remove-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4 pointer-events-none"><path d="M2.22 2.22a.75.75 0 0 1 1.06 0L8 6.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L9.06 8l4.72 4.72a.75.75 0 1 1-1.06 1.06L8 9.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L6.94 8 2.22 3.28a.75.75 0 0 1 0-1.06Z" /></svg>
+            </button>
+        `;
+
+        // Adiciona o evento para o botão de remover desta tag específica
+        tagDiv.querySelector('.contact-remove-btn').addEventListener('click', function() {
+            // Encontra o contato correspondente na lista e o remove
+            const index = contatosExtras.findIndex(c => c.nome === contato.nome && c.telefone === contato.telefone);
+            if (index > -1) {
+                removerContatoExtra(index);
+            }
+        });
+        
+        listaContatosVisivel.appendChild(tagDiv);
+    }
     
     // ESTA FUNÇÃO DESENHA AS TAGS VISÍVEIS NO FORMULÁRIO
     function renderizarTagsDeContato() {
@@ -1045,13 +1071,13 @@ document.addEventListener("DOMContentLoaded", function() {
             }
             const cliente = await res.json();
             
-            // 1. Limpa contatos extras anteriores antes de preencher
+            // 1. Limpa contatos extras anteriores
             contatosExtras = [];
-            renderizarTagsDeContato(); 
+            renderizarTagsDeContato();
 
-            // 2. Preenche todos os campos do formulário com os dados do cliente
+            // 2. Preenche TODOS os campos do formulário, com segurança para valores nulos
             nomeInput.value = cliente.nome || '';
-            telefoneInput.value = cliente.telefone || ''; // Preenche o telefone PRINCIPAL
+            telefoneInput.value = cliente.telefone || '';
             cepInput.value = cliente.cep || '';
             document.getElementById('logradouro').value = cliente.logradouro || '';
             document.getElementById('numero_casa').value = cliente.numero_casa || '';
@@ -1059,13 +1085,22 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById('cidade_uf').value = cliente.cidade_uf || '';
             document.getElementById('complemento').value = cliente.complemento || '';
             clienteIdInput.value = cliente.id;
+
+            // 3. Força a aplicação das máscaras de CEP e Telefone
+            if (telefoneInput.oninput) telefoneInput.dispatchEvent(new Event('input'));
+            if (cepInput.oninput) cepInput.dispatchEvent(new Event('input'));
             
-            // 3. Popula a lista de contatos EXTRAS
+            // 4. Popula a lista de contatos EXTRAS com os novos dados
             if (cliente.contatos && cliente.contatos.length > 0) {
-                contatosExtras = cliente.contatos;
-                renderizarTagsDeContato();  // A função correta para desenhar os contatos na tela
+                contatosExtras = cliente.contatos.map(c => ({
+                    nome: c.nome || '',
+                    telefone: c.telefone || '',
+                    email: c.email || ''
+                }));
+                renderizarTagsDeContato(); // Desenha as tags dos contatos na tela
             }
             
+            // 5. Ajusta o toggle e fecha o modal
             toggleSalvarCliente.checked = false;
             fecharModalDeClientes();
         } catch (e) {

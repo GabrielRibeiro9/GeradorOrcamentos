@@ -30,12 +30,12 @@ class Cliente(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nome: str
     telefone: Optional[str] = Field(default=None)
-    cep: str
-    logradouro: str
-    numero_casa: str
+    cep: Optional[str] = Field(default=None)
+    logradouro: Optional[str] = Field(default=None)
+    numero_casa: Optional[str] = Field(default=None)
     complemento: Optional[str] = Field(default=None)
-    bairro: str
-    cidade_uf: str
+    bairro: Optional[str] = Field(default=None)
+    cidade_uf: Optional[str] = Field(default=None)
     user_id: int = Field(foreign_key="user.id")
     user: "User" = Relationship(back_populates="clientes")
     

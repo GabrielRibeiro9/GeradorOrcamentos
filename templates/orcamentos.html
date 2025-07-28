@@ -45,133 +45,198 @@
   </main>
 
   <!-- MODAL DE CONFIGURAÇÕES -->
-  <div id="modal-config" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 transition-opacity duration-300">
-      <div id="modal-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md transform transition-all -translate-y-10 opacity-0 duration-300 flex flex-col max-h-[95vh] sm:max-h-[90vh]">
-          <div class="flex items-center justify-between pb-3 border-b">
-              <h3 class="text-xl font-semibold text-gray-800">Configurações</h3>
-              <button onclick="fecharModalConfig()" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
-          </div>
-          <div class="mt-4 space-y-6 overflow-y-auto pr-2">
-              <div class="bg-gray-50 p-4 rounded-lg border">
-                  <div class="flex flex-col sm:flex-row items-center gap-4">
-                      <div class="flex-grow">
-                          <label for="novo_numero_inicial" class="block text-sm font-medium text-gray-700">Reiniciar contagem a partir de:</label>
-                          <p class="text-xs text-gray-500 mt-1">Digite '0' para o próximo orçamento ser o Nº 0001.</p>
-                      </div>
-                      <div class="flex items-center gap-2">
-                          <input type="number" id="novo_numero_inicial" value="0" class="w-24 h-10 text-center font-semibold border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400">
-                          <button onclick="resetarContador()" class="h-10 px-4 bg-orange-500 text-white font-semibold rounded-lg shadow hover:bg-orange-600 transition">Resetar</button>
-                      </div>
-                  </div>
-              </div>
-
-              {% if user.username == admin_username_from_env %}
-
-                <div class="bg-gray-50 p-4 rounded-lg border">
-                  <h4 class="text-md font-semibold text-gray-800 mb-2">Mudar Meu Modelo de PDF (Admin)</h4>
-                  <div class="flex items-center gap-2">
-                      <select id="admin-template-select" class="flex-grow mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                          <option value="joao">Modelo João</option>
-                          <option value="cacador">Modelo Caçador</option>
-                      </select>
-                      <button onclick="atualizarModeloPDF()" class="h-10 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition">
-                          Aplicar
-                      </button>
-                  </div>
-              </div>
-              <div class="bg-gray-50 p-4 rounded-lg border">
-                  <h4 class="text-md font-semibold text-gray-800 mb-2">Cadastrar Novo Usuário</h4>
-                  <div class="space-y-3">
-                      <div>
-                          <label for="new-username" class="text-sm font-medium text-gray-600">Nome de Usuário:</label>
-                          <input type="text" id="new-username" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                      </div>
-                      <div>
-                          <label for="new-password" class="text-sm font-medium text-gray-600">Senha:</label>
-                          <input type="password" id="new-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                      </div>
-                      <div>
-                          <label for="new-template" class="text-sm font-medium text-gray-600">Modelo de PDF:</label>
-                          <select id="new-template" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                              <option value="joao">Modelo João</option>
-                              <option value="cacador">Modelo Caçador</option>
-                          </select>
-                      </div>
-                      <button onclick="cadastrarNovoUsuario()" class="w-full h-10 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition">
-                          Cadastrar Usuário
-                      </button>
-                  </div>
-              </div>
-
-              <!-- Div de Gerenciar Usuários começa aqui, no nível correto -->
-              <div class="bg-gray-50 p-4 rounded-lg border">
-                  <h4 class="text-md font-semibold text-gray-800 mb-2">Gerenciar Usuários</h4>
-                  <div id="lista-usuarios" class="mt-2 space-y-2 max-h-48 overflow-y-auto">
-                      <!-- O JavaScript vai preencher esta lista -->
-                      <p class="text-gray-500 text-sm">Carregando usuários...</p>
-                  </div>
-              </div>
-              {% endif %}
-          </div>
-      </div>
-  </div>
-
-    <div id="modal-email" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
-      <div id="modal-email-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md transform transition-all -translate-y-10 opacity-0 duration-300">
-          <div class="flex items-center justify-between pb-3 border-b">
-              <h3 class="text-xl font-semibold text-gray-800">Enviar Orçamento por E-mail</h3>
-              <button onclick="fecharModalEmail()" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
-          </div>
-          <div class="mt-4 space-y-4">
-              <p class="text-sm"> Selecione ou adicione os destinatários para o envio: <strong id="email-cliente-nome"></strong></p>
-              <div class="relative">
-                <input type="email" id="email-manual-input" 
-                  placeholder="Ou digite um novo e-mail aqui"
-                  class="h-10 w-full rounded-md border border-gray-300 bg-gray-50 px-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-400">
-              </div>
-              <div id="lista-contatos-email" class="space-y-2 border-t border-b py-3 max-h-48 overflow-y-auto">
-                <!-- A lista de contatos com checkboxes de e-mail vai aqui -->
-              </div>
-              <!-- Input oculto para guardar o ID do orçamento -->
-              <input type="hidden" id="email-orcamento-id">
-              <input type="hidden" id="email-tipo-documento">
-              <button id="btn-enviar-email-final" class="w-full h-10 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" />
-                  <path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" />
+  <div id="modal-config" class="fixed inset-0 bg-opacity-0 hidden z-50 transition-opacity duration-300 ease-in-out">
+       <div id="sidebar-panel" class="absolute top-0 right-0 h-full w-full max-w-sm bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-in-out translate-x-full">
+          <div class="flex items-center justify-between p-4 border-b bg-gray-50 flex-shrink-0">
+              <h3 id="sidebar-title" class="text-xl font-semibold text-gray-800">Configurações</h3>
+              <button onclick="fecharModalConfig()" class="text-gray-500 hover:text-gray-800 p-1 rounded-full transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                Enviar para Selecionados
               </button>
           </div>
-      </div>
-  </div>
-    <div id="modal-status-pdf" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
-      <div id="modal-status-pdf-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md transform transition-all -translate-y-10 opacity-0 duration-300">
-          <div class="text-center">
-              <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
-                  <svg class="h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+          <div id="sidebar-content" class="overflow-y-auto flex-grow">
+              <div id="config-menu" class="p-4">
+                <ul class="space-y-2">
+                  <li>
+                    <a href="#" data-target="panel-reset-counter" class="sidebar-link group flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                      <span class="font-medium text-gray-700">Reiniciar Contagem</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" data-target="panel-manage-clients" class="sidebar-link group flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                        <span class="font-medium text-gray-700">Gerenciar Clientes</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </a>
+                  </li>
+
+                  {% if user.username == admin_username_from_env %}
+                  <li>
+                     <a href="#" data-target="panel-change-template" class="sidebar-link group flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                          <span class="font-medium text-gray-700">Mudar Modelo de PDF</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>  
+                      </a>
+                  </li>
+                  <li>
+                    <a href="#" data-target="panel-add-user" class="sidebar-link group flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                        <span class="font-medium text-gray-700">Cadastrar Novo Usuário</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" data-target="panel-manage-users" class="sidebar-link group flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                        <span class="font-medium text-gray-700">Gerenciar Usuários</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </a>
+                  </li>
+                  {% endif %}
+                </ul>
               </div>
-              <h3 class="mt-4 text-lg leading-6 font-medium text-gray-900">Tipo de Documento</h3>
-              <div class="mt-2 px-7 py-3">
-                  <p class="text-sm text-gray-500">
-                      O serviço deste documento já foi realizado? Escolha o tipo de documento que deseja gerar.
-                  </p>
+              <div id="panel-reset-counter" class="config-panel hidden">
+                <div class="flex items-center gap-2 p-4 border-b">
+                  <button class="back-to-menu p-1 text-gray-500 hover:text-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                  </button>    
+                  <h4 class="text-lg font-semibold text-gray-800">Reiniciar Contagem</h4>
+                </div>
+                <div class="p-6 space-y-4">
+                  <p class="text-sm text-gray-600">Defina o número a partir do qual a contagem de orçamentos irá continuar. Se digitar '0', o próximo será o Nº 0001.</p>
+                  <div class="flex items-center gap-3">  
+                    <label for="novo_numero_inicial" class="text-sm font-medium text-gray-700 whitespace-nowrap">Iniciar em:</label>
+                    <input type="number" id="novo_numero_inicial" value="0" class="w-full h-10 text-center font-semibold border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400">
+                  </div>  
+                  <button onclick="resetarContador()" class="w-full h-10 px-4 bg-orange-500 text-white font-semibold rounded-lg shadow hover:bg-orange-600 transition">Resetar Contagem</button>
+                </div>  
               </div>
-          </div>
-          <div class="mt-5 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button id="btn-gerar-orcamento" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700">
-                  Gerar Orçamento
-              </button>
-              <button id="btn-gerar-nota" type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50">
-                  Gerar Nota de Serviço
-              </button>
-          </div>
-          <input type="hidden" id="pdf-orcamento-id">
-      </div>
+              <div id="panel-change-template" class="config-panel hidden">
+                <div class="flex items-center gap-2 p-4 border-b">
+                  <button class="back-to-menu p-1 text-gray-500 hover:text-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  <h4 class="text-lg font-semibold text-gray-800">Mudar Modelo de PDF</h4>
+                </div>
+                <div class="p-6 space-y-4">
+                  <p class="text-sm text-gray-600">Como administrador, você pode definir qual modelo de PDF será usado para gerar seus documentos.</p>
+                  <div class="space-y-2">
+                    <label for="admin-template-select" class="block text-sm font-medium text-gray-700">Seu modelo atual:</label>
+                    <select id="admin-template-select" class="w-full h-10 px-3 border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400">
+                      <option value="joao">Modelo João</option>
+                      <option value="cacador">Modelo Caçador</option>
+                    </select>
+                  </div>
+                  <button onclick="atualizarModeloPDF()" class="w-full h-10 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition">Aplicar Novo Modelo</button>
+                </div>
+              </div>
+              <div id="panel-add-user" class="config-panel hidden">
+                <div class="flex items-center gap-2 p-4 border-b">
+                    <button class="back-to-menu p-1 text-gray-500 hover:text-gray-800"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg></button>
+                    <h4 class="text-lg font-semibold text-gray-800">Cadastrar Novo Usuário</h4>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="space-y-3">
+                        <div>
+                            <label for="new-username" class="text-sm font-medium text-gray-700">Nome de Usuário:</label>
+                            <input type="text" id="new-username" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label for="new-password" class="text-sm font-medium text-gray-700">Senha:</label>
+                            <input type="password" id="new-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label for="new-template" class="text-sm font-medium text-gray-700">Modelo de PDF Padrão:</label>
+                            <select id="new-template" class="mt-1 block w-full h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                                <option value="joao">Modelo João</option>
+                                <option value="cacador">Modelo Caçador</option>
+                            </select>
+                        </div>
+                        <button onclick="cadastrarNovoUsuario()" class="w-full h-10 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition !mt-6">Cadastrar Usuário</button>
+                    </div>
+                </div>
+              </div>
+              <div id="panel-manage-users" class="config-panel hidden">
+                <div class="flex items-center gap-2 p-4 border-b">
+                    <button class="back-to-menu p-1 text-gray-500 hover:text-gray-800"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg></button>
+                    <h4 class="text-lg font-semibold text-gray-800">Gerenciar Usuários</h4>
+                </div>
+                <div class="p-6 space-y-4">
+                    <p class="text-sm text-gray-600">Abaixo estão listados todos os usuários cadastrados no sistema. Lembre-se que apagar um usuário é uma ação permanente e irreversível.</p>
+                    <div id="lista-usuarios" class="mt-2 space-y-2 max-h-60 overflow-y-auto border-t border-b py-2"><p class="text-gray-500 text-sm">Carregando usuários...</p></div>
+                </div>
+              </div>  
+              <div id="panel-manage-clients" class="config-panel hidden">
+                <div class="flex items-center gap-2 p-4 border-b">
+                    <button class="back-to-menu p-1 text-gray-500 hover:text-gray-800"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg></button>
+                    <h4 class="text-lg font-semibold text-gray-800">Gerenciar Clientes</h4>
+                </div>
+                <div class="p-4">
+                    <div class="relative mb-4">
+                        <input type="text" id="client-search-input" placeholder="Buscar cliente por nome..." class="w-full h-10 pl-10 pr-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <div id="client-list-container" class="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-2"><p class="text-gray-500 text-center py-4">Carregando clientes...</p></div>
+                </div>
+              </div>
+          </div> <!-- FECHA #sidebar-content -->
+       </div> <!-- FECHA #sidebar-panel -->
+  </div> <!-- FECHA #modal-config -->
+
+  <div id="modal-email" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+    <div id="modal-email-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md transform transition-all -translate-y-10 opacity-0 duration-300">
+        <div class="flex items-center justify-between pb-3 border-b">
+            <h3 class="text-xl font-semibold text-gray-800">Enviar Orçamento por E-mail</h3>
+            <button onclick="fecharModalEmail()" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
+        </div>
+        <div class="mt-4 space-y-4">
+            <p class="text-sm"> Selecione ou adicione os destinatários para o envio: <strong id="email-cliente-nome"></strong></p>
+            <div class="relative">
+              <input type="email" id="email-manual-input" placeholder="Ou digite um novo e-mail aqui" class="h-10 w-full rounded-md border border-gray-300 bg-gray-50 px-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+            <div id="lista-contatos-email" class="space-y-2 border-t border-b py-3 max-h-48 overflow-y-auto"></div>
+            <input type="hidden" id="email-orcamento-id">
+            <input type="hidden" id="email-tipo-documento">
+            <button id="btn-enviar-email-final" class="w-full h-10 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" /><path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" /></svg>
+              Enviar para Selecionados
+            </button>
+        </div>
+    </div>
   </div>
-    <div id="modal-whatsapp" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+
+  <div id="modal-status-pdf" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+    <div id="modal-status-pdf-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md transform transition-all -translate-y-10 opacity-0 duration-300">
+        <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                <svg class="h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+            <h3 class="mt-4 text-lg leading-6 font-medium text-gray-900">Tipo de Documento</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500">O serviço deste documento já foi realizado? Escolha o tipo de documento que deseja gerar.</p>
+            </div>
+        </div>
+        <div class="mt-5 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button id="btn-gerar-orcamento" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700">Gerar Orçamento</button>
+            <button id="btn-gerar-nota" type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50">Gerar Nota de Serviço</button>
+        </div>
+        <input type="hidden" id="pdf-orcamento-id">
+    </div>
+  </div>
+
+  <div id="modal-whatsapp" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
     <div id="modal-whatsapp-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md transform transition-all -translate-y-10 opacity-0 duration-300">
         <div class="flex items-center justify-between pb-3 border-b">
             <h3 class="text-xl font-semibold text-gray-800">Enviar por WhatsApp</h3>
@@ -180,15 +245,9 @@
         <div class="mt-4 space-y-4">
             <p class="text-sm">Selecione ou adicione os contatos para enviar:</p>
             <div class="relative">
-              <input type="tel" id="whatsapp-manual-input" 
-                oninput="mascara(event, '(##) #####-####')"
-                maxlength="15"
-                placeholder="Ou digite um novo número aqui"
-                class="h-10 w-full rounded-md border border-gray-300 bg-gray-50 px-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-400">
+              <input type="tel" id="whatsapp-manual-input" oninput="mascara(event, '(##) #####-####')" maxlength="15" placeholder="Ou digite um novo número aqui" class="h-10 w-full rounded-md border border-gray-300 bg-gray-50 px-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-400">
             </div>
-            <div id="lista-contatos-whatsapp" class="space-y-2 border-t border-b py-3 max-h-48 overflow-y-auto">
-                <!-- A lista de contatos com checkboxes vai aqui -->
-            </div>
+            <div id="lista-contatos-whatsapp" class="space-y-2 border-t border-b py-3 max-h-48 overflow-y-auto"></div>
             <input type="hidden" id="whatsapp-orcamento-id">
             <button id="btn-enviar-whatsapp-final" class="w-full h-10 px-4 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 transition flex items-center justify-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
@@ -197,45 +256,104 @@
         </div>
     </div>
   </div>
-    <div id="modal-tipo-documento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[60]">
-      <div id="modal-tipo-documento-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm mx-4 transform transition-all -translate-y-10 opacity-0 duration-300">
-          <!-- Título -->
-          <h3 class="text-lg font-medium text-gray-900 text-center">Qual documento deseja enviar?</h3>
-          
-          <!-- Conteúdo/Opções -->
-          <div class="mt-4 space-y-3">
-              <p class="text-sm text-center text-gray-500">
-                  Selecione o tipo de documento que será gerado para o compartilhamento via WhatsApp.
-              </p>
-              <div class="pt-2">
-                  <label class="flex items-center p-3 w-full bg-white border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
-                      <input type="radio" name="tipo_documento_escolha" value="Orçamento" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" checked>
-                      <span class="ml-3 text-sm font-medium text-gray-800">Enviar como Orçamento</span>
-                  </label>
-              </div>
-              <div>
-                  <label class="flex items-center p-3 w-full bg-white border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
-                      <input type="radio" name="tipo_documento_escolha" value="Nota de Serviço" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
-                      <span class="ml-3 text-sm font-medium text-gray-800">Enviar como Nota de Serviço</span>
-                  </label>
-              </div>
-          </div>
 
-          <!-- Botões de Ação -->
-          <div class="mt-6 flex justify-end gap-3">
-              <button type="button" class="btn-fechar-modal-tipo-documento px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
-              <button type="button" id="btn-confirmar-tipo-documento" class="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700">Confirmar</button>
-          </div>
-
-          <!-- ID do orçamento será guardado aqui -->
-          <input type="hidden" id="tipo-documento-orcamento-id">
-      </div>
+  <div id="modal-tipo-documento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[60]">
+    <div id="modal-tipo-documento-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm mx-4 transform transition-all -translate-y-10 opacity-0 duration-300">
+        <h3 class="text-lg font-medium text-gray-900 text-center">Qual documento deseja enviar?</h3>
+        <div class="mt-4 space-y-3">
+            <p class="text-sm text-center text-gray-500">Selecione o tipo de documento que será gerado para o compartilhamento.</p>
+            <div class="pt-2">
+                <label class="flex items-center p-3 w-full bg-white border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                    <input type="radio" name="tipo_documento_escolha" value="Orçamento" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" checked>
+                    <span class="ml-3 text-sm font-medium text-gray-800">Enviar como Orçamento</span>
+                </label>
+            </div>
+            <div>
+                <label class="flex items-center p-3 w-full bg-white border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                    <input type="radio" name="tipo_documento_escolha" value="Nota de Serviço" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                    <span class="ml-3 text-sm font-medium text-gray-800">Enviar como Nota de Serviço</span>
+                </label>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" class="btn-fechar-modal-tipo-documento px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
+            <button type="button" id="btn-confirmar-tipo-documento" class="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700">Confirmar</button>
+        </div>
+        <input type="hidden" id="tipo-documento-orcamento-id">
     </div>
+  </div>
 
-  <script>
+  <div id="modal-edit-client" class="hidden fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+    <div id="modal-edit-client-box" class="bg-gray-50 rounded-xl shadow-2xl w-full sm:max-w-2xl transform transition-all -translate-y-10 opacity-0 duration-300 flex flex-col max-h-[90vh] sm:max-h-[95vh]">
+        <div class="flex items-center justify-between p-4 border-b bg-white rounded-t-xl">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></div>
+                <h3 class="text-xl font-semibold text-gray-800">Editar Cliente</h3>
+            </div>
+            <button onclick="fecharModalEditarCliente()" class="text-gray-400 hover:text-gray-600 text-3xl">×</button>
+        </div>
+        <div class="p-6 space-y-6 overflow-y-auto">
+            <div class="bg-white p-4 rounded-lg border shadow-sm">
+                <h4 class="font-semibold text-gray-700 mb-3">Informações Principais</h4>
+                <div class="grid grid-cols-1 gap-4">
+                    <input type="hidden" id="edit-cliente-id">
+                    <div>
+                        <label for="edit-cliente-nome" class="text-sm font-medium text-gray-600">Nome do Cliente / Empresa</label>
+                        <input type="text" id="edit-cliente-nome" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label for="edit-cliente-telefone" class="text-sm font-medium text-gray-600">Telefone Principal</label>
+                        <input type="text" id="edit-cliente-telefone" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500" oninput="mascara(event, '(##) #####-####')" maxlength="15">
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg border shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="font-semibold text-gray-700">Contatos Adicionais</h4>
+                    <button onclick="adicionarNovoContatoForm()" class="px-3 py-1 bg-emerald-600 text-white text-sm font-semibold rounded-md hover:bg-emerald-700 flex items-center gap-1">
+                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
+                        Adicionar
+                    </button>
+                </div>
+                <div id="contatos-container" class="space-y-3">
+                    <p id="sem-contatos-msg" class="text-gray-400 text-sm text-center py-4">Nenhum contato adicional.</p>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-4 border-t bg-gray-100 rounded-b-xl">
+            <div class="grid grid-cols-2 gap-3 w-full sm:w-auto">
+                <button onclick="fecharModalEditarCliente()" class="px-5 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors justify-center">Cancelar</button>
+                <button onclick="salvarClienteAtualizado()" class="px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2">
+                    <svg id="save-icon" class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6.293a2 2 0 011.414.586l2.828 2.828A2 2 0 0118 6.707V16a2 2 0 01-2 2H7a2 2 0 01-2-2V4zm3 0a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V5a1 1 0 00-1-1H8z" /></svg>
+                    <div id="save-spinner" class="hidden h-5 w-5 border-2 border-t-blue-200 border-white rounded-full animate-spin"></div>
+                    <span>Salvar Alterações</span>
+                </button>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <template id="contato-form-template">
+      <div class="grid grid-cols-1 sm:grid-cols-6 gap-3 p-3 border rounded-md bg-gray-50/50 relative contact-form-row">
+          <div class="sm:col-span-2">
+              <input type="text" placeholder="Nome do Contato" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 contato-nome">
+          </div>
+          <div class="sm:col-span-2">
+              <input type="text" placeholder="Telefone" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 contato-telefone" oninput="mascara(event, '(##) #####-####')" maxlength="15">
+          </div>
+          <div class="sm:col-span-2">
+              <input type="email" placeholder="E-mail (opcional)" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 contato-email">
+          </div>
+          <button onclick="this.closest('.contact-form-row').remove()" class="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600" title="Remover Contato">
+              <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" /></svg>
+          </button>
+      </div>
+  </template>
+
+<script>
 const modalEmail = document.getElementById('modal-email');
 const modalEmailBox = document.getElementById('modal-email-box');
-const modalBox = document.getElementById('modal-box');
+const sidebarPanel = document.getElementById('sidebar-panel');
 const modal = document.getElementById('modal-config');
 const modalStatusPdf = document.getElementById('modal-status-pdf');
 const modalStatusPdfBox = document.getElementById('modal-status-pdf-box');
@@ -249,6 +367,10 @@ const modalTipoDocumentoBox = document.getElementById('modal-tipo-documento-box'
 const tipoDocumentoOrcamentoIdInput = document.getElementById('tipo-documento-orcamento-id');
 const btnConfirmarTipoDocumento = document.getElementById('btn-confirmar-tipo-documento');
 const btnsFecharModalTipoDocumento = document.querySelectorAll('.btn-fechar-modal-tipo-documento');
+const modalEditClient = document.getElementById('modal-edit-client');
+const modalEditClientBox = document.getElementById('modal-edit-client-box');
+const contatosContainer = document.getElementById('contatos-container');
+const contatoFormTemplate = document.getElementById('contato-form-template');
 
 // --- LÓGICA DE CARREGAMENTO DOS ORÇAMENTOS ---
 async function carregarOrcamentos() {
@@ -293,7 +415,7 @@ async function carregarOrcamentos() {
 }
 
 // --- FUNÇÕES GERAIS ---
-function editarOrcamento(id) { window.location.href = `/editar-orcamento/${id}`; }
+window.editarOrcamento = function(id) { window.location.href = `/editar-orcamento/${id}`; }
 function isMobile() { return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent); }
 window.mascara = function(e, pattern) {
   let i = 0;
@@ -301,7 +423,7 @@ window.mascara = function(e, pattern) {
   e.target.value = pattern.replace(/#/g, () => v[i++] || "");
 }
 // --- MODAL DE SELEÇÃO DE DOCUMENTO (EMAIL/WHATSAPP) ---
-function abrirModalTipoDocumento(orcamentoId, acao) {
+window.abrirModalTipoDocumento = function(orcamentoId, acao) {
     tipoDocumentoOrcamentoIdInput.value = orcamentoId;
     modalTipoDocumento.dataset.acao = acao;
     btnConfirmarTipoDocumento.textContent = 'Confirmar';
@@ -317,7 +439,7 @@ function fecharModalTipoDocumento() {
 }
 
 // --- MODAL DE PDF (GERAR NOTA/ORÇAMENTO) ---
-function abrirModalStatusPDF(orcamentoId) {
+window.abrirModalStatusPDF = function(orcamentoId) {
     pdfOrcamentoIdInput.value = orcamentoId;
     modalStatusPdf.classList.remove('hidden');
     modalStatusPdf.classList.add('flex');
@@ -380,51 +502,31 @@ async function enviarEmailsSelecionados() {
     const emailManual = document.getElementById('email-manual-input').value.trim();
 
     let destinatariosFinais = [...emailsSelecionados];
-    if (emailManual) {
-        destinatariosFinais.push(emailManual);
-    }
-
-    if (destinatariosFinais.length === 0) {
-        alert("Por favor, selecione ou digite pelo menos um e-mail para enviar.");
-        return;
-    }
+    if (emailManual) { destinatariosFinais.push(emailManual); }
+    if (destinatariosFinais.length === 0) { alert("Por favor, selecione ou digite pelo menos um e-mail para enviar."); return; }
     
-
     btn.disabled = true;
     btn.innerHTML = 'Gerando...';
-
     const destinatariosString = destinatariosFinais.join(',');
 
     try {
       await fetch(`/orcamento/${orcamentoId}/pdf?status=${encodeURIComponent(tipoDocumento)}`);
-        
       const formData = new FormData();
-          formData.append('destinatario', destinatariosString);
-
-          const response = await fetch(`/orcamento/${orcamentoId}/email/link?status=${encodeURIComponent(tipoDocumento)}`, {
-              method: 'POST',
-              body: formData
-          });
-
-          if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.detail || "Falha ao gerar o link de e-mail.");
-          }
-          
-          const data = await response.json();
-          
-          // 4. ABRE DIRETAMENTE O APP DE E-MAIL!
-          //    O navegador entende o link `mailto:` e abre o cliente padrão do usuário.
-          window.location.href = data.mailto_link;
-          
-      } catch (error) {
-          alert(`Ocorreu um erro: ${error.message}`);
-      } finally {
-          // Sempre fecha o modal e reativa o botão
-          fecharModalEmail();
-          btn.disabled = false;
-          btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" /><path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" /></svg> Enviar para Selecionados`;
+      formData.append('destinatario', destinatariosString);
+      const response = await fetch(`/orcamento/${orcamentoId}/email/link?status=${encodeURIComponent(tipoDocumento)}`, { method: 'POST', body: formData });
+      if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || "Falha ao gerar o link de e-mail.");
       }
+      const data = await response.json();
+      window.location.href = data.mailto_link;
+    } catch (error) {
+        alert(`Ocorreu um erro: ${error.message}`);
+    } finally {
+        fecharModalEmail();
+        btn.disabled = false;
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" /><path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" /></svg> Enviar para Selecionados`;
+    }
 }
 
 
@@ -451,13 +553,11 @@ function abrirModalWhatsApp(orcamentoId, telefonePrincipal, tipoDeDocumento, nom
       .then(res => res.ok ? res.json() : Promise.reject('Falha na API'))
       .then(contatosExtras => {
         listaContatosDiv.innerHTML = '';
-        let listaCompleta = [...contatosExtras];
-
-        if (listaCompleta.length === 0) {
+        if (contatosExtras.length === 0) {
             listaContatosDiv.innerHTML = `<p class="text-red-500 text-sm p-2">Nenhum telefone encontrado.</p>`;
             return;
         }
-        listaCompleta.forEach(contato => {
+        contatosExtras.forEach(contato => {
             const label = document.createElement('label');
             label.className = "flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer";
             label.innerHTML = `
@@ -473,12 +573,25 @@ function fecharModalWhatsApp() {
     setTimeout(() => { modalWhatsApp.classList.add('hidden'); modalWhatsApp.classList.remove('flex'); }, 300);
 }
 
+function abrirModalEditarCliente() {
+    modalEditClient.classList.remove('hidden');
+    setTimeout(() => {
+        modalEditClientBox.classList.remove('-translate-y-10', 'opacity-0');
+    }, 50);
+}
+
+function fecharModalEditarCliente() {
+    modalEditClientBox.classList.add('-translate-y-10', 'opacity-0');
+    setTimeout(() => {
+        modalEditClient.classList.add('hidden');
+    }, 300);
+}
+
 async function deletarOrcamento(id) {
     if (!confirm(`Tem certeza que deseja excluir o orçamento?`)) return;
 
     try {
       const response = await fetch(`/api/orcamentos/${id}`, { method: 'DELETE' });
-
       if (response.status === 204) {
         const card = document.getElementById(`orcamento-card-${id}`);
         if (card) {
@@ -496,20 +609,21 @@ async function deletarOrcamento(id) {
       alert("Ocorreu um erro: " + error.message);
     }
 }
+
 function abrirModalConfig() {
+  document.querySelectorAll('.config-panel').forEach(panel => panel.classList.add('hidden'));
+  document.getElementById('config-menu').classList.remove('hidden');
   modal.classList.remove('hidden');
-  modal.classList.add('flex');
-  setTimeout(() => { modalBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
-  
-  // A variável 'admin_username_from_env' é injetada pelo Jinja2 no seu HTML
-  if ("{{ user.username }}" === "{{ admin_username_from_env }}") {
-      carregarListaUsuarios();
-  }
+  setTimeout(() => {
+      modal.classList.add('backdrop-blur-sm');
+      sidebarPanel.classList.remove('translate-x-full');
+  }, 10);
 }
 
 function fecharModalConfig() {
-  modalBox.classList.add('-translate-y-10', 'opacity-0');
-  setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+  modal.classList.remove('backdrop-blur-sm');
+  sidebarPanel.classList.add('translate-x-full');
+  setTimeout(() => { modal.classList.add('hidden'); }, 300);
 }
 
 async function carregarListaUsuarios() {
@@ -522,25 +636,19 @@ async function carregarListaUsuarios() {
         throw new Error(errorData.detail || "Falha ao carregar usuários.");
     }
     const users = await response.json();
-    
     container.innerHTML = '';
     if (users.length <= 1) {
         container.innerHTML = `<p class="text-gray-400 text-sm">Nenhum outro usuário cadastrado.</p>`;
         return;
     }
-      
     users.forEach(user => {
       if (user.username === "{{ user.username }}") return;
-
       const userDiv = document.createElement('div');
       userDiv.className = 'flex items-center justify-between p-2 bg-white rounded-md border';
       userDiv.id = `user-row-${user.id}`;
       userDiv.innerHTML = `
           <span class="text-gray-700 font-medium">${user.username}</span>
-          <button onclick="deletarUsuario(${user.id}, '${user.username}')" class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-md hover:bg-red-200">
-              Apagar
-          </button>
-      `;
+          <button onclick="deletarUsuario(${user.id}, '${user.username}')" class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-md hover:bg-red-200">Apagar</button>`;
       container.appendChild(userDiv);
     });
   } catch (error) {
@@ -549,10 +657,147 @@ async function carregarListaUsuarios() {
   }
 }
 
-async function deletarUsuario(userId, username) {
-    if (!confirm(`Tem certeza que deseja apagar permanentemente o usuário "${username}"?\nTODOS os orçamentos e clientes deste usuário serão perdidos.`)) {
+async function carregarListaClientes() {
+  const container = document.getElementById('client-list-container');
+  container.innerHTML = `<p class="text-gray-500 text-center py-4">Carregando clientes...</p>`;
+  try {
+    const response = await fetch('/api/clientes/');
+    if (!response.ok) { throw new Error('Falha ao buscar os dados dos clientes.'); }
+    const clientes = await response.json();
+    if (clientes.length === 0) {
+        container.innerHTML = `<p class="text-gray-400 text-center py-4">Nenhum cliente cadastrado ainda.</p>`;
         return;
     }
+    container.innerHTML = ''; 
+    clientes.forEach(cliente => {
+        const clientCard = document.createElement('div');
+        clientCard.className = 'bg-white border rounded-lg p-3 space-y-2';
+        clientCard.id = `client-card-${cliente.id}`;
+        let contatosInfo = '<span class="text-xs text-gray-400">Nenhum contato adicional.</span>';
+        if (cliente.contatos.length > 0) {
+            const nomesContatos = cliente.contatos.map(c => c.nome).join(', ');
+            contatosInfo = `<span class="text-xs text-gray-500" title="${nomesContatos}">${cliente.contatos.length} contato(s): ${nomesContatos}</span>`;
+        }
+        clientCard.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="font-semibold text-gray-800">${cliente.nome}</p>
+                    <p class="text-sm text-gray-500">${cliente.telefone || 'Sem telefone principal'}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="editarCliente(${cliente.id})" class="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" title="Editar Cliente"><svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
+                    <button onclick="deletarCliente(${cliente.id}, '${cliente.nome}')" class="p-2 text-red-600 hover:bg-red-100 rounded-full transition-colors" title="Apagar Cliente"><svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
+                </div>
+            </div>
+            <div class="border-t pt-2 truncate">${contatosInfo}</div>`;
+        container.appendChild(clientCard);
+    });
+  } catch (error) {
+      console.error('Erro ao carregar clientes:', error);
+      container.innerHTML = `<p class="text-red-500 text-center py-4">Não foi possível carregar os clientes.</p>`;
+  }
+}
+
+async function deletarCliente(clienteId, nomeCliente) {
+  if (!confirm(`Tem certeza que deseja apagar o cliente "${nomeCliente}" e todos os seus contatos?\n\nEsta ação é irreversível!`)) { return; }
+  try {
+      const response = await fetch(`/api/clientes/${clienteId}`, { method: 'DELETE' });
+    if (response.ok) {
+        const card = document.getElementById(`client-card-${clienteId}`);
+        if (card) {
+          card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+          card.style.opacity = '0';
+          card.style.transform = 'scale(0.95)';
+          setTimeout(() => {
+              card.remove();
+              const container = document.getElementById('client-list-container');
+              if (container.children.length === 0) {
+                  container.innerHTML = `<p class="text-gray-400 text-center py-4">Nenhum cliente cadastrado ainda.</p>`;
+              }
+          }, 300);
+        }
+    } else {
+          const error = await response.json();
+          throw new Error(error.detail || 'Falha ao apagar o cliente.');
+    }
+  } catch(error) { alert(`Erro: ${error.message}`); }
+}
+
+async function editarCliente(clienteId) {
+  try {
+    const response = await fetch(`/api/clientes/${clienteId}`);
+    if (!response.ok) throw new Error('Não foi possível carregar os dados do cliente.');
+    const cliente = await response.json();
+    document.getElementById('edit-cliente-id').value = cliente.id;
+    document.getElementById('edit-cliente-nome').value = cliente.nome;
+    document.getElementById('edit-cliente-telefone').value = cliente.telefone || '';
+    contatosContainer.innerHTML = '';
+    if (cliente.contatos.length > 0) {
+        cliente.contatos.forEach(contato => { adicionarNovoContatoForm(contato); });
+    } else {
+        contatosContainer.innerHTML = `<p id="sem-contatos-msg" class="text-gray-400 text-sm text-center py-4">Nenhum contato adicional.</p>`;
+    }
+    abrirModalEditarCliente();
+  } catch(error) { alert(`Erro: ${error.message}`); }
+}
+
+function adicionarNovoContatoForm(contato = null) {
+    const msg = document.getElementById('sem-contatos-msg');
+    if (msg) msg.remove();
+    const formClone = contatoFormTemplate.content.cloneNode(true);
+    const formRow = formClone.querySelector('.contact-form-row');
+    if (contato) {
+        formRow.dataset.id = contato.id;
+        formRow.querySelector('.contato-nome').value = contato.nome;
+        formRow.querySelector('.contato-telefone').value = contato.telefone;
+        formRow.querySelector('.contato-email').value = contato.email || '';
+    }
+    contatosContainer.appendChild(formClone);
+}
+
+async function salvarClienteAtualizado() {
+  const clienteId = document.getElementById('edit-cliente-id').value;
+  const saveButton = document.querySelector('#modal-edit-client-box button[onclick="salvarClienteAtualizado()"]');
+  const saveIcon = document.getElementById('save-icon');
+  const saveSpinner = document.getElementById('save-spinner');
+
+  saveButton.disabled = true;
+  saveIcon.classList.add('hidden');
+  saveSpinner.classList.remove('hidden');
+
+  const contatosRows = document.querySelectorAll('#contatos-container .contact-form-row');
+  const contatosPayload = Array.from(contatosRows).map(row => ({
+    id: row.dataset.id ? parseInt(row.dataset.id) : null,
+    nome: row.querySelector('.contato-nome').value,
+    telefone: row.querySelector('.contato-telefone').value,
+    email: row.querySelector('.contato-email').value
+  }));
+
+  const payload = {
+    nome: document.getElementById('edit-cliente-nome').value,
+    telefone: document.getElementById('edit-cliente-telefone').value,
+    contatos: contatosPayload
+  };
+    
+  try {
+    const response = await fetch(`/api/clientes/${clienteId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Falha ao salvar o cliente.');
+    }
+    fecharModalEditarCliente();
+    await carregarListaClientes();
+  } catch(error) {
+      alert(`Erro: ${error.message}`);
+  } finally {
+      saveButton.disabled = false;
+      saveIcon.classList.remove('hidden');
+      saveSpinner.classList.add('hidden');
+  }
+}
+
+async function deletarUsuario(userId, username) {
+    if (!confirm(`Tem certeza que deseja apagar permanentemente o usuário "${username}"?\nTODOS os orçamentos e clientes deste usuário serão perdidos.`)) { return; }
     try {
         const response = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
         if (response.status === 204) {
@@ -572,9 +817,7 @@ async function deletarUsuario(userId, username) {
 async function resetarContador() {
     const inputNumero = document.getElementById('novo_numero_inicial');
     const novoValor = inputNumero.value;
-    if (novoValor === "" || isNaN(parseInt(novoValor)) || parseInt(novoValor) < 0) {
-        alert("Por favor, insira um número válido (0 ou maior)."); return;
-    }
+    if (novoValor === "" || isNaN(parseInt(novoValor)) || parseInt(novoValor) < 0) { alert("Por favor, insira um número válido (0 ou maior)."); return; }
     if (!confirm(`Tem certeza? O próximo orçamento será o Nº ${String(parseInt(novoValor) + 1).padStart(4, '0')}.`)) return;
     try {
         const formData = new FormData();
@@ -593,17 +836,13 @@ async function resetarContador() {
 async function atualizarModeloPDF() {
     const select = document.getElementById('admin-template-select');
     const novoModelo = select.value;
-    if (!confirm(`Tem certeza que deseja mudar seu modelo de PDF para '${novoModelo.charAt(0).toUpperCase() + novoModelo.slice(1)}'?`)) {
-        return;
-    }
+    if (!confirm(`Tem certeza que deseja mudar seu modelo de PDF para '${novoModelo.charAt(0).toUpperCase() + novoModelo.slice(1)}'?`)) { return; }
     const formData = new FormData();
     formData.append('new_template', novoModelo);
     try {
         const response = await fetch('/api/user/update-template', { method: 'POST', body: formData });
         const result = await response.json();
-        if (!response.ok) {
-            throw new Error(result.detail || "Ocorreu um erro desconhecido.");
-        }
+        if (!response.ok) { throw new Error(result.detail || "Ocorreu um erro desconhecido."); }
         alert(result.message);
         fecharModalConfig();
     } catch (error) {
@@ -619,10 +858,7 @@ async function cadastrarNovoUsuario() {
     const username = usernameInput.value.trim();
     const password = passwordInput.value.trim();
     const template = templateInput.value;
-    if (!username || !password) {
-        alert("Por favor, preencha o nome de usuário e a senha.");
-        return;
-    }
+    if (!username || !password) { alert("Por favor, preencha o nome de usuário e a senha."); return; }
     const formData = new FormData();
     formData.append('username', username);
     formData.append('password', password);
@@ -630,22 +866,49 @@ async function cadastrarNovoUsuario() {
     try {
         const response = await fetch('/api/users/', { method: 'POST', body: formData });
         const result = await response.json();
-        if (!response.ok) {
-            throw new Error(result.detail || "Erro desconhecido ao cadastrar usuário.");
-        }
+        if (!response.ok) { throw new Error(result.detail || "Erro desconhecido ao cadastrar usuário."); }
         alert(result.message);
         usernameInput.value = '';
         passwordInput.value = '';
-        carregarListaUsuarios(); // Recarrega a lista para mostrar o novo usuário
+        carregarListaUsuarios();
     } catch (error) {
         console.error("Erro ao cadastrar usuário:", error);
         alert(`Ocorreu um erro: ${error.message}`);
     }
 }
 
-// --- FUNÇÃO DE INICIALIZAÇÃO (PONTO CENTRAL) ---
+function setupSidebarNavigation() {
+  const sidebarLinks = document.querySelectorAll('.sidebar-link');
+  const configPanels = document.querySelectorAll('.config-panel');
+  const backButtons = document.querySelectorAll('.back-to-menu');
+  const menuPanel = document.getElementById('config-menu');
+
+  sidebarLinks.forEach(link => {
+    if (link.getAttribute('data-target')) {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetPanelId = this.getAttribute('data-target');
+          const targetPanel = document.getElementById(targetPanelId);
+          if (targetPanel) {
+            if (targetPanelId === 'panel-manage-users') { carregarListaUsuarios(); }
+            if (targetPanelId === 'panel-manage-clients') { carregarListaClientes(); }
+            menuPanel.classList.add('hidden');
+            targetPanel.classList.remove('hidden');
+          }
+        });
+    }
+  });
+
+  backButtons.forEach(button => {
+      button.addEventListener('click', function(e) {
+          e.preventDefault();
+          this.closest('.config-panel').classList.add('hidden');
+          menuPanel.classList.remove('hidden');
+      });
+  });
+}
+
 function inicializar() {
-    // Listeners Globais para Fechamento de Modais
     modal.addEventListener('click', (e) => { if (e.target === modal) fecharModalConfig(); });
     modalStatusPdf.addEventListener('click', (e) => { if(e.target === modalStatusPdf) fecharModalStatusPDF(); });
     modalEmail.addEventListener('click', (e) => { if (e.target === modalEmail) fecharModalEmail(); });
@@ -653,7 +916,7 @@ function inicializar() {
     btnsFecharModalTipoDocumento.forEach(btn => btn.addEventListener('click', fecharModalTipoDocumento));
     modalTipoDocumento.addEventListener('click', (e) => { if (e.target === modalTipoDocumento) fecharModalTipoDocumento(); });
     document.getElementById('whatsapp-manual-input').addEventListener('input', (e) => mascara(e, '(##) #####-####'));
-    // Listeners de Ação dos Modais
+    
     btnConfirmarTipoDocumento.addEventListener('click', async () => {
         const orcamentoId = tipoDocumentoOrcamentoIdInput.value;
         const tipoDocumento = document.querySelector('input[name="tipo_documento_escolha"]:checked').value;
@@ -665,15 +928,12 @@ function inicializar() {
             if (!orcamentoRes.ok) throw new Error("Falha ao buscar dados.");
             const orcamentos = await orcamentoRes.json();
             const orcamentoAtual = orcamentos.find(o => o.id === parseInt(orcamentoId));
-            
             if (acao === 'whatsapp') {
                 abrirModalWhatsApp(orcamentoId, orcamentoAtual?.telefone || '', tipoDocumento, orcamentoAtual?.nome || '');
             } else if (acao === 'email') {
-                abrirModalEmail(orcamentoId, tipoDocumento); // Chamada simplificada
+                abrirModalEmail(orcamentoId, tipoDocumento);
             }
-        } catch(e) {
-            alert(e.message);
-        }
+        } catch(e) { alert(e.message); }
     });
 
     document.getElementById('btn-gerar-orcamento').addEventListener('click', () => {
@@ -688,29 +948,14 @@ function inicializar() {
         fecharModalStatusPDF();
     });
 
-    // SUBSTITUA O BLOCO INTEIRO
-
   btnEnviarWhatsAppFinal.addEventListener('click', async () => {
     const orcamentoId = whatsappOrcamentoIdInput.value;
-    
-    // 1. Pega os números dos checkboxes
     const checkboxes = document.querySelectorAll('#lista-contatos-whatsapp input[type="checkbox"]:checked');
     const telefonesSelecionados = Array.from(checkboxes).map(check => check.value);
-
-    // 2. Pega o número do campo manual
     const telefoneManual = document.getElementById('whatsapp-manual-input').value.trim();
-
-    // 3. Cria a lista final unificada
     let telefonesParaEnviar = [...telefonesSelecionados];
-    if (telefoneManual) {
-        telefonesParaEnviar.push(telefoneManual);
-    }
-    
-    // 4. Faz UMA ÚNICA validação na lista final
-    if (telefonesParaEnviar.length === 0) {
-        alert("Por favor, selecione ou digite pelo menos um número para enviar.");
-        return;
-    }
+    if (telefoneManual) { telefonesParaEnviar.push(telefoneManual); }
+    if (telefonesParaEnviar.length === 0) { alert("Por favor, selecione ou digite pelo menos um número para enviar."); return; }
     
     const tipoDocumento = document.getElementById('whatsapp-tipo-documento').value;
 
@@ -720,38 +965,27 @@ function inicializar() {
         const data = await response.json();
         const mensagemBase = data.whatsapp_message;
 
-        // 5. O loop agora itera sobre a LISTA CORRETA (telefonesParaEnviar)
         telefonesParaEnviar.forEach((telefone, index) => {
           const telefoneLimpo = telefone.replace(/\D/g, '');
           if (!telefoneLimpo) return;
-
           const telefoneFinal = telefoneLimpo.startsWith("55") ? telefoneLimpo : "55" + telefoneLimpo;
           const mensagemCodificada = encodeURIComponent(mensagemBase);
           const urlFinal = `https://wa.me/${telefoneFinal}?text=${mensagemCodificada}`;
-            
           setTimeout(() => {
             if (isMobile()) {
               let win = window.open(`whatsapp://send?phone=${telefoneFinal}&text=${mensagemCodificada}`);
                 setTimeout(() => {
-                  if (!win || win.closed || typeof win.closed === 'undefined') {
-                    window.open(urlFinal, '_blank');
-                  }
-                  }, 700);
-                } else {
-                  window.open(urlFinal, '_blank');
-                }
+                  if (!win || win.closed || typeof win.closed === 'undefined') { window.open(urlFinal, '_blank'); }
+                }, 700);
+            } else { window.open(urlFinal, '_blank'); }
           }, index * 400);
         });
-
         fecharModalWhatsApp();
-    } catch (error) {
-        alert("Ocorreu um erro: " + error.message);
-    }
+    } catch (error) { alert("Ocorreu um erro: " + error.message); }
   });
     
     document.getElementById('btn-enviar-email-final').onclick = enviarEmailsSelecionados;
 
-    // Checagem de Notificação de Sucesso na URL
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('atualizado')) {
         const notificacao = document.createElement('div');
@@ -761,11 +995,10 @@ function inicializar() {
         setTimeout(() => { notificacao.remove(); window.history.replaceState({}, document.title, "/orcamentos"); }, 3000);
     }
     
-    // CARGA INICIAL DOS DADOS DA PÁGINA
     carregarOrcamentos();
+    setupSidebarNavigation();
 }
 
-// INICIA TUDO QUANDO A PÁGINA ESTÁ PRONTA
 document.addEventListener('DOMContentLoaded', inicializar);
 
 </script>
