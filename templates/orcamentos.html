@@ -133,8 +133,9 @@
                   <div class="space-y-2">
                     <label for="admin-template-select" class="block text-sm font-medium text-gray-700">Seu modelo atual:</label>
                     <select id="admin-template-select" class="w-full h-10 px-3 border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400">
-                      <option value="joao">Modelo João</option>
-                      <option value="cacador">Modelo Caçador</option>
+                      {% for key, name in pdf_templates.items() %}
+                        <option value="{{ key }}" {% if key == user.pdf_template_name %}selected{% endif %}>Modelo {{ name }}</option>
+                      {% endfor %}
                     </select>
                   </div>
                   <button onclick="atualizarModeloPDF()" class="w-full h-10 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition">Aplicar Novo Modelo</button>
@@ -156,11 +157,12 @@
                             <input type="password" id="new-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
                         </div>
                         <div>
-                            <label for="new-template" class="text-sm font-medium text-gray-700">Modelo de PDF Padrão:</label>
-                            <select id="new-template" class="mt-1 block w-full h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                                <option value="joao">Modelo João</option>
-                                <option value="cacador">Modelo Caçador</option>
-                            </select>
+                          <label for="new-template" class="text-sm font-medium text-gray-700">Modelo de PDF Padrão:</label>
+                          <select id="new-template" class="mt-1 block w-full h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                              {% for key, name in pdf_templates.items() %}
+                                <option value="{{ key }}">Modelo {{ name }}</option>
+                              {% endfor %}
+                          </select>
                         </div>
                         <button onclick="cadastrarNovoUsuario()" class="w-full h-10 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition !mt-6">Cadastrar Usuário</button>
                     </div>

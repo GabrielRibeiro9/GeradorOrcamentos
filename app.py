@@ -37,11 +37,13 @@ from security import get_password_hash, verify_password
 
 from pdf_models.modelo_joao import gerar_pdf_joao
 from pdf_models.modelo_cacador import gerar_pdf_cacador
+from pdf_models.modelo_apresentacao import gerar_pdf_apresentacao
 
 PDF_GENERATORS = {
     "joao": gerar_pdf_joao,
     "cacador": gerar_pdf_cacador,
-    "default": gerar_pdf_joao 
+    "apresentacao": gerar_pdf_apresentacao,
+    "default": gerar_pdf_apresentacao 
 }
 
 # --- CONFIGURAÇÃO INICIAL E CONSTANTES ---
@@ -186,7 +188,19 @@ async def home(request: Request, current_user: User = Depends(get_current_user))
 @app.get("/orcamentos", response_class=HTMLResponse)
 async def orcamentos_page(request: Request, current_user: User = Depends(get_current_user)):
     admin_username = os.getenv("BASIC_AUTH_USER", "admin")
-    return templates.TemplateResponse("orcamentos.html", {"request": request, "user": current_user, "admin_username_from_env": admin_username})
+
+    # Pega a lista de modelos (exceto o 'default') para enviar ao template
+    available_templates = {key: key.capitalize() for key in PDF_GENERATORS if key != 'default'}
+
+    return templates.TemplateResponse(
+        "orcamentos.html", 
+        {
+            "request": request, 
+            "user": current_user, 
+            "admin_username_from_env": admin_username,
+            "pdf_templates": available_templates 
+        }
+    )
 
 
 # --- ROTAS DA API ---
@@ -1102,7 +1116,3 @@ def get_orcamento_emails(
             lista_emails.append(ContatoEmailResponse(nome=contato.nome, email=contato.email))
     
     return lista_emails
-
-
-
- 
