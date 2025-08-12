@@ -1,4 +1,4 @@
-import os, qrcode, tempfile
+import os, qrcode, tempfile, json
 from fpdf import FPDF
 from models import Orcamento
 from io import BytesIO
@@ -200,13 +200,20 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
     if servicos:
         pdf.ln(4)
         pdf.set_font("Arial", "B", 12)
-        pdf.set_text_color(0, 0, 0) # Cor do título da seção
+        pdf.set_text_color(0, 0, 0)
         pdf.cell(0, 10, "Serviços", ln=True, align="L")
         draw_header()
         for i, it in enumerate(servicos, start=1):
             draw_row(i, it) 
 
     if materiais:
+        # --- LÓGICA DE VERIFICAÇÃO DE ESPAÇO ---
+        # 10 (título) + 8 (cabeçalho da tabela) + 7 (altura mínima da linha) = 25
+        espaco_necessario = 25 
+        if pdf.get_y() + espaco_necessario > pdf.page_break_trigger:
+            pdf.add_page()
+        # --- FIM DA VERIFICAÇÃO ---
+
         pdf.ln(4)
         pdf.set_font("Arial", "B", 12)
         pdf.set_text_color(0, 0, 0)
@@ -278,8 +285,25 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
              pdf.ln() # Se não tiver linhas (valor vazio), só pula a linha
 
 
+
+    condicao_pagamento_str = orcamento.condicao_pagamento
+    condicao_formatada = condicao_pagamento_str
+
+    if condicao_pagamento_str and condicao_pagamento_str.strip().startswith('['):
+        try:
+            parcelas = json.loads(condicao_pagamento_str)
+            if isinstance(parcelas, list) and parcelas:
+                partes = []
+                for p in parcelas:
+                    descricao = p.get('descricao', 'Parcela')
+                    valor = float(p.get('valor', 0))
+                    partes.append(f"{descricao}: {format_brl_cacador(valor)}")
+                condicao_formatada = " + ".join(partes)
+        except (json.JSONDecodeError, TypeError):
+            condicao_formatada = condicao_pagamento_str
+
     # --- USO DA FUNÇÃO PARA TODOS OS CAMPOS ---
-    draw_term_line("Pagamento", orcamento.condicao_pagamento)
+    draw_term_line("Pagamento", condicao_formatada)
     draw_term_line("Prazo", orcamento.prazo_entrega)
     draw_term_line("Garantia", orcamento.garantia)
     draw_term_line("Observações", orcamento.observacoes)

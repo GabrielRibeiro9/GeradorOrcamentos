@@ -297,6 +297,16 @@ async def salvar_orcamento_endpoint(
     # --- LÓGICA DO ORÇAMENTO (como já estava)
     itens_data = json.loads(form_data.get("itens"))
     total_geral = sum(int(i['quantidade']) * float(i['valor']) for i in itens_data)
+
+    condicao_pagamento = form_data.get("condicao_pagamento")
+    try:
+        # Tenta carregar como JSON; se for uma lista/dicionário, converte para string
+        parsed_json = json.loads(condicao_pagamento)
+        condicao_pagamento_final = json.dumps(parsed_json)
+    except (json.JSONDecodeError, TypeError):
+        # Se falhar, é uma string simples ou nulo
+        condicao_pagamento_final = condicao_pagamento or "A combinar"
+
     
     orcamento_db = Orcamento(
         numero=form_data.get("numero_orcamento"),
@@ -316,7 +326,7 @@ async def salvar_orcamento_endpoint(
         complemento_cliente=form_data.get("complemento"),
         bairro_cliente=form_data.get("bairro"),
         cidade_uf_cliente=form_data.get("cidade_uf"),
-        condicao_pagamento=form_data.get("condicao_pagamento"),
+        condicao_pagamento=condicao_pagamento_final,
         prazo_entrega=form_data.get("prazo_entrega"),
         garantia=form_data.get("garantia"),
         observacoes=form_data.get("observacoes"),
@@ -348,6 +358,8 @@ def listar_orcamentos_api(
 ):
     statement = (
         select(Orcamento)
+        # O .options(selectinload...) não é mais estritamente necessário aqui, 
+        # mas não prejudica se ficar.
         .options(selectinload(Orcamento.cliente)) 
         .where(Orcamento.user_id == user.id)
         .order_by(Orcamento.id.desc())
@@ -355,18 +367,16 @@ def listar_orcamentos_api(
     orcamentos = session.exec(statement).all()
     resultado = []
     for o in orcamentos:
-        # Pega o telefone principal, seja do cliente salvo ou do fallback
-        telefone_principal = o.cliente.telefone if o.cliente and o.cliente.telefone else o.telefone_cliente
-        
-        nome_cliente = o.cliente.nome if o.cliente else o.nome_cliente
-
+        # --- CORREÇÃO APLICADA AQUI ---
+        # Agora, nós SEMPRE usamos os campos do próprio orçamento.
+        # Eles representam a "foto" correta dos dados no momento da última atualização.
         resultado.append({
             "id": o.id,
             "numero": o.numero,
-            "nome": o.cliente.nome if o.cliente else o.nome_cliente,
+            "nome": o.nome_cliente,  # Usa diretamente o nome salvo NO orçamento.
             "data_emissao": o.data_emissao,
             "total_geral": o.total_geral,
-            "telefone": telefone_principal  # <-- CAMPO NOVO E CRUCIAL
+            "telefone": o.telefone_cliente # Usa diretamente o telefone salvo NO orçamento.
         })
     return resultado
 
@@ -545,7 +555,10 @@ async def editar_orcamento_page(
     # USAREMOS selectinload PARA GARANTIR QUE O CLIENTE VENHA JUNTO
     statement = (
         select(Orcamento)
-        .options(selectinload(Orcamento.cliente).selectinload(Cliente.contatos)) # A linha mágica
+        .options(
+            selectinload(Orcamento.contatos_extras),
+        selectinload(Orcamento.cliente).selectinload(Cliente.contatos)
+        )
         .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
     )
     orcamento = session.exec(statement).first()
@@ -560,6 +573,8 @@ async def editar_orcamento_page(
     )
 
 # SUBSTITUA A FUNÇÃO ATUALIZAR INTEIRA POR ESTA:
+# Em app.py, SUBSTITUA a função de atualizar inteira por esta:
+
 @app.post("/atualizar-orcamento/{orcamento_id}")
 async def atualizar_orcamento_submit(
     request: Request,
@@ -569,14 +584,19 @@ async def atualizar_orcamento_submit(
 ):
     form_data = await request.form()
     
+    # Busca o orçamento e seus relacionamentos (SEU CÓDIGO JÁ ESTÁ CORRETO AQUI)
     orcamento_db = session.exec(
-        select(Orcamento).options(selectinload(Orcamento.contatos_extras)) # Carrega os contatos antigos do ORÇAMENTO
+        select(Orcamento).options(
+            selectinload(Orcamento.contatos_extras), 
+            selectinload(Orcamento.cliente).selectinload(Cliente.contatos)
+        )
         .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
     ).first()
+    
     if not orcamento_db:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado para atualizar")
 
-    # ATUALIZA OS DADOS DE FALLBACK (copiados para o orçamento)
+    # Atualiza dados de cliente/fallback (SEU CÓDIGO JÁ ESTÁ CORRETO AQUI)
     orcamento_db.nome_cliente = form_data.get("nome")
     orcamento_db.telefone_cliente = form_data.get("telefone")
     orcamento_db.cep_cliente = form_data.get("cep")
@@ -586,8 +606,11 @@ async def atualizar_orcamento_submit(
     orcamento_db.bairro_cliente = form_data.get("bairro")
     orcamento_db.cidade_uf_cliente = form_data.get("cidade_uf")
 
-    if orcamento_db.cliente:
-        cliente = orcamento_db.cliente  # Pega o objeto do cliente relacionado
+    salvar_cliente_flag = form_data.get("salvar_cliente") == "on"
+
+    # Sincroniza com perfil do cliente (SEU CÓDIGO JÁ ESTÁ CORRETO AQUI)
+    if orcamento_db.cliente and salvar_cliente_flag:
+        cliente = orcamento_db.cliente
         cliente.nome = form_data.get("nome")
         cliente.telefone = form_data.get("telefone")
         cliente.cep = form_data.get("cep")
@@ -596,53 +619,39 @@ async def atualizar_orcamento_submit(
         cliente.complemento = form_data.get("complemento")
         cliente.bairro = form_data.get("bairro")
         cliente.cidade_uf = form_data.get("cidade_uf")
-
-        # Também sincroniza os contatos extras para o registro do cliente
-        # Primeiro, remove os contatos antigos do cliente
         cliente.contatos.clear()
-        
-        # Depois, adiciona os novos contatos (vindos do formulário) ao cliente
-        contatos_json = form_data.get("contatos", "[]")
-        contatos_data = json.loads(contatos_json)
-        for contato_info in contatos_data:
-            cliente.contatos.append(
-                Contato(
-                    nome=contato_info['nome'], 
-                    telefone=contato_info['telefone'],
-                    email=contato_info.get('email')
-                )
-            )
-        
+        contatos_data = json.loads(form_data.get("contatos", "[]"))
+        for c_info in contatos_data:
+            cliente.contatos.append(Contato(nome=c_info['nome'], telefone=c_info['telefone'], email=c_info.get('email')))
         session.add(cliente)
     
-    # ATUALIZA OS DADOS DO ORÇAMENTO
+    # Atualiza dados do orçamento (SEU CÓDIGO JÁ ESTÁ CORRETO AQUI)
     orcamento_db.numero = form_data.get("numero_orcamento").strip()
     orcamento_db.descricao_servico = form_data.get("descricao_servico")
-    
     itens_data = json.loads(form_data.get("itens"))
     orcamento_db.itens = itens_data
     orcamento_db.total_geral = sum(int(i.get('quantidade', 0)) * float(i.get('valor', 0)) for i in itens_data)
     
+    # **** AQUI ESTÁ A ÚNICA CORREÇÃO NECESSÁRIA ****
+    # O valor que vem do formulário já é a string JSON correta.
+    # Não precisamos tentar fazer `json.loads` de novo.
+    # Apenas pegamos o valor e o salvamos.
     orcamento_db.condicao_pagamento = form_data.get("condicao_pagamento")
+
+    # O resto continua correto
     orcamento_db.prazo_entrega = form_data.get("prazo_entrega")
     orcamento_db.garantia = form_data.get("garantia")
     orcamento_db.observacoes = form_data.get("observacoes")
 
-    # ATUALIZA A LISTA DE CONTATOS DO ORÇAMENTO
+    # Atualiza contatos do orçamento (SEU CÓDIGO JÁ ESTÁ CORRETO AQUI)
     orcamento_db.contatos_extras.clear()
-    contatos_json = form_data.get("contatos", "[]")
-    contatos_data = json.loads(contatos_json)
-    for contato_info in contatos_data:
-        orcamento_db.contatos_extras.append(
-            ContatoOrcamento(
-                nome=contato_info['nome'], 
-                telefone=contato_info['telefone'],
-                email=contato_info.get('email')
-            )
-        )
+    contatos_data_orc = json.loads(form_data.get("contatos", "[]"))
+    for c_info in contatos_data_orc:
+        orcamento_db.contatos_extras.append(ContatoOrcamento(nome=c_info['nome'], telefone=c_info['telefone'], email=c_info.get('email')))
     
     session.add(orcamento_db)
     session.commit()
+    
     return RedirectResponse(url="/orcamentos?atualizado=true", status_code=status.HTTP_303_SEE_OTHER)
 
 

@@ -295,16 +295,17 @@
             <div class="mt-4 space-y-4">
                 
                 <div>
-                    <label for="info-condicao-pagamento" class="block text-sm font-medium text-gray-700">Condição de Pagamento:</label>
-                    <select id="info-condicao-pagamento" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                        <option value="">-- Selecione --</option>
-                        <option value="À vista">À vista</option>
-                        <option value="Pix">Pix</option>
-                        <option value="Cartão de Crédito">Cartão de Crédito</option>
-                        <option value="50% de entrada, 50% na entrega">50% de entrada, 50% na entrega</option>
-                        <option value="30 dias">30 dias</option>
-                        <option value="A combinar">A combinar</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-700">Condição de Pagamento:</label>
+                    <div class="mt-1 flex items-center gap-2">
+                        <!-- Campo para exibir o resultado -->
+                        <div id="display-condicao-pagamento" class="flex-grow h-10 px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600 truncate">
+                            A definir...
+                        </div>
+                        <!-- Botão que abrirá o novo modal -->
+                        <button type="button" id="btn-abrir-modal-pagamento" class="flex-shrink-0 h-10 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors">
+                            Definir
+                        </button>
+                    </div>
                 </div>
 
                 <div>
@@ -398,6 +399,104 @@
         </div>
     </div>
 
+    <div id="modal-pagamento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[60] transition-opacity duration-300">
+    <div id="modal-pagamento-box" class="bg-white rounded-lg shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh] transform transition-all -translate-y-10 opacity-0 duration-300">
+        
+        <!-- Cabeçalho -->
+        <div class="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+            <h3 class="text-xl font-semibold text-gray-800">Definir Condições de Pagamento</h3>
+            <button id="btn-fechar-modal-pagamento" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
+        </div>
+
+            <!-- Corpo do Modal - CÓDIGO FINAL CORRIGIDO -->
+            <div class="p-6 space-y-5 overflow-y-auto">
+
+                <!-- Indicadores de Valor SIMPLIFICADOS -->
+                <div class="bg-gray-50 p-4 rounded-lg border sticky top-0">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-medium text-gray-600">Total com Desconto:</span>
+                        <span id="pagamento-valor-total" class="font-bold text-emerald-600 text-xl">R$ 0,00</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm mb-3">
+                        <span class="font-medium text-amber-600">Desconto aplicado:</span>
+                        <span id="pagamento-valor-desconto" class="font-bold text-amber-700">- R$ 0,00</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-lg mb-2">
+                        <span class="font-medium text-gray-600">Restante a alocar:</span>
+                        <span id="pagamento-valor-restante" class="font-bold text-blue-600">R$ 0,00</span>
+                    </div>
+
+                    <!-- Barra de Progresso -->
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="pagamento-progress-bar" class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            
+                <!-- Formulário para Adicionar Parcelas -->
+                <div class="space-y-4 pt-2">
+                    <!-- Linha 1: Descrição da Parcela -->
+                    <div>
+                        <label for="pagamento-descricao-select" class="block text-sm font-medium text-gray-700">Descrição</label>
+                        <select id="pagamento-descricao-select" class="mt-1 block w-full h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">-- Selecione --</option>
+                            <option value="Entrada">Entrada</option>
+                            <option value="Sinal">Sinal</option>
+                            <option value="À vista">À vista</option>
+                            <option value="Pix">Pix</option>
+                            <option value="Cartão de Crédito">Cartão de Crédito</option>
+                            <option value="outro">Outro (especificar)</option>
+                        </select>
+                        <input type="text" id="pagamento-descricao-input-outro" placeholder="Especifique a descrição" class="hidden mt-2 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                    </div>
+                    
+                    <div class="flex items-end gap-2">
+                        <!-- Tipo (R$ / %) -->
+                        <div class="flex-none">
+                            <label for="pagamento-tipo-valor-input" class="block text-sm font-medium text-gray-700">Tipo</label>
+                            <select id="pagamento-tipo-valor-input" class="mt-1 block w-full h-10 px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                                <option value="percent">%</option>
+                                <option value="valor">R$</option>
+                            </select>
+                        </div>
+                        <!-- Valor -->
+                        <div class="flex-grow">
+                            <label for="pagamento-valor-input" class="block text-sm font-medium text-gray-700">Valor</label>
+                            <input type="text" id="pagamento-valor-input" inputmode="decimal" placeholder="Ex: 50" class="mt-1 block w-full h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+                        <!-- Desconto na Parcela (%) -->
+                        <div class="flex-none">
+                            <label for="pagamento-desconto-parcela" class="block text-sm font-medium text-gray-700">Desc. (%)</label>
+                            <input type="text" id="pagamento-desconto-parcela" inputmode="decimal" placeholder="0" class="mt-1 block w-20 h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500">
+                        </div>
+                    </div>
+                    
+                    <!-- Linha 4: Botão de Adicionar -->
+                    <button id="btn-add-parcela" class="w-full h-11 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>
+                        <span>Adicionar Parcela</span>
+                    </button>
+                </div>
+                                
+                <!-- Lista de Parcelas Adicionadas -->
+                <div class="border-t pt-4 mt-4">
+                    <h4 class="text-md font-semibold text-gray-700 mb-2">Parcelas Definidas:</h4>
+                    <div id="lista-parcelas-container" class="space-y-2">
+                        <p id="parcelas-placeholder" class="text-center text-gray-400 py-4">Nenhuma condição de pagamento adicionada.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Rodapé -->
+            <div class="flex items-center justify-end p-4 bg-gray-50 border-t sticky bottom-0">
+                <button id="btn-salvar-pagamento" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-blue-700 transition-colors">
+                    Confirmar Condições
+                </button>
+            </div>
+        </div>
+    </div>
+
 <script>
 
 
@@ -449,6 +548,38 @@ document.addEventListener("DOMContentLoaded", function() {
     const btnFecharModalCatalogo = document.getElementById('btn-fechar-modal-catalogo');
     const filtroCatalogoInput = document.getElementById('filtro-catalogo-input');
     const listaCatalogoModal = document.getElementById('lista-catalogo-modal');
+
+    const modalPagamento = document.getElementById('modal-pagamento');
+    const modalPagamentoBox = document.getElementById('modal-pagamento-box');
+    const btnAbrirModalPagamento = document.getElementById('btn-abrir-modal-pagamento');
+    const btnFecharModalPagamento = document.getElementById('btn-fechar-modal-pagamento');
+    const btnSalvarPagamento = document.getElementById('btn-salvar-pagamento');
+
+    // Elementos de exibição de valores (NOVOS)
+    const pagamentoValorDescontoEl = document.getElementById('pagamento-valor-desconto');
+    const pagamentoValorTotalEl = document.getElementById('pagamento-valor-total'); // Agora é o total líquido
+    const pagamentoValorRestanteEl = document.getElementById('pagamento-valor-restante');
+    const pagamentoProgressBar = document.getElementById('pagamento-progress-bar');
+
+    // Inputs do formulário de parcela (NOVOS)
+    const pagamentoDescricaoSelect = document.getElementById('pagamento-descricao-select');
+    const pagamentoDescricaoInputOutro = document.getElementById('pagamento-descricao-input-outro');
+    const pagamentoTipoValorInput = document.getElementById('pagamento-tipo-valor-input');
+    const pagamentoValorInput = document.getElementById('pagamento-valor-input');
+    const pagamentoDescontoParcelaInput = document.getElementById('pagamento-desconto-parcela');
+    const btnAddParcela = document.getElementById('btn-add-parcela');
+
+    // Container da lista e placeholder
+    const listaParcelasContainer = document.getElementById('lista-parcelas-container');
+    const parcelasPlaceholder = document.getElementById('parcelas-placeholder');
+
+    // Display no modal de informações
+    const displayCondicaoPagamento = document.getElementById('display-condicao-pagamento');
+
+    // --- VARIÁVEIS DE ESTADO (MODAL DE PAGAMENTO) ---
+    let parcelas = [];
+    let valorOrcamentoBruto = 0;
+    let descontoTotalEmValor = 0;
     
     
     const icons = {
@@ -456,6 +587,215 @@ document.addEventListener("DOMContentLoaded", function() {
         material: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>`,
         default: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>`
     };
+
+    function calcularValorTotalOrcamento() {
+        return itens.reduce((total, item) => total + (item.quantidade * item.valor), 0);
+    }
+
+    function formatarMoedaLocal(valor) {
+        return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function atualizarModalPagamentoUI() {
+        // Calcula o total líquido a ser pago (bruto - descontos)
+        const valorTotalLiquido = valorOrcamentoBruto - descontoTotalEmValor;
+        
+        // Calcula o valor já alocado nas parcelas
+        const valorAlocado = parcelas.reduce((total, p) => total + p.valor, 0);
+        const valorRestante = valorTotalLiquido - valorAlocado;
+
+        // --- ATUALIZA O CABEÇALHO DE VALORES ---
+        pagamentoValorTotalEl.textContent = formatarMoedaLocal(valorTotalLiquido);
+        pagamentoValorDescontoEl.textContent = `- ${formatarMoedaLocal(descontoTotalEmValor)}`;
+        pagamentoValorRestanteEl.textContent = formatarMoedaLocal(valorRestante);
+        
+        // --- ATUALIZA A BARRA DE PROGRESSO ---
+        const progressoPercent = valorTotalLiquido > 0 ? (valorAlocado / valorTotalLiquido) * 100 : 0;
+        pagamentoProgressBar.style.width = `${Math.min(progressoPercent, 100)}%`;
+
+        // --- ATUALIZA A LISTA DE PARCELAS ---
+        listaParcelasContainer.innerHTML = ''; // Limpa antes de redesenhar
+        
+        if (parcelas.length === 0) {
+            listaParcelasContainer.appendChild(parcelasPlaceholder);
+        } else {
+            parcelas.forEach(p => {
+                const parcelaDiv = document.createElement('div');
+                parcelaDiv.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
+                
+                // Monta a string de exibição da parcela
+                let textoParcela = `${p.descricao}: <span class="font-semibold text-emerald-700">${formatarMoedaLocal(p.valor)}</span>`;
+                if (p.desconto > 0) {
+                    textoParcela += ` <span class="text-xs text-amber-600">(Desc. ${formatarMoedaLocal(p.desconto)})</span>`;
+                }
+
+                parcelaDiv.innerHTML = `
+                    <div class="font-medium text-gray-800">${textoParcela}</div>
+                    <button type="button" class="remover-parcela-btn p-1 text-red-400 hover:text-red-600 rounded-full" data-id="${p.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-5 pointer-events-none"><path fill-rule="evenodd" d="M2 8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 8Z" clip-rule="evenodd" /></svg>
+                    </button>
+                `;
+                listaParcelasContainer.appendChild(parcelaDiv);
+            });
+            
+            // Adiciona os eventos de clique aos botões de remoção
+            document.querySelectorAll('.remover-parcela-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => removerParcela(parseInt(e.currentTarget.dataset.id)));
+            });
+        }
+    }
+
+    function abrirModalPagamento() {
+        // Agora o valor base é sempre o valor bruto dos itens
+        valorOrcamentoBruto = calcularValorTotalOrcamento(); 
+        if (valorOrcamentoBruto <= 0) {
+            alert("Adicione itens ao orçamento primeiro para definir as condições de pagamento.");
+            return;
+        }
+        
+        // Zera os totais e a lista de parcelas toda vez que o modal é aberto
+        parcelas = [];
+        descontoTotalEmValor = 0;
+
+        atualizarModalPagamentoUI(); // Atualiza a UI com os valores zerados e o total bruto correto
+
+        modalPagamento.classList.remove('hidden');
+        modalPagamento.classList.add('flex');
+        setTimeout(() => {
+            modalPagamentoBox.classList.remove('-translate-y-10', 'opacity-0');
+            pagamentoDescricaoSelect.focus(); // Foco no primeiro campo útil
+        }, 50);
+    }
+    
+    function fecharModalPagamento() {
+        modalPagamentoBox.classList.add('-translate-y-10', 'opacity-0');
+        setTimeout(() => {
+            modalPagamento.classList.add('hidden');
+            modalPagamento.classList.remove('flex');
+        }, 300);
+    }
+
+    function adicionarParcela() {
+        let descricao = pagamentoDescricaoSelect.value;
+        if (descricao === 'outro') {
+            descricao = pagamentoDescricaoInputOutro.value.trim();
+        }
+
+        const tipoValor = pagamentoTipoValorInput.value;
+        const valorStr = pagamentoValorInput.value;
+        const descontoStr = pagamentoDescontoParcelaInput.value || '0';
+
+        if (!descricao || !valorStr) {
+            alert("Preencha a descrição e o valor da parcela.");
+            return;
+        }
+
+        const valorNumerico = parseFloat(valorStr.replace(/\./g, "").replace(",", "."));
+        const descontoNumerico = parseFloat(descontoStr.replace(/\./g, "").replace(",", "."));
+
+        if (isNaN(valorNumerico) || valorNumerico <= 0) {
+            alert("Insira um valor numérico válido e maior que zero para a parcela.");
+            return;
+        }
+        if (isNaN(descontoNumerico) || descontoNumerico < 0) {
+            alert("Insira um valor de desconto válido (0 ou maior).");
+            return;
+        }
+
+        const valorTotalLiquido = valorOrcamentoBruto - descontoTotalEmValor;
+        const valorAlocado = parcelas.reduce((total, p) => total + p.valor, 0);
+        const valorRestante = valorTotalLiquido - valorAlocado;
+
+        let valorBrutoParcela = 0;
+        if (tipoValor === 'valor') {
+            valorBrutoParcela = valorNumerico;
+        } else { // tipo 'percent'
+            // A porcentagem agora é calculada sobre o valor total LÍQUIDO do orçamento
+            valorBrutoParcela = (valorTotalLiquido * valorNumerico) / 100;
+        }
+
+        // Calcula o valor do desconto desta parcela específica
+        const descontoDaParcela = (valorBrutoParcela * descontoNumerico) / 100;
+        
+        // O valor final que esta parcela representa
+        const valorLiquidoParcela = valorBrutoParcela - descontoDaParcela;
+        
+        if (valorLiquidoParcela > valorRestante + 0.01) { // 0.01 de tolerância para float
+            alert(`O valor da parcela (${formatarMoedaLocal(valorLiquidoParcela)}) excede o restante a pagar (${formatarMoedaLocal(valorRestante)}).`);
+            return;
+        }
+
+        // Adiciona o novo objeto parcela à lista
+        parcelas.push({
+            id: Date.now(),
+            descricao: descricao,
+            valor: valorLiquidoParcela,
+            desconto: descontoDaParcela // Armazena o valor do desconto em R$
+        });
+
+        // Soma o desconto desta parcela ao desconto total
+        descontoTotalEmValor += descontoDaParcela;
+        
+        // Limpa os campos para a próxima
+        pagamentoDescricaoSelect.value = '';
+        pagamentoDescricaoInputOutro.value = '';
+        pagamentoDescricaoInputOutro.classList.add('hidden');
+        pagamentoValorInput.value = '';
+        pagamentoDescontoParcelaInput.value = '';
+        pagamentoDescricaoSelect.focus();
+
+        // Atualiza toda a UI do modal
+        atualizarModalPagamentoUI();
+    }
+    
+    function removerParcela(idParcela) {
+        const parcelaRemovida = parcelas.find(p => p.id === idParcela);
+        if (parcelaRemovida) {
+            // Subtrai o desconto da parcela removida do total de descontos
+            descontoTotalEmValor -= parcelaRemovida.desconto;
+        }
+
+        // Filtra a lista, removendo a parcela com o ID correspondente
+        parcelas = parcelas.filter(p => p.id !== idParcela);
+        
+        // Atualiza a UI com os novos totais
+        atualizarModalPagamentoUI();
+    }
+    
+    function salvarPagamento() {
+        const valorTotalLiquido = valorOrcamentoBruto - descontoTotalEmValor;
+        const valorAlocado = parcelas.reduce((total, p) => total + p.valor, 0);
+
+        // Usa Math.abs para tratar pequenas diferenças de ponto flutuante
+        if (Math.abs(valorTotalLiquido - valorAlocado) > 0.01) {
+            if (!confirm("O valor total das parcelas não corresponde ao total a pagar com desconto. Deseja confirmar mesmo assim?")) {
+                return;
+            }
+        }
+        
+        let resumoCondicao = "A combinar";
+        if (parcelas.length > 0) {
+            const detalhesParcelas = parcelas.map(p => `${p.descricao} (${formatarMoedaLocal(p.valor).replace(/\u00a0/g, ' ')})`).join(' + ');
+            if (descontoTotalEmValor > 0) {
+                resumoCondicao = `${detalhesParcelas} [Total com desc. ${formatarMoedaLocal(valorTotalLiquido).replace(/\u00a0/g, ' ')}]`;
+            } else {
+                resumoCondicao = detalhesParcelas;
+            }
+            } else if (descontoTotalEmValor > 0) {
+                resumoCondicao = `Pagamento único de ${formatarMoedaLocal(valorTotalLiquido).replace(/\u00a0/g, ' ')} (Desconto de ${formatarMoedaLocal(descontoTotalEmValor).replace(/\u00a0/g, ' ')} aplicado)`;
+            }
+        
+        // Atualiza o display no modal de informações e o campo oculto do formulário
+        displayCondicaoPagamento.textContent = resumoCondicao;
+        document.getElementById('hidden_condicao_pagamento').value = resumoCondicao;
+        
+        // Muda a aparência do botão para "Editar", indicando que a condição foi definida
+        btnAbrirModalPagamento.textContent = "Editar";
+        btnAbrirModalPagamento.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+        btnAbrirModalPagamento.classList.add('bg-blue-600', 'hover:bg-blue-700');
+
+        fecharModalPagamento();
+    }
 
     function updateTipoItemIcon() {
     // Mostra a seta só para "Seleção"
@@ -605,24 +945,22 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function salvarInfoModal() {
-        // Pega os valores dos campos do modal NO MOMENTO do clique
-        const condicaoPagamento = document.getElementById('info-condicao-pagamento').value;
+        // Pega os valores dos campos que ainda estão neste modal
         const prazoEntrega = document.getElementById('info-prazo-entrega').value;
         const garantia = document.getElementById('info-garantia').value;
         const observacoes = document.getElementById('info-observacoes').value;
 
-        // Salva os valores nos inputs ocultos do formulário principal
-        document.getElementById('hidden_condicao_pagamento').value = condicaoPagamento;
+        // Salva APENAS esses valores nos inputs ocultos correspondentes
         document.getElementById('hidden_prazo_entrega').value = prazoEntrega;
         document.getElementById('hidden_garantia').value = garantia;
         document.getElementById('hidden_observacoes').value = observacoes;
         
-        // Mostra um feedback visual sutil
+        // Mostra um feedback visual no ícone para indicar que os dados foram salvos
         const btnAbrir = document.getElementById('btn-abrir-modal-info');
         btnAbrir.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-200');
         btnAbrir.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-emerald-600"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.052-.143Z" clip-rule="evenodd" /></svg>`;
 
-        // Fecha o modal
+        // Fecha o modal de informações
         fecharModalInfo();
     }
 
@@ -1175,7 +1513,28 @@ document.addEventListener("DOMContentLoaded", function() {
         btnAdicionarContato.addEventListener("click", abrirModalContato);
         btnFecharModalContato.addEventListener('click', fecharModalContato);
         btnSalvarContatoModal.addEventListener('click', salvarContatoDoModal);
-        nomeInput.addEventListener("blur", handleVerificacaoCliente); 
+        nomeInput.addEventListener("blur", handleVerificacaoCliente);
+        btnAbrirModalPagamento.addEventListener('click', abrirModalPagamento);
+        btnFecharModalPagamento.addEventListener('click', fecharModalPagamento);
+        btnAddParcela.addEventListener('click', adicionarParcela);
+        btnSalvarPagamento.addEventListener('click', salvarPagamento);
+        pagamentoValorInput.addEventListener('input', formatarMoeda); // Esta é para o valor da parcela
+        pagamentoDescontoParcelaInput.addEventListener('input', formatarMoeda);
+        
+        pagamentoDescricaoSelect.addEventListener('change', () => {
+            if (pagamentoDescricaoSelect.value === 'outro') {
+                pagamentoDescricaoInputOutro.classList.remove('hidden');
+                pagamentoDescricaoInputOutro.focus();
+            } else {
+                pagamentoDescricaoInputOutro.classList.add('hidden');
+            }
+        }); 
+        
+        modalPagamento.addEventListener('click', (event) => {
+            if (event.target === modalPagamento) {
+                fecharModalPagamento();
+            }
+        }); 
 
         btnAbrirModalClientes.addEventListener('click', abrirModalDeClientes);
         btnFecharModalClientes.addEventListener('click', fecharModalDeClientes);

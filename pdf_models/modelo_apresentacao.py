@@ -17,6 +17,37 @@ LINE_HEIGHT = 5
 TABLE_COL_WIDTHS = [20, 70, 20, 40, 40]
 TABLE_TOTAL_WIDTH = sum(TABLE_COL_WIDTHS)
 
+def formatar_condicoes_pagamento(condicoes):
+    """
+    Transforma a lista de condições de pagamento em uma única string formatada.
+    """
+    # Se não houver dados ou não for uma lista, retorna uma string vazia ou um padrão.
+    if not condicoes or not isinstance(condicoes, list):
+        # Se condicoes for um texto antigo, apenas o retorna.
+        return str(condicoes) if condicoes else "A combinar"
+
+    textos_formatados = []
+    for condicao in condicoes:
+        metodo = condicao.get("metodo", "")
+        valor = condicao.get("valor", 0)
+        parcelas = condicao.get("parcelas")
+
+        # Formata o valor como moeda
+        valor_fmt = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        
+        texto_base = f"{metodo}: {valor_fmt}"
+
+        # Se houver parcelas (e forem mais de 1), adiciona o detalhamento
+        if parcelas and parcelas > 1:
+            valor_parcela = valor / parcelas
+            valor_parcela_fmt = f"R$ {valor_parcela:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            texto_base += f" ({parcelas}x de {valor_parcela_fmt})"
+        
+        textos_formatados.append(texto_base)
+    
+    # Junta todas as condições com uma barra vertical
+    return " | ".join(textos_formatados)
+
 def format_brl_cacador(value): # Renomeado para evitar conflitos se você importar ambos no mesmo lugar
     if not isinstance(value, (int, float)):
         return "R$ 0,00"
@@ -282,7 +313,8 @@ def gerar_pdf_apresentacao(file_path, orcamento: Orcamento):
 
 
     # --- USO DA FUNÇÃO PARA TODOS OS CAMPOS ---
-    draw_term_line("Pagamento", orcamento.condicao_pagamento)
+    texto_pagamento_formatado = formatar_condicoes_pagamento(orcamento.condicao_pagamento)
+    draw_term_line("Pagamento", texto_pagamento_formatado)
     draw_term_line("Prazo", orcamento.prazo_entrega)
     draw_term_line("Garantia", orcamento.garantia)
     draw_term_line("Observações", orcamento.observacoes)

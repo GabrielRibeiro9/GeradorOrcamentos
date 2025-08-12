@@ -7,10 +7,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body>
-    <script>
-        const orcamentoData = JSON.parse('{{ orcamento.json() | safe }}');
+    <script id="orcamento-json" type="application/json">
+    {{ orcamento.model_dump_json() | safe }}
     </script>
-</body>
 
 <header class="bg-gradient-to-r from-emerald-500 to-teal-600 shadow-lg px-4 sm:px-6 py-3 flex items-center justify-between text-white sticky top-0 z-50">
   <!-- Esquerda: Avatar + Nome -->
@@ -296,16 +295,17 @@
             <div class="mt-4 space-y-4">
                 
                 <div>
-                    <label for="info-condicao-pagamento" class="block text-sm font-medium text-gray-700">Condição de Pagamento:</label>
-                    <select id="info-condicao-pagamento" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                        <option value="">-- Selecione --</option>
-                        <option value="À vista">À vista</option>
-                        <option value="Pix">Pix</option>
-                        <option value="Cartão de Crédito">Cartão de Crédito</option>
-                        <option value="50% de entrada, 50% na entrega">50% de entrada, 50% na entrega</option>
-                        <option value="30 dias">30 dias</option>
-                        <option value="A combinar">A combinar</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-700">Condição de Pagamento:</label>
+                    <div class="mt-1 flex items-center gap-2">
+                        <!-- Campo para exibir o resultado -->
+                        <div id="display-condicao-pagamento" class="flex-grow h-10 px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600 truncate">
+                            A definir...
+                        </div>
+                        <!-- Botão que abrirá o novo modal -->
+                        <button type="button" id="btn-abrir-modal-pagamento" class="flex-shrink-0 h-10 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors">
+                            Definir
+                        </button>
+                    </div>
                 </div>
 
                 <div>
@@ -449,18 +449,117 @@
         </div>
     </div>
 
+    <div id="modal-pagamento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[60] transition-opacity duration-300">
+    <div id="modal-pagamento-box" class="bg-white rounded-lg shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh] transform transition-all -translate-y-10 opacity-0 duration-300">
+        
+        <!-- Cabeçalho -->
+        <div class="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+            <h3 class="text-xl font-semibold text-gray-800">Definir Condições de Pagamento</h3>
+            <button id="btn-fechar-modal-pagamento" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
+        </div>
+
+            <!-- Corpo do Modal - CÓDIGO FINAL CORRIGIDO -->
+            <div class="p-6 space-y-5 overflow-y-auto">
+
+                <!-- Indicadores de Valor SIMPLIFICADOS -->
+                <div class="bg-gray-50 p-4 rounded-lg border sticky top-0">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-medium text-gray-600">Total com Desconto:</span>
+                        <span id="pagamento-valor-total" class="font-bold text-emerald-600 text-xl">R$ 0,00</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm mb-3">
+                        <span class="font-medium text-amber-600">Desconto aplicado:</span>
+                        <span id="pagamento-valor-desconto" class="font-bold text-amber-700">- R$ 0,00</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-lg mb-2">
+                        <span class="font-medium text-gray-600">Restante a alocar:</span>
+                        <span id="pagamento-valor-restante" class="font-bold text-blue-600">R$ 0,00</span>
+                    </div>
+
+                    <!-- Barra de Progresso -->
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="pagamento-progress-bar" class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            
+                <!-- Formulário para Adicionar Parcelas -->
+                <div class="space-y-4 pt-2">
+                    <!-- Linha 1: Descrição da Parcela -->
+                    <div>
+                        <label for="pagamento-descricao-select" class="block text-sm font-medium text-gray-700">Descrição</label>
+                        <select id="pagamento-descricao-select" class="mt-1 block w-full h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                            <option value="">-- Selecione --</option>
+                            <option value="Entrada">Entrada</option>
+                            <option value="Sinal">Sinal</option>
+                            <option value="À vista">À vista</option>
+                            <option value="Pix">Pix</option>
+                            <option value="Cartão de Crédito">Cartão de Crédito</option>
+                            <option value="outro">Outro (especificar)</option>
+                        </select>
+                        <input type="text" id="pagamento-descricao-input-outro" placeholder="Especifique a descrição" class="hidden mt-2 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                    </div>
+                    
+                    <div class="flex items-end gap-2">
+                        <!-- Tipo (R$ / %) -->
+                        <div class="flex-none">
+                            <label for="pagamento-tipo-valor-input" class="block text-sm font-medium text-gray-700">Tipo</label>
+                            <select id="pagamento-tipo-valor-input" class="mt-1 block w-full h-10 px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                                <option value="percent">%</option>
+                                <option value="valor">R$</option>
+                            </select>
+                        </div>
+                        <!-- Valor -->
+                        <div class="flex-grow">
+                            <label for="pagamento-valor-input" class="block text-sm font-medium text-gray-700">Valor</label>
+                            <input type="text" id="pagamento-valor-input" inputmode="decimal" placeholder="Ex: 50" class="mt-1 block w-full h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                        </div>
+                        <!-- Desconto na Parcela (%) -->
+                        <div class="flex-none">
+                            <label for="pagamento-desconto-parcela" class="block text-sm font-medium text-gray-700">Desc. (%)</label>
+                            <input type="text" id="pagamento-desconto-parcela" inputmode="decimal" placeholder="0" class="mt-1 block w-20 h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500">
+                        </div>
+                    </div>
+                    
+                    <!-- Linha 4: Botão de Adicionar -->
+                    <button id="btn-add-parcela" class="w-full h-11 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>
+                        <span>Adicionar Parcela</span>
+                    </button>
+                </div>
+                                
+                <!-- Lista de Parcelas Adicionadas -->
+                <div class="border-t pt-4 mt-4">
+                    <h4 class="text-md font-semibold text-gray-700 mb-2">Parcelas Definidas:</h4>
+                    <div id="lista-parcelas-container" class="space-y-2">
+                        <p id="parcelas-placeholder" class="text-center text-gray-400 py-4">Nenhuma condição de pagamento adicionada.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Rodapé -->
+            <div class="flex items-center justify-end p-4 bg-gray-50 border-t sticky bottom-0">
+                <button id="btn-salvar-pagamento" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-blue-700 transition-colors">
+                    Confirmar Condições
+                </button>
+            </div>
+        </div>
+    </div>
+
+
 <script>
+
+const orcamentoData = JSON.parse(document.getElementById('orcamento-json').textContent);    
 document.addEventListener("DOMContentLoaded", function() {
     
-    // --- 1. VARIÁVEIS GLOBAIS ---
+    // --- 1. VARIÁVEIS GLOBAIS E DE DOM ---
     const API_BASE_URL = window.location.origin;
     let itens = orcamentoData.itens || [];
-    // AQUI ESTÁ A MUDANÇA: Inicia como um array vazio. Será populado via API.
     let contatosExtras = []; 
     let servicosCatalogo = [];
     let materiaisCatalogo = [];
 
-    // --- 2. ELEMENTOS DO DOM ---
     const form = document.getElementById("orcamentoForm");
     const tableContainer = document.getElementById("tableContainer");
     const itensContainer = document.getElementById("itensContainer");
@@ -490,60 +589,93 @@ document.addEventListener("DOMContentLoaded", function() {
     const filtroCatalogoInput = document.getElementById('filtro-catalogo-input');
     const listaCatalogoModal = document.getElementById('lista-catalogo-modal');
 
+    // ELEMENTOS DO MODAL DE PAGAMENTO
+    const modalPagamento = document.getElementById('modal-pagamento');
+    const modalPagamentoBox = document.getElementById('modal-pagamento-box');
+    const btnAbrirModalPagamento = document.getElementById('btn-abrir-modal-pagamento');
+    const btnFecharModalPagamento = document.getElementById('btn-fechar-modal-pagamento');
+    const btnSalvarPagamento = document.getElementById('btn-salvar-pagamento');
+    const pagamentoValorTotalEl = document.getElementById('pagamento-valor-total');
+    const pagamentoValorDescontoEl = document.getElementById('pagamento-valor-desconto');
+    const pagamentoValorRestanteEl = document.getElementById('pagamento-valor-restante');
+    const pagamentoProgressBar = document.getElementById('pagamento-progress-bar');
+    const pagamentoDescricaoSelect = document.getElementById('pagamento-descricao-select');
+    const pagamentoDescricaoInputOutro = document.getElementById('pagamento-descricao-input-outro');
+    const pagamentoTipoValorInput = document.getElementById('pagamento-tipo-valor-input');
+    const pagamentoValorInput = document.getElementById('pagamento-valor-input');
+    const pagamentoDescontoParcelaInput = document.getElementById('pagamento-desconto-parcela');
+    const btnAddParcela = document.getElementById('btn-add-parcela');
+    const listaParcelasContainer = document.getElementById('lista-parcelas-container');
+    const parcelasPlaceholder = document.getElementById('parcelas-placeholder');
+    const displayCondicaoPagamento = document.getElementById('display-condicao-pagamento');
+    
+
+    let parcelas = [];
+    let valorOrcamentoBruto = 0;
+    let descontoTotalEmValor = 0;
+
     const icons = {
         servico: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M14.5 10a4.5 4.5 0 004.284-5.882c-.105-.324-.51-.391-.752-.15L15.34 6.66a.454.454 0 01-.493.11 3.01 3.01 0 01-1.618-1.616.455.455 0 01.11-.494l2.694-2.692c.24-.241.174-.647-.15-.752a4.5 4.5 0 00-5.873 4.575c.055.873-.128 1.808-.8 2.368l-7.23 6.024a2.724 2.724 0 103.837 3.837l6.024-7.23c.56-.672 1.495-.855 2.368-.8.096.007.193.01.291.01ZM5 16a1 1 0 10-2 0 1 1 0 002 0Z" clip-rule="evenodd" /><path d="M14.5 11.5c.173 0 .345-.007.514-.022l3.754 3.754a2.5 2.5 0 01-3.536 3.536l-4.41-4.41 2.172-2.607c.052-.063.147-.138.342-.196.202-.06.469-.087.777-.067.128.008.257.012.387.012ZM6 4.586l2.33 2.33a.452.452 0 01-.08.09L6.8 8.214 4.586 6H3.309a.5.5 0 01-.447-.276l-1.7-3.402a.5.5 0 01.093-.577l.49-.49a.5.5 0 01.577-.094l3.402 1.7A.5.5 0 016 3.31v1.277Z" /></svg>`,
         material: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>`,
         default: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>`
     };
-    
-    // --- 3. FUNÇÕES ---
+    const updateTipoItemIcon = () => tipoItemIconDiv.innerHTML = icons[tipoItemSelect.value] || icons.default;
+    window.mascara = (e,p) => { let i=0, v=e.target.value.replace(/\D/g,""); e.target.value = p.replace(/#/g, ()=> v[i++]||""); };
 
-    // -- AQUI ESTÁ A NOVA FUNÇÃO PARA CARREGAR OS CONTATOS ---
-    async function carregarContatosExtras(orcamentoId) {
-        try {
-            const response = await fetch(`/api/orcamento/${orcamentoId}/contatos`);
-            if (response.ok) {
-                const contatos = await response.json();
-                contatosExtras = contatos; // Popula a variável global com os dados da API
-                renderizarTagsDeContato(); // Renderiza as tags verdes com os contatos carregados
-            } else {
-                console.error("Falha ao carregar os contatos extras do orçamento.");
-            }
-        } catch (error) {
-            console.error("Erro na requisição dos contatos extras:", error);
-        }
+    function formatarMoeda(e) {
+        let value = e.target.value.replace(/\D/g, "");
+        if (!value) { e.target.value = ""; return; }
+        const numericValue = parseFloat(value) / 100;
+        e.target.value = numericValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
     }
     
-    function formatarMoeda(e) { let v = e.target.value.replace(/\D/g,""); e.target.value = !v ? "" : (parseFloat(v)/100).toLocaleString("pt-BR", {minimumFractionDigits: 2}); }
-    window.mascara = (e,p) => { let i=0, v=e.target.value.replace(/\D/g,""); e.target.value = p.replace(/#/g, ()=> v[i++]||""); };
-    const updateTableVisibility = () => tableContainer.classList.toggle("hidden", itens.length === 0);
-    function limparCamposItem() { itemInput.value = ""; itemQtdInput.value = "1"; itemValorInput.value = ""; tipoItemSelect.value = "default"; updateTipoItemIcon(); itemInput.focus(); }
-    const updateTipoItemIcon = () => tipoItemIconDiv.innerHTML = icons[tipoItemSelect.value] || icons.default;
-
+    function formatarMoedaLocal(valor) {
+        // Verifica se o valor é numérico antes de formatar para evitar erros
+        if (typeof valor !== 'number') {
+            return 'R$ 0,00';
+        }
+        return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+    
     function abrirModalCatalogo(tipo) {
         modalCatalogoTitulo.textContent = `Buscar em ${tipo === 'servico' ? 'Serviços' : 'Materiais'}`;
         modalCatalogo.dataset.tipoAtual = tipo;
         popularListaModalCatalogo(tipo, '');
         modalCatalogo.classList.remove('hidden');
         modalCatalogo.classList.add('flex');
-        setTimeout(() => { modalCatalogoBox.classList.remove('-translate-y-10', 'opacity-0'); filtroCatalogoInput.focus(); }, 50);
+        setTimeout(() => { 
+            modalCatalogoBox.classList.remove('-translate-y-10', 'opacity-0');
+            filtroCatalogoInput.focus();
+        }, 50);
     }
+
     function fecharModalCatalogo() {
         modalCatalogoBox.classList.add('-translate-y-10', 'opacity-0');
-        setTimeout(() => { modalCatalogo.classList.add('hidden'); modalCatalogo.classList.remove('flex'); filtroCatalogoInput.value = ''; }, 300);
+        setTimeout(() => { 
+            modalCatalogo.classList.add('hidden'); 
+            modalCatalogo.classList.remove('flex');
+            filtroCatalogoInput.value = '';
+        }, 300);
     }
+
     function popularListaModalCatalogo(tipo, filtro) {
         const catalogo = tipo === 'servico' ? servicosCatalogo : materiaisCatalogo;
         const termoBusca = filtro.toLowerCase();
+        
         const itensFiltrados = catalogo.filter(item => item.nome.toLowerCase().includes(termoBusca));
+        
         listaCatalogoModal.innerHTML = '';
+        
         if (itensFiltrados.length === 0) {
             listaCatalogoModal.innerHTML = '<p class="p-4 text-center text-gray-400">Nenhum item encontrado.</p>';
             return;
         }
+        
         itensFiltrados.forEach(item => {
             const itemDiv = document.createElement('div');
-            itemDiv.className = 'p-3 flex justify-between items-center rounded-lg hover:bg-emerald-50 border-b last:border-b-0';
+            itemDiv.className = 'p-3 flex justify-between items-center rounded-lg hover:bg-emerald-50 cursor-pointer border-b last:border-b-0';
+            
+            // ** AQUI ESTÁ A MUDANÇA: ADICIONAMOS O BOTÃO DA LIXEIRA **
             itemDiv.innerHTML = `
                 <div class="flex flex-col flex-grow cursor-pointer">
                     <span class="font-semibold text-gray-800">${item.nome}</span>
@@ -553,11 +685,20 @@ document.addEventListener("DOMContentLoaded", function() {
                     <svg class="size-4 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.474.14l-.5-5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .71.787l-.5 5a.75.75 0 1 1-1.474-.14l.5-5a.75.75 0 0 1 .764-.647Z" clip-rule="evenodd" /></svg>
                 </button>
             `;
+            
+            // Registra o evento de clique que SELECIONA o item
             itemDiv.querySelector(".flex-grow").addEventListener('click', () => selecionarItemDoModal(item.id, tipo));
-            itemDiv.querySelector(".btn-excluir-item-catalogo").addEventListener('click', (e) => { e.stopPropagation(); confirmarExclusao(item.id, item.nome); });
+
+            // Registra o evento de clique que EXCLUI o item
+            itemDiv.querySelector(".btn-excluir-item-catalogo").addEventListener('click', (e) => {
+                e.stopPropagation(); // Impede que o clique na lixeira também selecione o item
+                confirmarExclusao(item.id, item.nome);
+            });
+            
             listaCatalogoModal.appendChild(itemDiv);
         });
     }
+
     function selecionarItemDoModal(itemId, tipo) {
         const selectId = tipo === 'servico' ? 'containerServico' : 'containerMaterial';
         const select = document.querySelector(`#${selectId} select`);
@@ -565,104 +706,56 @@ document.addEventListener("DOMContentLoaded", function() {
         select.dispatchEvent(new Event('change'));
         fecharModalCatalogo();
     }
+
     async function confirmarExclusao(itemId, itemName) {
-        if (!confirm(`Tem certeza que deseja excluir "${itemName}" do catálogo?`)) return;
+        if (!confirm(`Tem certeza que deseja excluir "${itemName}" do catálogo?`)) {
+            return;
+        }
+        
         try {
             const response = await fetch(`${API_BASE_URL}/api/item/${itemId}`, { method: 'DELETE' });
+
             if (response.status !== 204) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.detail || "Falha ao excluir o item.");
             }
-            if(itemInput.value === itemName) limparCamposItem();
-            await carregarCatalogosAPI();
+            
+            // Se o item que estava selecionado para ser adicionado ao orçamento foi o excluído, limpa os campos
+            if(itemInput.value === itemName) {
+                itemInput.value = "";
+                itemValorInput.value = "";
+                tipoItemSelect.value = "default";
+                updateTipoItemIcon();
+            }
+            
+            // Recarrega os catálogos da API para garantir que a lista de dados está atualizada
+            await carregarCatalogosAPI(); 
+            
+            // Redesenha a lista DENTRO DO MODAL já com o item removido
             const tipoAtual = modalCatalogo.dataset.tipoAtual;
             const filtroAtual = filtroCatalogoInput.value;
             popularListaModalCatalogo(tipoAtual, filtroAtual);
+            
         } catch (error) {
             console.error("Erro ao excluir item:", error);
             alert(`Ocorreu um erro: ${error.message}`);
         }
     }
-    async function carregarCatalogosAPI() {
-        try {
-            const [respServ, respMat] = await Promise.all([ fetch(`${API_BASE_URL}/api/servico/`), fetch(`${API_BASE_URL}/api/materiais/`) ]);
-            if (!respServ.ok || !respMat.ok) throw new Error("Falha ao carregar catálogos.");
-            servicosCatalogo = await respServ.json();
-            materiaisCatalogo = await respMat.json();
-            renderizarSeletor("servico");
-            renderizarSeletor("material");
-        } catch (error) { console.error(error); }
-    }
-    function renderizarSeletor(tipo) {
-        const container = document.getElementById(tipo === "servico" ? "containerServico" : "containerMaterial");
-        const catalogo = tipo === "servico" ? servicosCatalogo : materiaisCatalogo;
-        const placeholder = tipo === "servico" ? "-- Selecione um Serviço --" : "-- Selecione um Material --";
-        container.innerHTML = `
-            <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">${icons[tipo]}</div>
-            <select class="select-catalogo h-10 w-full ps-10 pe-20 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400 appearance-none">
-                <option value="">${placeholder}</option>
-                ${catalogo.map(item => `<option value="${item.id}">${item.nome}</option>`).join("")}
-            </select>
-            <button type="button" data-tipo-catalogo="${tipo}" class="btn-abrir-modal-catalogo absolute inset-y-0 end-0 flex items-center justify-center px-3 border-l border-zinc-300 text-zinc-600 hover:bg-zinc-100 transition-colors rounded-e-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clip-rule="evenodd" /></svg>
-            </button>`;
-        container.querySelector("select").addEventListener("change", (e) => handleSelecaoCatalogo(e, tipo));
-        container.querySelector(".btn-abrir-modal-catalogo").addEventListener("click", (e) => { abrirModalCatalogo(e.currentTarget.dataset.tipoCatalogo); });
-    }
-    function handleSelecaoCatalogo(e, tipo) {
-        const selectElement = e.target;
-        const id = selectElement.value;
-        if (!id) { itemInput.value = ''; itemValorInput.value = ''; return; }
-        const itemSelecionado = (tipo === "servico" ? servicosCatalogo : materiaisCatalogo).find(item => String(item.id) === id);
-        if (itemSelecionado) {
-            itemInput.value = itemSelecionado.nome;
-            itemValorInput.value = itemSelecionado.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
-            tipoItemSelect.value = tipo;
-            updateTipoItemIcon();
-            itemQtdInput.focus();
-        }
-    }
-    function adicionarItemNaTela(item) {
-        const rowId = item.id || `temp-${Date.now()}`;
-        item.id = rowId;
-        const total = (item.quantidade || 0) * (item.valor || 0);
-        const tr = document.createElement("tr");
-        tr.className = "bg-white border-b hover:bg-gray-50";
-        tr.dataset.id = rowId;
-        tr.innerHTML = `
-            <td class="px-4 py-3 font-medium text-gray-900 capitalize">${item.nome} (${item.tipo})</td>
-            <td class="px-4 py-3 text-center">${item.quantidade}</td>
-            <td class="px-4 py-3 text-right">${(item.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-            <td class="px-4 py-3 text-right">${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-            <td class="px-4 py-3 text-center"><button type="button" class="text-red-500" data-action="remover-item">Excluir</button></td>`;
-        tr.querySelector("[data-action='remover-item']").addEventListener("click", () => removerItem(rowId));
-        itensContainer.appendChild(tr);
-    }
-    function renderizarItensNaTabela() {
-        itensContainer.innerHTML = "";
-        itens.forEach(item => adicionarItemNaTela(item));
-        updateTableVisibility();
-    }
-    function removerItem(rowId) {
-        itens = itens.filter(item => String(item.id) !== String(rowId));
-        renderizarItensNaTabela();
-    }
-    function adicionarItem() {
-        const nomeVal = itemInput.value.trim(), qtdVal = parseInt(itemQtdInput.value, 10), valStr = itemValorInput.value, tipoVal = tipoItemSelect.value;
-        if (!nomeVal || isNaN(qtdVal) || !valStr || tipoVal === "default") { alert("Preencha todos os campos do item."); return; }
-        const valVal = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
-        itens.push({ id: `temp-${Date.now()}`, nome: nomeVal, quantidade: qtdVal, valor: valVal, tipo: tipoVal });
-        renderizarItensNaTabela();
-        limparCamposItem();
-    }
+    // --- LÓGICA PRINCIPAL ---
+
     function abrirModalContato() { 
         document.getElementById('modal-contato-nome').value=''; 
         document.getElementById('modal-contato-telefone').value=''; 
         document.getElementById('modal-contato-email').value = ''; 
         modalContato.classList.remove('hidden'); 
         modalContato.classList.add('flex'); 
-        setTimeout(()=>modalContatoBox.classList.remove('-translate-y-10','opacity-0'),50); }
-    function fecharModalContato() { modalContatoBox.classList.add('-translate-y-10','opacity-0'); setTimeout(()=>{ modalContato.classList.add('hidden'); modalContato.classList.remove('flex');},300); }
+        setTimeout(()=>modalContatoBox.classList.remove('-translate-y-10','opacity-0'),50); 
+    }
+
+    function fecharModalContato() { 
+        modalContatoBox.classList.add('-translate-y-10','opacity-0'); 
+        setTimeout(()=>{ modalContato.classList.add('hidden'); modalContato.classList.remove('flex');},300); 
+    }
 
     function salvarContatoDoModal() {
         const nome = document.getElementById('modal-contato-nome').value.trim();
@@ -673,139 +766,382 @@ document.addEventListener("DOMContentLoaded", function() {
             alert("Por favor, preencha o nome e o telefone do contato.");
             return;
         }
-
         const novoTelefoneNormalizado = telefone.replace(/\D/g, '');
-        const telefonePrincipal = document.getElementById('telefone').value.trim();
-        const telefonePrincipalNormalizado = telefonePrincipal.replace(/\D/g, '');
-        
-        
-        const contatoExistente = contatosExtras.find(
-        c => c.telefone.replace(/\D/g, '') === novoTelefoneNormalizado
-    );
+        const telefonePrincipalNormalizado = telefoneInput.value.replace(/\D/g, '');
+        const contatoExistente = contatosExtras.find(c => c.telefone.replace(/\D/g, '') === novoTelefoneNormalizado);
 
-        // 2. AVALIA o que foi encontrado
         if (contatoExistente) {
-            // CASO 1: O NÚMERO EXISTE NA LISTA DE CONTATOS EXTRAS
-            const querAtualizar = confirm(
-                `Este telefone já pertence ao contato "${contatoExistente.nome}".\n\nDeseja atualizar as informações dele com os novos dados?`
-            );
-
+            const querAtualizar = confirm(`Este telefone já pertence ao contato "${contatoExistente.nome}".\nDeseja atualizar as informações dele?`);
             if (querAtualizar) {
-                // Se o usuário confirmar, atualizamos o nome e o e-mail do objeto existente
                 contatoExistente.nome = nome;
                 contatoExistente.email = email;
             } else {
-                // Se o usuário cancelar, não fazemos nada
                 return;
             }
-
         } else if (novoTelefoneNormalizado === telefonePrincipalNormalizado && telefonePrincipalNormalizado !== '') {
-            // CASO 2: O NÚMERO É IGUAL AO TELEFONE PRINCIPAL
-            alert("Este telefone já está definido como o contato principal do cliente e não pode ser adicionado como um contato extra.");
-            return; // Bloqueia a adição
-
+            alert("Este telefone já está definido como o contato principal.");
+            return;
         } else {
-            // CASO 3: É UM NÚMERO TOTALMENTE NOVO
             contatosExtras.push({ nome: nome, telefone: telefone, email: email });
         }
         renderizarTagsDeContato();
         fecharModalContato();
     }
 
-
-    function renderizarTagsDeContato() {
-        listaContatosVisivel.innerHTML = ''; // Limpa a lista antes de redesenhar
-        contatosExtras.forEach((contato, index) => {
-            const tagDiv = document.createElement('div');
-            tagDiv.className = "flex items-center gap-2 bg-emerald-100 text-emerald-800 text-sm font-semibold px-3 py-1 rounded-full";
-            
-            // Constrói o texto do contato dinamicamente
-            let infoContato = `${contato.nome} - ${contato.telefone}`;
-            if (contato.email) {
-                infoContato += ` (${contato.email})`; // Adiciona o e-mail se ele existir
-            }
-
-            tagDiv.innerHTML = `
-                <span>${infoContato}</span>
-                <button type="button" onclick="removerContatoExtra(${index})" class="text-emerald-600 hover:text-emerald-900">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path d="M2.22 2.22a.75.75 0 0 1 1.06 0L8 6.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L9.06 8l4.72 4.72a.75.75 0 1 1-1.06 1.06L8 9.06l-4.72 4.72a.75.75 0 0 1-1.06-1.06L6.94 8 2.22 3.28a.75.75 0 0 1 0-1.06Z" /></svg>
-                </button>
-            `;
-            listaContatosVisivel.appendChild(tagDiv);
-        });
+    function abrirModalInfo() {
+        // Puxa os valores dos inputs ocultos para preencher os campos do modal
+        document.getElementById('info-prazo-entrega').value = document.getElementById('hidden_prazo_entrega').value;
+        document.getElementById('info-garantia').value = document.getElementById('hidden_garantia').value;
+        document.getElementById('info-observacoes').value = document.getElementById('hidden_observacoes').value;
+        
+        modalInfo.classList.remove('hidden');
+        modalInfo.classList.add('flex');
+        setTimeout(() => { modalInfoBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
     }
-    window.removerContatoExtra = (i) => { contatosExtras.splice(i,1); renderizarTagsDeContato(); };
-    function abrirModalInfo() { document.getElementById('info-condicao-pagamento').value = document.getElementById('hidden_condicao_pagamento').value; document.getElementById('info-prazo-entrega').value = document.getElementById('hidden_prazo_entrega').value; document.getElementById('info-garantia').value = document.getElementById('hidden_garantia').value; document.getElementById('info-observacoes').value = document.getElementById('hidden_observacoes').value; modalInfo.classList.remove('hidden'); modalInfo.classList.add('flex'); setTimeout(()=>modalInfoBox.classList.remove('-translate-y-10','opacity-0'),50); }
-    function fecharModalInfo() { modalInfoBox.classList.add('-translate-y-10','opacity-0'); setTimeout(() => { modalInfo.classList.add('hidden'); modalInfo.classList.remove('flex'); }, 300); }
-    function salvarInfoModal() { document.getElementById('hidden_condicao_pagamento').value=document.getElementById('info-condicao-pagamento').value; document.getElementById('hidden_prazo_entrega').value=document.getElementById('info-prazo-entrega').value; document.getElementById('hidden_garantia').value=document.getElementById('info-garantia').value; document.getElementById('hidden_observacoes').value=document.getElementById('info-observacoes').value; fecharModalInfo(); }
 
-    // --- INICIALIZAÇÃO ---
-    function preencherFormulario() {
-        const cliente = orcamentoData.cliente;
-        document.getElementById('nome').value = cliente?.nome || orcamentoData.nome_cliente || '';
-        document.getElementById('telefone').value = cliente?.telefone || orcamentoData.telefone_cliente || '';
-        document.getElementById('cep').value = cliente?.cep || orcamentoData.cep_cliente || '';
-        document.getElementById('logradouro').value = cliente?.logradouro || orcamentoData.logradouro_cliente || '';
-        document.getElementById('numero_casa').value = cliente?.numero_casa || orcamentoData.numero_casa_cliente || '';
-        document.getElementById('complemento').value = cliente?.complemento || orcamentoData.complemento_cliente || '';
-        document.getElementById('bairro').value = cliente?.bairro || orcamentoData.bairro_cliente || '';
-        document.getElementById('cidade_uf').value = cliente?.cidade_uf || orcamentoData.cidade_uf_cliente || '';
+    function fecharModalInfo() {
+        modalInfoBox.classList.add('-translate-y-10', 'opacity-0');
+        setTimeout(() => { modalInfo.classList.add('hidden'); modalInfo.classList.remove('flex'); }, 300);
+    }
+    
+    function salvarInfoModal() {
+        // Salva os valores dos campos nos inputs ocultos correspondentes do formulário
+        document.getElementById('hidden_prazo_entrega').value = document.getElementById('info-prazo-entrega').value;
+        document.getElementById('hidden_garantia').value = document.getElementById('info-garantia').value;
+        document.getElementById('hidden_observacoes').value = document.getElementById('info-observacoes').value;
+        
+        // Dá um feedback visual no botão que abre o modal
+        const btnAbrir = document.getElementById('btn-abrir-modal-info');
+        btnAbrir.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-200');
 
-        if (orcamentoData.cliente && orcamentoData.cliente.id) {
-            document.getElementById('cliente_id').value = orcamentoData.cliente.id;
+        fecharModalInfo();
+    }
+    
+    function calcularValorTotalOrcamento() {
+        return itens.reduce((total, item) => total + (item.quantidade * item.valor), 0);
+    }
+
+
+    function abrirModalPagamento() {
+        valorOrcamentoBruto = calcularValorTotalOrcamento();
+        if (valorOrcamentoBruto <= 0) {
+            alert("Adicione itens ao orçamento para definir o pagamento.");
+            return;
         }
+        
+        // Reseta as parcelas e o desconto ao abrir o modal
+        parcelas = []; 
+        descontoTotalEmValor = 0; 
+        atualizarModalPagamentoUI();
 
+        modalPagamento.classList.remove('hidden');
+        modalPagamento.classList.add('flex');
+        setTimeout(() => { modalPagamentoBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+    }
 
+    function fecharModalPagamento() {
+        modalPagamentoBox.classList.add('-translate-y-10', 'opacity-0');
+        setTimeout(() => { modalPagamento.classList.add('hidden'); modalPagamento.classList.remove('flex'); }, 300);
+    }
+
+    function adicionarParcela() {
+        let descricao = pagamentoDescricaoSelect.value === 'outro' ? pagamentoDescricaoInputOutro.value.trim() : pagamentoDescricaoSelect.value;
+        if (!descricao || !pagamentoValorInput.value) { alert("Preencha a descrição e o valor da parcela."); return; }
+
+        const valorNumerico = parseFloat(pagamentoValorInput.value.replace(/\./g, "").replace(",", "."));
+        const descontoPerc = parseFloat(pagamentoDescontoParcelaInput.value.replace(/\./g, "").replace(",", ".") || '0');
+        const valorTotalLiquido = valorOrcamentoBruto - descontoTotalEmValor;
+        const valorAlocado = parcelas.reduce((t, p) => t + p.valor, 0);
+
+        let valorBrutoParcela = pagamentoTipoValorInput.value === 'valor' ? valorNumerico : (valorTotalLiquido * valorNumerico) / 100;
+        let descontoDaParcela = (valorBrutoParcela * descontoPerc) / 100;
+        let valorLiquidoParcela = valorBrutoParcela - descontoDaParcela;
+        
+        if (valorLiquidoParcela > (valorTotalLiquido - valorAlocado) + 0.01) { alert("Valor da parcela excede o restante."); return; }
+
+        parcelas.push({ id: Date.now(), descricao: descricao, valor: valorLiquidoParcela, desconto: descontoDaParcela });
+        descontoTotalEmValor += descontoDaParcela;
+        
+        pagamentoDescricaoSelect.value = '';
+        pagamentoValorInput.value = '';
+        pagamentoDescontoParcelaInput.value = '';
+        pagamentoDescricaoInputOutro.classList.add('hidden');
+        
+        atualizarModalPagamentoUI();
+    }
+    
+    function removerParcela(idParcela) {
+        const parcelaRemovida = parcelas.find(p => p.id === idParcela);
+        if (parcelaRemovida) descontoTotalEmValor -= parcelaRemovida.desconto;
+        parcelas = parcelas.filter(p => p.id !== idParcela);
+        atualizarModalPagamentoUI();
+    }
+
+    function salvarPagamento() {
+        document.getElementById('hidden_condicao_pagamento').value = JSON.stringify(parcelas);
+        displayCondicaoPagamento.textContent = parcelas.length > 0 ? parcelas.map(p => p.descricao).join(' + ') : 'A definir...';
+        btnAbrirModalPagamento.textContent = parcelas.length > 0 ? "Editar" : "Definir";
+        fecharModalPagamento();
+    }
+    
+    function atualizarModalPagamentoUI() {
+        const valorTotalLiquido = valorOrcamentoBruto - descontoTotalEmValor;
+        const valorAlocado = parcelas.reduce((t, p) => t + p.valor, 0);
+
+        pagamentoValorTotalEl.textContent = formatarMoedaLocal(valorTotalLiquido);
+        pagamentoValorDescontoEl.textContent = `- ${formatarMoedaLocal(descontoTotalEmValor)}`;
+        pagamentoValorRestanteEl.textContent = formatarMoedaLocal(valorTotalLiquido - valorAlocado);
+        pagamentoProgressBar.style.width = `${valorTotalLiquido > 0 ? (valorAlocado / valorTotalLiquido) * 100 : 0}%`;
+
+        listaParcelasContainer.innerHTML = '';
+        if (parcelas.length === 0) {
+            listaParcelasContainer.appendChild(parcelasPlaceholder);
+        } else {
+            parcelas.forEach(p => {
+                const parcelaDiv = document.createElement('div');
+                parcelaDiv.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
+                parcelaDiv.innerHTML = `<div>${p.descricao}: <strong>${formatarMoedaLocal(p.valor)}</strong></div>
+                                        <button type="button" class="remover-parcela-btn text-red-500" data-id="${p.id}">Remover</button>`;
+                listaParcelasContainer.appendChild(parcelaDiv);
+            });
+            listaParcelasContainer.querySelectorAll('.remover-parcela-btn').forEach(btn => btn.onclick = () => removerParcela(parseInt(btn.dataset.id)));
+        }
+    }
+
+    function preencherFormulario() {
+        document.getElementById('nome').value = orcamentoData.nome_cliente || '';
+        document.getElementById('telefone').value = orcamentoData.telefone_cliente || '';
+        document.getElementById('cep').value = orcamentoData.cep_cliente || '';
+        document.getElementById('logradouro').value = orcamentoData.logradouro_cliente || '';
+        document.getElementById('numero_casa').value = orcamentoData.numero_casa_cliente || '';
+        document.getElementById('complemento').value = orcamentoData.complemento_cliente || '';
+        document.getElementById('bairro').value = orcamentoData.bairro_cliente || '';
+        document.getElementById('cidade_uf').value = orcamentoData.cidade_uf_cliente || '';
+
+        if (orcamentoData.cliente) { document.getElementById('cliente_id').value = orcamentoData.cliente.id; }
         document.getElementById('numero_orcamento').value = orcamentoData.numero;
         document.getElementById('descricaoServico').value = orcamentoData.descricao_servico;
-        document.getElementById('hidden_condicao_pagamento').value = orcamentoData.condicao_pagamento || '';
+
+
+        const condicaoPagamentoData = orcamentoData.condicao_pagamento;
+        let resumo = 'A definir...';
+        let btnTexto = 'Definir';
+
+        // Variável que guardará os dados das parcelas, seja qual for o tipo
+        let parcelasSalvas = null;
+
+        // 1. Verificamos o tipo do dado
+        if (typeof condicaoPagamentoData === 'string' && condicaoPagamentoData) {
+            // Se for string, tentamos decodificar
+            try {
+                parcelasSalvas = JSON.parse(condicaoPagamentoData);
+            } catch (e) {
+                // Se a decodificação falhar, é só um texto simples (ex: "A combinar")
+                resumo = condicaoPagamentoData;
+                parcelas = [];
+            }
+        } else if (Array.isArray(condicaoPagamentoData)) {
+            // Se já for um array, usamos diretamente
+            parcelasSalvas = condicaoPagamentoData;
+        } else {
+             // Se for outra coisa (ou nulo), tratamos como texto
+             resumo = condicaoPagamentoData || 'A definir...';
+        }
+
+        // 2. Agora, formatamos o resumo se tivermos um array válido de parcelas
+        if (Array.isArray(parcelasSalvas) && parcelasSalvas.length > 0) {
+            parcelas = parcelasSalvas; // ATUALIZA o array global de parcelas para edição
+            resumo = parcelasSalvas.map(p => `${p.descricao} (${formatarMoedaLocal(p.valor)})`).join(' + ');
+            btnTexto = "Editar";
+        }
+
+        // 3. Finalmente, atualizamos a interface e os campos ocultos
+        displayCondicaoPagamento.textContent = resumo;
+        btnAbrirModalPagamento.textContent = btnTexto;
+        // Armazenamos a versão em string no input oculto para o próximo envio do formulário
+        document.getElementById('hidden_condicao_pagamento').value = JSON.stringify(parcelas);
         document.getElementById('hidden_prazo_entrega').value = orcamentoData.prazo_entrega || '';
         document.getElementById('hidden_garantia').value = orcamentoData.garantia || '';
         document.getElementById('hidden_observacoes').value = orcamentoData.observacoes || '';
-        renderizarItensNaTabela();
+
+
+    }
+
+    function renderizarItensNaTabela() {
+    itensContainer.innerHTML = "";
+    itens.forEach(item => {
+        const rowId = item.id || `temp-${Date.now()}`;
+        const qtd   = Number(item.quantidade ?? item.qtd ?? 0);
+        const val   = Number(
+        typeof item.valor === "string" ? item.valor.replace(/\./g,"").replace(",",".") : item.valor
+        ) || 0;
+        const total = qtd * val;
+
+        const tr = document.createElement("tr");
+        tr.className = "bg-white border-b hover:bg-gray-50";
+        tr.dataset.id = rowId;
+
+        tr.innerHTML = `
+        <td class="px-4 py-3 font-medium text-gray-900 capitalize">${item.nome} (${item.tipo})</td>
+        <td class="px-4 py-3 text-center">${qtd}</td>
+        <td class="px-4 py-3 text-right">${val.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+        <td class="px-4 py-3 text-right">${total.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+        <td class="px-4 py-3 text-center">
+            <button type="button" class="text-red-500 remove-item-btn" data-id="${rowId}">Excluir</button>
+        </td>`;
+        itensContainer.appendChild(tr);
+    });
+    tableContainer.classList.toggle("hidden", itens.length === 0);
+    }
+
+    function carregarContatosExtras() {
+        contatosExtras = (orcamentoData.contatos_extras || []).map(c => ({ nome: c.nome, telefone: c.telefone, email: c.email || '' }));
         renderizarTagsDeContato();
     }
-    
-    function inicializar() {
-        preencherFormulario();
-        carregarCatalogosAPI();
-        updateTipoItemIcon();
 
-        // AQUI ESTÁ A CHAMADA PARA A NOVA FUNÇÃO
-        if (orcamentoData && orcamentoData.id) {
-            carregarContatosExtras(orcamentoData.id);
+    function renderizarTagsDeContato() {
+        listaContatosVisivel.innerHTML = '';
+        contatosExtras.forEach((contato, index) => {
+            const tagDiv = document.createElement('div');
+            tagDiv.className = "flex items-center gap-2 bg-emerald-100 text-emerald-800 text-sm font-semibold px-3 py-1 rounded-full";
+            let infoContato = `${contato.nome} - ${contato.telefone}${contato.email ? ` (${contato.email})` : ''}`;
+            tagDiv.innerHTML = `<span>${infoContato}</span><button type="button" data-index="${index}" class="remove-contact-btn text-emerald-600 hover:text-emerald-900">×</button>`;
+            listaContatosVisivel.appendChild(tagDiv);
+        });
+    }
+
+    async function carregarCatalogosAPI() {
+        try {
+            const [respServ, respMat] = await Promise.all([ fetch(`/api/servico/`), fetch(`/api/materiais/`) ]);
+            if (!respServ.ok || !respMat.ok) throw new Error("Falha ao carregar catálogos.");
+            servicosCatalogo = await respServ.json(); materiaisCatalogo = await respMat.json();
+            renderizarSeletor("servico"); renderizarSeletor("material");
+        } catch (error) { console.error(error); }
+    }
+
+    function renderizarSeletor(tipo) {
+        const container = document.getElementById(tipo === "servico" ? "containerServico" : "containerMaterial");
+        const catalogo = tipo === "servico" ? servicosCatalogo : materiaisCatalogo;
+        const placeholder = tipo === "servico" ? "-- Selecione um Serviço --" : "-- Selecione um Material --";
+        const icon = icons[tipo];
+        
+        container.innerHTML = `
+            <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">${icon}</div>
+            <select class="select-catalogo h-10 w-full ps-10 pe-20 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400 appearance-none">
+                <option value="">${placeholder}</option>
+                ${catalogo.map(item => `<option value="${item.id}">${item.nome}</option>`).join("")}
+            </select>
+            <button type="button" data-tipo-catalogo="${tipo}" class="btn-abrir-modal-catalogo absolute inset-y-0 end-0 flex items-center justify-center px-3 border-l border-zinc-300 text-zinc-600 hover:bg-zinc-100 transition-colors rounded-e-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clip-rule="evenodd" /></svg>
+            </button>
+        `;
+
+        container.querySelector("select").addEventListener("change", (e) => handleSelecaoCatalogo(e, tipo));
+        
+        container.querySelector(".btn-abrir-modal-catalogo").addEventListener("click", (e) => {
+            const tipoCatalogo = e.currentTarget.dataset.tipoCatalogo;
+            abrirModalCatalogo(tipoCatalogo);
+        });
+    }
+
+    function handleSelecaoCatalogo(e, tipo) {
+        const id = e.target.value; if (!id) { return; }
+        const itemSelecionado = (tipo === "servico" ? servicosCatalogo : materiaisCatalogo).find(item => String(item.id) === id);
+        if (itemSelecionado) {
+            itemInput.value = itemSelecionado.nome;
+            itemValorInput.value = itemSelecionado.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+            tipoItemSelect.value = tipo;
+            updateTipoItemIcon();
+            itemQtdInput.focus();
         }
+    }
 
-        // Listeners
+    function adicionarItem() {
+        const nomeVal = itemInput.value.trim(), qtdVal = parseInt(itemQtdInput.value, 10), valStr = itemValorInput.value, tipoVal = tipoItemSelect.value;
+        if (!nomeVal || isNaN(qtdVal) || !valStr || tipoVal === "default") { alert("Preencha todos os campos do item."); return; }
+        const valVal = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
+        itens.push({ id: `temp-${Date.now()}`, nome: nomeVal, quantidade: qtdVal, valor: valVal, tipo: tipoVal });
+        renderizarItensNaTabela();
+        limparCamposItem(); // <-- LINHA ADICIONADA
+    }
+
+    function limparCamposItem() {
+        itemInput.value = "";
+        itemQtdInput.value = "1";
+        itemValorInput.value = "";
+        tipoItemSelect.value = "default";
+        document.getElementById("toggleSalvar").checked = false;
+        updateTipoItemIcon();
+    }
+    
+    function adicionarEventListeners() {
         adicionarItemBtn.addEventListener("click", adicionarItem);
         itemValorInput.addEventListener("input", formatarMoeda);
-        telefoneInput.addEventListener("input", (e) => mascara(e, "(##) #####-####"));
         tipoItemSelect.addEventListener("change", updateTipoItemIcon);
-        btnAbrirModalInfo.addEventListener('click', abrirModalInfo);
-        btnFecharModalInfo.addEventListener('click', fecharModalInfo);
-        btnSalvarInfo.addEventListener('click', salvarInfoModal);
         btnAdicionarContato.addEventListener('click', abrirModalContato);
         btnFecharModalContato.addEventListener('click', fecharModalContato);
         btnSalvarContatoModal.addEventListener('click', salvarContatoDoModal);
         btnFecharModalCatalogo.addEventListener('click', fecharModalCatalogo);
-        modalCatalogo.addEventListener('click', (event) => { if (event.target === modalCatalogo) fecharModalCatalogo(); });
+        modalCatalogo.addEventListener('click', (event) => { 
+            if (event.target === modalCatalogo) fecharModalCatalogo(); 
+        });
         filtroCatalogoInput.addEventListener('input', (e) => {
             const tipoAtual = modalCatalogo.dataset.tipoAtual;
             popularListaModalCatalogo(tipoAtual, e.target.value);
         });
 
-        // Submissão
+        document.body.addEventListener('click', function(event) {
+            if (event.target.classList.contains('remove-item-btn')) {
+                const idToRemove = event.target.dataset.id;
+                itens = itens.filter(i => String(i.id) !== idToRemove);
+                renderizarItensNaTabela();
+            }
+            if (event.target.classList.contains('remove-contact-btn')) {
+                const indexToRemove = parseInt(event.target.dataset.index, 10);
+                contatosExtras.splice(indexToRemove, 1);
+                renderizarTagsDeContato();
+            }
+        });
+        
         form.addEventListener("submit", (e) => {
             if (itens.length === 0) { e.preventDefault(); alert("O orçamento deve ter pelo menos um item."); return; }
             document.getElementById("hiddenItens").value = JSON.stringify(itens);
             document.getElementById("hiddenContatos").value = JSON.stringify(contatosExtras);
+            
+            
         });
+
+        btnAbrirModalInfo.addEventListener('click', abrirModalInfo);
+        btnFecharModalInfo.addEventListener('click', fecharModalInfo);
+        btnSalvarInfo.addEventListener('click', salvarInfoModal);
+
+        btnAbrirModalPagamento.addEventListener('click', abrirModalPagamento);
+        btnFecharModalPagamento.addEventListener('click', fecharModalPagamento);
+        btnSalvarPagamento.addEventListener('click', salvarPagamento);
+        btnAddParcela.addEventListener('click', adicionarParcela);
+
+        pagamentoValorInput.addEventListener('input', formatarMoeda);
+        pagamentoDescontoParcelaInput.addEventListener('input', formatarMoeda);
+
+        pagamentoDescricaoSelect.addEventListener('change', () => {
+            pagamentoDescricaoInputOutro.classList.toggle('hidden', pagamentoDescricaoSelect.value !== 'outro');
+        });
+    }
+
+    // --- PONTO DE ENTRADA ---
+    function inicializar() {
+        preencherFormulario();
+        renderizarItensNaTabela();
+
+        carregarContatosExtras();
+        carregarCatalogosAPI();
+        updateTipoItemIcon();
+
+        adicionarEventListeners();
     }
 
     inicializar();
 });
-
 </script>
-
 </body>
 </html>

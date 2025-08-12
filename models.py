@@ -1,5 +1,6 @@
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, JSON, Column, Relationship
+import json
 
 # --- Modelo Item (Sem alterações) ---
 class Item(SQLModel, table=True):
@@ -75,6 +76,24 @@ class Orcamento(SQLModel, table=True):
     # Esta é a chave estrangeira que conecta ao cliente
     cliente_id: Optional[int] = Field(default=None, foreign_key="cliente.id")
     cliente: Optional[Cliente] = Relationship(back_populates="orcamentos")
+
+    def model_dump_json(self, **kwargs):
+        # 1. Combina os argumentos. 'exclude_none=True' é o padrão.
+        # Se o usuário passar um `exclude_none` diferente em kwargs, ele terá prioridade.
+        dump_kwargs = {'exclude_none': True, **kwargs}
+        
+        # 2. Chama o dump UMA VEZ com os argumentos combinados
+        data = self.model_dump(**dump_kwargs)
+
+        # 3. Processa os relacionamentos como antes
+        # (Não há mudanças nesta parte)
+        if 'cliente' in data and self.cliente and self.cliente.contatos:
+            data['cliente']['contatos'] = [c.model_dump() for c in self.cliente.contatos]
+                
+        if self.contatos_extras:
+            data['contatos_extras'] = [c.model_dump() for c in self.contatos_extras]
+            
+        return json.dumps(data)
 
 class Contato(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
