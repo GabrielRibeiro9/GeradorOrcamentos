@@ -429,59 +429,36 @@
         </div>
     </div>
 
-    <!-- Modal para Envio via WhatsApp -->
-    <div id="modal-whatsapp" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div id="modal-whatsapp-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md transform transition-all -translate-y-10 opacity-0 duration-300">
-            <div class="flex items-center justify-between pb-3 border-b">
-                <h3 class="text-xl font-semibold text-gray-800">Enviar por WhatsApp</h3>
-                <button onclick="fecharModalWhatsApp()" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
-            </div>
-            <div class="mt-4 space-y-4">
-                <p class="text-sm">Selecione os contatos para enviar:</p>
-                <div id="lista-contatos-whatsapp" class="space-y-2 border-t border-b py-3 max-h-48 overflow-y-auto">
-                    <!-- A lista de contatos com checkboxes vai aqui -->
-                </div>
-                <button id="btn-enviar-whatsapp-final" class="w-full h-10 px-4 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 transition flex items-center justify-center gap-2">
-                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
-                    Enviar para Selecionados
-                </button>
-            </div>
-        </div>
-    </div>
-
     <div id="modal-pagamento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[60] transition-opacity duration-300">
     <div id="modal-pagamento-box" class="bg-white rounded-lg shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh] transform transition-all -translate-y-10 opacity-0 duration-300">
         
-        <!-- Cabeçalho -->
         <div class="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
             <h3 class="text-xl font-semibold text-gray-800">Definir Condições de Pagamento</h3>
             <button id="btn-fechar-modal-pagamento" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
         </div>
 
-            <!-- Corpo do Modal - CÓDIGO FINAL CORRIGIDO -->
-            <div class="p-6 space-y-5 overflow-y-auto">
+        <!-- Corpo do Modal -->
+        <div class="p-6 space-y-5 overflow-y-auto">
 
-                <!-- Indicadores de Valor SIMPLIFICADOS -->
-                <div class="bg-gray-50 p-4 rounded-lg border sticky top-0">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="font-medium text-gray-600">Total com Desconto:</span>
-                        <span id="pagamento-valor-total" class="font-bold text-emerald-600 text-xl">R$ 0,00</span>
-                    </div>
-                    <div class="flex justify-between items-center text-sm mb-3">
-                        <span class="font-medium text-amber-600">Desconto aplicado:</span>
-                        <span id="pagamento-valor-desconto" class="font-bold text-amber-700">- R$ 0,00</span>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-lg mb-2">
-                        <span class="font-medium text-gray-600">Restante a alocar:</span>
-                        <span id="pagamento-valor-restante" class="font-bold text-blue-600">R$ 0,00</span>
-                    </div>
-
-                    <!-- Barra de Progresso -->
-                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div id="pagamento-progress-bar" class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-                    </div>
+            <!-- Indicadores de Valor (sem mudanças na estrutura) -->
+            <div class="bg-gray-50 p-4 rounded-lg border sticky top-0">
+                <!-- ... (o conteúdo dos indicadores de valor continua o mesmo) ... -->
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-medium text-gray-600">Total com Desconto:</span>
+                    <span id="pagamento-valor-total" class="font-bold text-emerald-600 text-xl">R$ 0,00</span>
                 </div>
+                <div class="flex justify-between items-center text-sm mb-3">
+                    <span class="font-medium text-amber-600">Desconto aplicado:</span>
+                    <span id="pagamento-valor-desconto" class="font-bold text-amber-700">- R$ 0,00</span>
+                </div>
+                <div class="flex justify-between items-center text-lg mb-2">
+                    <span class="font-medium text-gray-600">Restante a alocar (nesta opção):</span>
+                    <span id="pagamento-valor-restante" class="font-bold text-blue-600">R$ 0,00</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="pagamento-progress-bar" class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
             
                 <!-- Formulário para Adicionar Parcelas -->
                 <div class="space-y-4 pt-2">
@@ -522,17 +499,28 @@
                     </div>
                     
                     <!-- Linha 4: Botão de Adicionar -->
-                    <button id="btn-add-parcela" class="w-full h-11 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>
-                        <span>Adicionar Parcela</span>
+                        <button id="btn-add-parcela" class="w-full h-11 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>
+                            <span>Adicionar Parcela a esta Opção</span>
+                        </button>
+                    </div>
+                                
+                <div id="grupo-atual-container" class="border-t pt-4 mt-4 hidden">
+                    <h4 class="text-md font-semibold text-gray-700 mb-2">Opção em construção:</h4>
+                    <div id="lista-parcelas-grupo-atual" class="space-y-2 p-2 bg-blue-50/50 rounded-lg border-l-4 border-blue-400">
+                        <!-- As parcelas do grupo atual aparecerão aqui -->
+                    </div>
+                    <button id="btn-salvar-grupo" type="button" class="w-full mt-3 h-11 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.052-.143Z" clip-rule="evenodd" /></svg>
+                        <span>Finalizar e Adicionar Opção</span>
                     </button>
                 </div>
-                                
-                <!-- Lista de Parcelas Adicionadas -->
+
+                <!-- **** NOVA SEÇÃO: OPÇÕES JÁ SALVAS **** -->
                 <div class="border-t pt-4 mt-4">
-                    <h4 class="text-md font-semibold text-gray-700 mb-2">Parcelas Definidas:</h4>
-                    <div id="lista-parcelas-container" class="space-y-2">
-                        <p id="parcelas-placeholder" class="text-center text-gray-400 py-4">Nenhuma condição de pagamento adicionada.</p>
+                    <h4 class="text-md font-semibold text-gray-700 mb-2">Opções de Pagamento Salvas:</h4>
+                    <div id="grupos-salvos-container" class="space-y-2">
+                        <p id="grupos-placeholder" class="text-center text-gray-400 py-4">Nenhuma opção de pagamento definida.</p>
                     </div>
                 </div>
 
@@ -540,13 +528,12 @@
 
             <!-- Rodapé -->
             <div class="flex items-center justify-end p-4 bg-gray-50 border-t sticky bottom-0">
-                <button id="btn-salvar-pagamento" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-blue-700 transition-colors">
-                    Confirmar Condições
+                <button id="btn-salvar-pagamento" class="bg-emerald-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-emerald-700 transition-colors">
+                    Confirmar Todas as Condições
                 </button>
             </div>
         </div>
     </div>
-
 
 <script>
 
@@ -606,12 +593,17 @@ document.addEventListener("DOMContentLoaded", function() {
     const pagamentoValorInput = document.getElementById('pagamento-valor-input');
     const pagamentoDescontoParcelaInput = document.getElementById('pagamento-desconto-parcela');
     const btnAddParcela = document.getElementById('btn-add-parcela');
-    const listaParcelasContainer = document.getElementById('lista-parcelas-container');
-    const parcelasPlaceholder = document.getElementById('parcelas-placeholder');
     const displayCondicaoPagamento = document.getElementById('display-condicao-pagamento');
+    const grupoAtualContainer = document.getElementById('grupo-atual-container');
+    const listaParcelasGrupoAtual = document.getElementById('lista-parcelas-grupo-atual');
+    const btnSalvarGrupo = document.getElementById('btn-salvar-grupo');
+    const gruposSalvosContainer = document.getElementById('grupos-salvos-container');
+    const gruposPlaceholder = document.getElementById('grupos-placeholder');
     
 
-    let parcelas = [];
+    let gruposDePagamento = []; // Lista principal que conterá os grupos
+    let grupoAtual = [];         // Lista temporária para o grupo que está sendo montado no modal
+    let idGrupoEmEdicao = null;  // Para saber se estamos editando um grupo existente
     let valorOrcamentoBruto = 0;
     let descontoTotalEmValor = 0;
 
@@ -826,18 +818,48 @@ document.addEventListener("DOMContentLoaded", function() {
     function abrirModalPagamento() {
         valorOrcamentoBruto = calcularValorTotalOrcamento();
         if (valorOrcamentoBruto <= 0) {
-            alert("Adicione itens ao orçamento para definir o pagamento.");
+            alert("Adicione itens ao orçamento primeiro para definir as condições de pagamento.");
             return;
         }
-        
-        // Reseta as parcelas e o desconto ao abrir o modal
-        parcelas = []; 
-        descontoTotalEmValor = 0; 
-        atualizarModalPagamentoUI();
+
+        // Sempre começamos sem um grupo em edição
+        grupoAtual = [];
+        idGrupoEmEdicao = null;
+
+        // NOVO: carrega do hidden o que veio do banco (JSON ou string)
+        const raw = document.getElementById('hidden_condicao_pagamento').value || '[]';
+        let parsed = [];
+        try { parsed = JSON.parse(raw); } catch (e) { parsed = []; }
+
+        // Aceita tanto [[...],[...]] quanto [{...},{...}]
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            if (Array.isArray(parsed[0])) {
+            gruposDePagamento = parsed;
+            } else if (typeof parsed[0] === 'object') {
+            gruposDePagamento = [parsed];
+            } else {
+            gruposDePagamento = [];
+            }
+
+            // Normaliza objetos e garante ID numérico pra remover/editar
+            gruposDePagamento = gruposDePagamento.map(grupo =>
+            grupo.map((p, i) => ({
+                id: p.id ?? (Date.now() + i),
+                descricao: p.descricao,
+                valor: Number(p.valor) || 0,
+                desconto: Number(p.desconto) || 0
+            }))
+            );
+        } else {
+            gruposDePagamento = [];
+        }
+
+        renderizarGruposEParcelasUI();
+        atualizarCabecalhoPagamentoUI();
 
         modalPagamento.classList.remove('hidden');
         modalPagamento.classList.add('flex');
-        setTimeout(() => { modalPagamentoBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+        setTimeout(() => { modalPagamentoBox.classList.remove('-translate-y-10','opacity-0'); }, 50);
     }
 
     function fecharModalPagamento() {
@@ -846,94 +868,162 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function adicionarParcela() {
+        // Esta função agora adiciona ao `grupoAtual`
         let descricao = pagamentoDescricaoSelect.value === 'outro' ? pagamentoDescricaoInputOutro.value.trim() : pagamentoDescricaoSelect.value;
-        if (!descricao || !pagamentoValorInput.value) { alert("Preencha a descrição e o valor da parcela."); return; }
+        if (!descricao || !pagamentoValorInput.value) { alert("Preencha a descrição e o valor."); return; }
 
         const valorNumerico = parseFloat(pagamentoValorInput.value.replace(/\./g, "").replace(",", "."));
-        const descontoPerc = parseFloat(pagamentoDescontoParcelaInput.value.replace(/\./g, "").replace(",", ".") || '0');
-        const valorTotalLiquido = valorOrcamentoBruto - descontoTotalEmValor;
-        const valorAlocado = parcelas.reduce((t, p) => t + p.valor, 0);
+        const descontoNumerico = parseFloat(pagamentoDescontoParcelaInput.value.replace(/\./g, "").replace(",", ".") || '0');
+        if (isNaN(valorNumerico) || valorNumerico <= 0) { alert("Insira um valor válido."); return; }
 
-        let valorBrutoParcela = pagamentoTipoValorInput.value === 'valor' ? valorNumerico : (valorTotalLiquido * valorNumerico) / 100;
-        let descontoDaParcela = (valorBrutoParcela * descontoPerc) / 100;
+        const valorTotalGrupoLiquido = valorOrcamentoBruto - grupoAtual.reduce((acc, p) => acc + p.desconto, 0);
+        const valorAlocadoGrupo = grupoAtual.reduce((acc, p) => acc + p.valor, 0);
+        const valorRestanteGrupo = valorTotalGrupoLiquido - valorAlocadoGrupo;
+
+        let valorBrutoParcela = pagamentoTipoValorInput.value === 'valor' ? valorNumerico : (valorOrcamentoBruto * valorNumerico) / 100;
+        let descontoDaParcela = (valorBrutoParcela * descontoNumerico) / 100;
         let valorLiquidoParcela = valorBrutoParcela - descontoDaParcela;
         
-        if (valorLiquidoParcela > (valorTotalLiquido - valorAlocado) + 0.01) { alert("Valor da parcela excede o restante."); return; }
+        if (valorLiquidoParcela > valorRestanteGrupo + 0.01) {
+            alert(`O valor da parcela (${formatarMoedaLocal(valorLiquidoParcela)}) excede o restante a pagar nesta opção (${formatarMoedaLocal(valorRestanteGrupo)}).`);
+            return;
+        }
 
-        parcelas.push({ id: Date.now(), descricao: descricao, valor: valorLiquidoParcela, desconto: descontoDaParcela });
-        descontoTotalEmValor += descontoDaParcela;
+        grupoAtual.push({ id: Date.now(), descricao, valor: valorLiquidoParcela, desconto: descontoDaParcela });
         
+        // Limpa os campos do formulário
         pagamentoDescricaoSelect.value = '';
+        pagamentoDescricaoInputOutro.value = '';
+        pagamentoDescricaoInputOutro.classList.add('hidden');
         pagamentoValorInput.value = '';
         pagamentoDescontoParcelaInput.value = '';
-        pagamentoDescricaoInputOutro.classList.add('hidden');
         
-        atualizarModalPagamentoUI();
+        renderizarGruposEParcelasUI(); // Atualiza a lista "em construção"
+        atualizarCabecalhoPagamentoUI(); // Recalcula os totais
     }
+
     
-    function removerParcela(idParcela) {
-        const parcelaRemovida = parcelas.find(p => p.id === idParcela);
-        if (parcelaRemovida) descontoTotalEmValor -= parcelaRemovida.desconto;
-        parcelas = parcelas.filter(p => p.id !== idParcela);
-        atualizarModalPagamentoUI();
+    function salvarGrupoAtual() {
+        if (grupoAtual.length === 0) { alert("Adicione pelo menos uma parcela para criar uma opção de pagamento."); return; }
+
+        const descontoTotalGrupo = grupoAtual.reduce((acc, p) => acc + p.desconto, 0);
+        const valorTotalGrupo = grupoAtual.reduce((acc, p) => acc + p.valor, 0);
+        const valorAlvo = valorOrcamentoBruto - descontoTotalGrupo;
+        if (Math.abs(valorTotalGrupo - valorAlvo) > 0.01) {
+            if (!confirm("O total desta opção de pagamento não corresponde ao valor total do orçamento com desconto. Deseja adicionar mesmo assim?")) return;
+        }
+
+        if (idGrupoEmEdicao !== null) {
+            gruposDePagamento[idGrupoEmEdicao] = [...grupoAtual];
+            idGrupoEmEdicao = null;
+        } else {
+            gruposDePagamento.push([...grupoAtual]); 
+        }
+
+        grupoAtual = [];
+        renderizarGruposEParcelasUI();
+        atualizarCabecalhoPagamentoUI();
     }
+
+    function removerParcelaDoGrupoAtual(parcelaId) {
+        grupoAtual = grupoAtual.filter(p => p.id !== parcelaId);
+        renderizarGruposEParcelasUI();
+        atualizarCabecalhoPagamentoUI();
+    }
+
+    function atualizarCabecalhoPagamentoUI() {
+        const descontoTotalGrupo = grupoAtual.reduce((acc, p) => acc + p.desconto, 0);
+        const valorTotalLiquido = valorOrcamentoBruto - descontoTotalGrupo;
+        const valorAlocado = grupoAtual.reduce((acc, p) => acc + p.valor, 0);
+        const valorRestante = valorTotalLiquido - valorAlocado;
+
+        pagamentoValorTotalEl.textContent = formatarMoedaLocal(valorTotalLiquido);
+        pagamentoValorDescontoEl.textContent = `- ${formatarMoedaLocal(descontoTotalGrupo)}`;
+        pagamentoValorRestanteEl.textContent = formatarMoedaLocal(valorRestante);
+        
+        const progressoPercent = valorTotalLiquido > 0 ? (valorAlocado / valorTotalLiquido) * 100 : 0;
+        pagamentoProgressBar.style.width = `${Math.min(progressoPercent, 100)}%`;
+    }
+
+    function renderizarGruposEParcelasUI() {
+        // Renderiza o grupo que está sendo construído
+        grupoAtualContainer.classList.toggle('hidden', grupoAtual.length === 0);
+        listaParcelasGrupoAtual.innerHTML = '';
+        grupoAtual.forEach(p => {
+            let textoParcela = `${p.descricao}: ${formatarMoedaLocal(p.valor)}`;
+            if (p.desconto > 0) textoParcela += ` (Desc. ${formatarMoedaLocal(p.desconto)})`;
+            listaParcelasGrupoAtual.innerHTML += `<div class="flex justify-between items-center text-sm"><span>${textoParcela}</span><button onclick="removerParcelaDoGrupoAtual(${p.id})" class="text-red-500 font-bold">×</button></div>`;
+        });
+        
+        // Renderiza os grupos já salvos
+        gruposSalvosContainer.innerHTML = '';
+        if (gruposDePagamento.length > 0) {
+            gruposPlaceholder.classList.add('hidden');
+            gruposDePagamento.forEach((grupo, index) => {
+                const resumoGrupo = grupo.map(p => p.descricao).join(' + ');
+                gruposSalvosContainer.innerHTML += `
+                <div class="p-3 bg-gray-100 rounded-lg flex justify-between items-center">
+                    <span>Opção ${index + 1}: ${resumoGrupo}</span>
+                    <div class="flex gap-2">
+                    <button onclick="editarGrupo(${index})" class="p-1 text-blue-600 rounded-full hover:bg-blue-100">Editar</button>
+                    <button onclick="removerGrupo(${index})" class="p-1 text-red-500 rounded-full hover:bg-red-100">Remover</button>
+                    </div>
+                </div>`;
+            });
+        } else {
+            gruposPlaceholder.classList.remove('hidden');
+        }
+    }
+
+    // Funções para manipular os grupos salvos (serão adicionados os eventos depois)
+    window.removerParcelaDoGrupoAtual = removerParcelaDoGrupoAtual;
+    window.removerGrupo = function(index) {
+        gruposDePagamento.splice(index, 1);
+        renderizarGruposEParcelasUI();
+    }
+
+    window.editarGrupo = function(index) {
+    grupoAtual = gruposDePagamento[index].map(p => ({
+        id: p.id ?? (Date.now() + Math.floor(Math.random()*1000)),
+        descricao: p.descricao,
+        valor: Number(p.valor) || 0,
+        desconto: Number(p.desconto) || 0
+    }));
+    idGrupoEmEdicao = index;
+    renderizarGruposEParcelasUI();
+    atualizarCabecalhoPagamentoUI();
+    };
 
     function salvarPagamento() {
-        const valorTotalLiquido = valorOrcamentoBruto - descontoTotalEmValor;
-        const valorAlocado = parcelas.reduce((total, p) => total + p.valor, 0);
-
-        if (Math.abs(valorTotalLiquido - valorAlocado) > 0.01) {
-            if (!confirm("O valor total das parcelas não corresponde ao total do orçamento. Deseja confirmar mesmo assim?")) {
-                return;
+        if (grupoAtual.length > 0) {
+            if (confirm("Você tem uma opção em construção. Deseja adicioná-la antes de confirmar?")) {
+                salvarGrupoAtual();
+            } else {
+                grupoAtual = []; 
             }
         }
         
-        // AQUI ESTÁ A CORREÇÃO PRINCIPAL:
-        // Nós só salvaremos o JSON estruturado. Não geramos mais texto com valor aqui.
-        if (parcelas.length > 0) {
-            document.getElementById('hidden_condicao_pagamento').value = JSON.stringify(parcelas);
+        // 1. Salva os DADOS COMPLETOS E ESTRUTURADOS no campo oculto para o backend
+        document.getElementById('hidden_condicao_pagamento').value = JSON.stringify(gruposDePagamento);
+
+        // 2. Cria o RESUMO VISUAL para o usuário
+        if (gruposDePagamento.length > 0) {
+            // Gera um resumo visual simples e funcional. Ex: "Opção 1: Entrada + Pix / Opção 2: À Vista"
+            const resumoVisual = gruposDePagamento.map((grupo, i) => 
+                `Opção ${i + 1}: ${grupo.map(p => p.descricao).join(' + ')}`
+            ).join(' / ');
             
-            // Atualiza o display visual
-            const resumoVisual = parcelas.map(p => `${p.descricao}`).join(' + ');
             displayCondicaoPagamento.textContent = resumoVisual;
             btnAbrirModalPagamento.textContent = "Editar";
-
         } else {
-            // Se o usuário abre o modal, não adiciona parcelas e salva, 
-            // mantemos o campo oculto como vazio ou "A combinar".
-            // Isso evita que um valor total seja gerado acidentalmente.
-            // É importante que o usuário possa LIMPAR as condições.
-            document.getElementById('hidden_condicao_pagamento').value = 'A combinar'; 
-            displayCondicaoPagamento.textContent = 'A combinar';
+            displayCondicaoPagamento.textContent = 'A definir...';
             btnAbrirModalPagamento.textContent = "Definir";
+            document.getElementById('hidden_condicao_pagamento').value = '[]'; // Garante que, ao limpar, salve um array vazio
         }
-
+        
         fecharModalPagamento();
     }
     
-    function atualizarModalPagamentoUI() {
-        const valorTotalLiquido = valorOrcamentoBruto - descontoTotalEmValor;
-        const valorAlocado = parcelas.reduce((t, p) => t + p.valor, 0);
-
-        pagamentoValorTotalEl.textContent = formatarMoedaLocal(valorTotalLiquido);
-        pagamentoValorDescontoEl.textContent = `- ${formatarMoedaLocal(descontoTotalEmValor)}`;
-        pagamentoValorRestanteEl.textContent = formatarMoedaLocal(valorTotalLiquido - valorAlocado);
-        pagamentoProgressBar.style.width = `${valorTotalLiquido > 0 ? (valorAlocado / valorTotalLiquido) * 100 : 0}%`;
-
-        listaParcelasContainer.innerHTML = '';
-        if (parcelas.length === 0) {
-            listaParcelasContainer.appendChild(parcelasPlaceholder);
-        } else {
-            parcelas.forEach(p => {
-                const parcelaDiv = document.createElement('div');
-                parcelaDiv.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
-                parcelaDiv.innerHTML = `<div>${p.descricao}: <strong>${formatarMoedaLocal(p.valor)}</strong></div>
-                                        <button type="button" class="remover-parcela-btn text-red-500" data-id="${p.id}">Remover</button>`;
-                listaParcelasContainer.appendChild(parcelaDiv);
-            });
-            listaParcelasContainer.querySelectorAll('.remover-parcela-btn').forEach(btn => btn.onclick = () => removerParcela(parseInt(btn.dataset.id)));
-        }
-    }
 
     function preencherFormulario() {
         document.getElementById('nome').value = orcamentoData.nome_cliente || '';
@@ -951,45 +1041,41 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
         const condicaoPagamentoData = orcamentoData.condicao_pagamento;
-        let resumo = 'A definir...';
-        let btnTexto = 'Definir';
+        gruposDePagamento = [];
 
-        // Variável que guardará os dados das parcelas, seja qual for o tipo
-        let parcelasSalvas = null;
+        let parsed = [];
+        if (Array.isArray(condicaoPagamentoData)) {
+        parsed = condicaoPagamentoData;
+        } else if (condicaoPagamentoData && typeof condicaoPagamentoData === 'object') {
+        parsed = [condicaoPagamentoData];
+        } else if (typeof condicaoPagamentoData === 'string' && condicaoPagamentoData.trim().startsWith('[')) {
+        try { parsed = JSON.parse(condicaoPagamentoData); } catch (e) { parsed = []; }
+        }
 
-        // 1. Verificamos o tipo do dado
-        if (typeof condicaoPagamentoData === 'string' && condicaoPagamentoData) {
-            // Se for string, tentamos decodificar
-            try {
-                parcelasSalvas = JSON.parse(condicaoPagamentoData);
-            } catch (e) {
-                // Se a decodificação falhar, é só um texto simples (ex: "A combinar")
-                resumo = condicaoPagamentoData;
-                parcelas = [];
-            }
-        } else if (Array.isArray(condicaoPagamentoData)) {
-            // Se já for um array, usamos diretamente
-            parcelasSalvas = condicaoPagamentoData;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+        gruposDePagamento = Array.isArray(parsed[0]) ? parsed : [parsed];
+        const resumoVisual = gruposDePagamento
+            .map((grupo, i) => `Opção ${i + 1}: ${grupo.map(p => p.descricao).join(' + ')}`)
+            .join(' / ');
+        displayCondicaoPagamento.textContent = resumoVisual;
+        btnAbrirModalPagamento.textContent = "Editar";
         } else {
-             // Se for outra coisa (ou nulo), tratamos como texto
-             resumo = condicaoPagamentoData || 'A definir...';
+        displayCondicaoPagamento.textContent =
+            (typeof condicaoPagamentoData === 'string' && condicaoPagamentoData.trim() !== '')
+            ? condicaoPagamentoData
+            : 'A definir...';
+        btnAbrirModalPagamento.textContent = "Definir";
         }
 
-        // 2. Agora, formatamos o resumo se tivermos um array válido de parcelas
-        if (Array.isArray(parcelasSalvas) && parcelasSalvas.length > 0) {
-            parcelas = parcelasSalvas; // ATUALIZA o array global de parcelas para edição
-            resumo = parcelasSalvas.map(p => `${p.descricao} (${formatarMoedaLocal(p.valor)})`).join(' + ');
-            btnTexto = "Editar";
-        }
-
-        // 3. Finalmente, atualizamos a interface e os campos ocultos
-        displayCondicaoPagamento.textContent = resumo;
-        btnAbrirModalPagamento.textContent = btnTexto;
-        // Armazenamos a versão em string no input oculto para o próximo envio do formulário
-        document.getElementById('hidden_condicao_pagamento').value = JSON.stringify(parcelas);
+        // O campo oculto sempre começa com o dado original do banco
+        const cp = orcamentoData.condicao_pagamento;
+        document.getElementById('hidden_condicao_pagamento').value =
+        Array.isArray(cp) || (cp && typeof cp === 'object')
+            ? JSON.stringify(cp)
+            : (cp || '[]');
         document.getElementById('hidden_prazo_entrega').value = orcamentoData.prazo_entrega || '';
-        document.getElementById('hidden_garantia').value = orcamentoData.garantia || '';
-        document.getElementById('hidden_observacoes').value = orcamentoData.observacoes || '';
+        document.getElementById('hidden_garantia').value      = orcamentoData.garantia || '';
+        document.getElementById('hidden_observacoes').value   = orcamentoData.observacoes || '';
 
 
     }
@@ -1030,7 +1116,7 @@ document.addEventListener("DOMContentLoaded", function() {
     function renderizarItensNaTabela() {
         itensContainer.innerHTML = "";
         itens.forEach(item => {
-            const rowId = item.id || `temp-${Date.now()}`;
+            const rowId = (item.id ||= `temp-${crypto?.randomUUID?.() || Date.now()}`);
             const total = (item.quantidade || 0) * (item.valor || 0);
             const tr = document.createElement("tr");
             
@@ -1233,9 +1319,12 @@ document.addEventListener("DOMContentLoaded", function() {
         btnFecharModalPagamento.addEventListener('click', fecharModalPagamento);
         btnSalvarPagamento.addEventListener('click', salvarPagamento);
         btnAddParcela.addEventListener('click', adicionarParcela);
+        btnSalvarGrupo.addEventListener('click', salvarGrupoAtual);
 
         pagamentoValorInput.addEventListener('input', formatarMoeda);
-        pagamentoDescontoParcelaInput.addEventListener('input', formatarMoeda);
+        pagamentoDescontoParcelaInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^\d,\.]/g,'');
+        });
 
         pagamentoDescricaoSelect.addEventListener('change', () => {
             pagamentoDescricaoInputOutro.classList.toggle('hidden', pagamentoDescricaoSelect.value !== 'outro');

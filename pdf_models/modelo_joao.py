@@ -242,26 +242,47 @@ class JoaoPDF(FPDF):
         self.ln(5)
 
         condicao_pagamento_str = orcamento.condicao_pagamento
-        condicao_formatada = condicao_pagamento_str # Usa o texto original como padrão
+        condicao_formatada = ""  # Começamos com uma string vazia
 
-        # Se for um JSON de parcelas, formata
-        if condicao_pagamento_str and condicao_pagamento_str.strip().startswith('['):
+        if condicao_pagamento_str and condicao_pagamento_str.strip().startswith('[['):
+            # NOVO CENÁRIO: É UM JSON de Grupos de Pagamento
             try:
-                parcelas = json.loads(condicao_pagamento_str)
-                if isinstance(parcelas, list) and parcelas:
-                    partes = []
-                    for p in parcelas:
-                        descricao = p.get('descricao', 'Parcela')
-                        valor = float(p.get('valor', 0))
-                        partes.append(f"{descricao}: {format_brl(valor)}")
-                    condicao_formatada = " + ".join(partes)
-            except (json.JSONDecodeError, TypeError):
-                # Se for um JSON quebrado, limpa qualquer valor R$ no final por segurança
-                condicao_formatada = re.sub(r'\s*R\$\s*[\d.,]+$', '', condicao_pagamento_str.strip())
+                grupos = json.loads(condicao_pagamento_str)
+                if isinstance(grupos, list) and all(isinstance(g, list) for g in grupos):
+                    opcoes_formatadas = []
+                    for i, grupo in enumerate(grupos):
+                        partes_grupo = []
+                        desconto_total_grupo = sum(float(p.get('desconto', 0)) for p in grupo)
 
-        # Se for um texto simples (orçamento antigo), limpa o valor R$ do final
+                        for p in grupo:
+                            partes_grupo.append(f"{p.get('descricao', 'Parcela')}: {format_brl(float(p.get('valor', 0)))}")
+                        
+                        texto_grupo_formatado = " + ".join(partes_grupo)
+                        
+                        # Se houve desconto NESTE grupo, adiciona a informação
+                        if desconto_total_grupo > 0:
+                            valor_bruto_grupo = sum(float(p.get('valor', 0)) + float(p.get('desconto', 0)) for p in grupo)
+                            percentual_desconto = (desconto_total_grupo / valor_bruto_grupo) * 100
+                            # Formata para exibir como "10%" ou "10.5%"
+                            desconto_str = f" ({percentual_desconto:g}% de desconto)"
+                            texto_grupo_formatado += desconto_str
+
+                        prefixo = f"Opção {i+1}: " if len(grupos) > 1 else ""
+                        opcoes_formatadas.append(prefixo + texto_grupo_formatado)
+                    
+                    # Junta cada opção com uma quebra de linha para exibir no PDF
+                    condicao_formatada = "\n".join(opcoes_formatadas)
+            except (json.JSONDecodeError, TypeError):
+                # Se falhar o parse, apenas limpa
+                condicao_formatada = re.sub(r'\s*R\$\s*[\d.,]+$', '', condicao_pagamento_str.strip())
+        
         elif condicao_pagamento_str:
+            # COMPATIBILIDADE: Se for um texto antigo, apenas limpa
             condicao_formatada = re.sub(r'\s*R\$\s*[\d.,]+$', '', condicao_pagamento_str.strip())
+            
+        # Garante que, se for '[]', não exiba nada
+        if condicao_formatada == '[]':
+            condicao_formatada = 'A combinar'
 
         self.draw_info_line("Condição de Pagamento", condicao_formatada)        
         self.draw_info_line("Prazo de Entrega", orcamento.prazo_entrega)

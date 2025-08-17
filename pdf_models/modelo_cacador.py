@@ -1,4 +1,4 @@
-import os, qrcode, tempfile, json
+import os, qrcode, tempfile, json, re
 from fpdf import FPDF
 from models import Orcamento
 from io import BytesIO
@@ -285,22 +285,49 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
              pdf.ln() # Se não tiver linhas (valor vazio), só pula a linha
 
 
-
     condicao_pagamento_str = orcamento.condicao_pagamento
-    condicao_formatada = condicao_pagamento_str
+    condicao_formatada = ""  # Começamos com uma string vazia
 
-    if condicao_pagamento_str and condicao_pagamento_str.strip().startswith('['):
+    if condicao_pagamento_str and condicao_pagamento_str.strip().startswith('[['):
+        # NOVO CENÁRIO: É UM JSON de Grupos de Pagamento
         try:
-            parcelas = json.loads(condicao_pagamento_str)
-            if isinstance(parcelas, list) and parcelas:
-                partes = []
-                for p in parcelas:
-                    descricao = p.get('descricao', 'Parcela')
-                    valor = float(p.get('valor', 0))
-                    partes.append(f"{descricao}: {format_brl_cacador(valor)}")
-                condicao_formatada = " + ".join(partes)
+            grupos = json.loads(condicao_pagamento_str)
+            if isinstance(grupos, list) and all(isinstance(g, list) for g in grupos):
+                opcoes_formatadas = []
+                for i, grupo in enumerate(grupos):
+                        partes_grupo = []
+                        desconto_total_grupo = sum(float(p.get('desconto', 0)) for p in grupo)
+
+                        for p in grupo:
+                            partes_grupo.append(f"{p.get('descricao', 'Parcela')}: {format_brl_cacador(float(p.get('valor', 0)))}")
+                        
+                        texto_grupo_formatado = " + ".join(partes_grupo)
+
+                        # Se houve desconto NESTE grupo, adiciona a informação
+                        if desconto_total_grupo > 0:
+                            valor_bruto_grupo = sum(float(p.get('valor', 0)) + float(p.get('desconto', 0)) for p in grupo)
+                            # Previne divisão por zero se o valor bruto for 0
+                            if valor_bruto_grupo > 0:
+                                percentual_desconto = (desconto_total_grupo / valor_bruto_grupo) * 100
+                                desconto_str = f" ({percentual_desconto:g}% de desconto)"
+                                texto_grupo_formatado += desconto_str
+
+                        prefixo = f"Opção {i+1}: " if len(grupos) > 1 else ""
+                        opcoes_formatadas.append(prefixo + texto_grupo_formatado)
+                
+                # Junta cada opção com uma quebra de linha para exibir no PDF
+                condicao_formatada = "\n".join(opcoes_formatadas)
         except (json.JSONDecodeError, TypeError):
-            condicao_formatada = condicao_pagamento_str
+            # Se falhar o parse, apenas limpa
+            condicao_formatada = re.sub(r'\s*R\$\s*[\d.,]+$', '', condicao_pagamento_str.strip())
+    
+    elif condicao_pagamento_str:
+        # COMPATIBILIDADE: Se for um texto antigo, apenas limpa
+        condicao_formatada = re.sub(r'\s*R\$\s*[\d.,]+$', '', condicao_pagamento_str.strip())
+        
+    # Garante que, se for '[]', não exiba nada
+    if condicao_formatada == '[]':
+        condicao_formatada = 'A combinar'
 
     # --- USO DA FUNÇÃO PARA TODOS OS CAMPOS ---
     draw_term_line("Pagamento", condicao_formatada)
