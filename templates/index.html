@@ -286,103 +286,50 @@
                 </div>
             </div>
         </div>
-        <!-- Modal de Condição de Pagamento -->
-        <div id="modal-pagamento" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[60] transition-opacity duration-300">
-            <div id="modal-pagamento-box" class="bg-white rounded-lg shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh] transform transition-all -translate-y-10 opacity-0 duration-300">
+        <div id="modal-info" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+        <div id="modal-info-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg mx-4 transform transition-all -translate-y-10 opacity-0 duration-300">
+            <div class="flex items-center justify-between pb-3 border-b">
+                <h3 class="text-xl font-semibold text-gray-800">Informações Adicionais do Orçamento</h3>
+                <button id="btn-fechar-modal-info" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
+            </div>
+            <div class="mt-4 space-y-4">
                 
-                <!-- Cabeçalho -->
-                <div class="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
-                    <h3 class="text-xl font-semibold text-gray-800">Definir Condições de Pagamento</h3>
-                    <button id="btn-fechar-modal-pagamento" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">×</button>
-                </div>
-
-                <!-- Corpo do Modal -->
-                <div class="p-6 space-y-5 overflow-y-auto">
-                    <!-- Indicadores de Valor SIMPLIFICADOS -->
-                    <div class="bg-gray-50 p-4 rounded-lg border sticky top-0">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-medium text-gray-600">Total com Desconto:</span>
-                            <span id="pagamento-valor-total" class="font-bold text-emerald-600 text-xl">R$ 0,00</span>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Condição de Pagamento:</label>
+                    <div class="mt-1 flex items-center gap-2">
+                        <!-- Campo para exibir o resultado -->
+                        <div id="display-condicao-pagamento" class="flex-grow h-10 px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600 truncate">
+                            A definir...
                         </div>
-                        <div class="flex justify-between items-center text-sm mb-3">
-                            <span class="font-medium text-amber-600">Desconto aplicado:</span>
-                            <span id="pagamento-valor-desconto" class="font-bold text-amber-700">- R$ 0,00</span>
-                        </div>
-
-                        <div class="flex justify-between items-center text-lg mb-2">
-                            <span class="font-medium text-gray-600">Restante a alocar:</span>
-                            <span id="pagamento-valor-restante" class="font-bold text-blue-600">R$ 0,00</span>
-                        </div>
-
-                        <!-- Barra de Progresso -->
-                        <div class="w-full bg-gray-200 rounded-full h-2.5">
-                            <div id="pagamento-progress-bar" class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <!-- Formulário para Adicionar Parcelas -->
-                    <div class="space-y-4 pt-2">
-                        <!-- Linha 1: Descrição da Parcela -->
-                        <div>
-                            <label for="pagamento-descricao-select" class="block text-sm font-medium text-gray-700">Descrição</label>
-                            <select id="pagamento-descricao-select" class="mt-1 block w-full h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                                <option value="">-- Selecione --</option>
-                                <option value="Entrada">Entrada</option>
-                                <option value="Sinal">Sinal</option>
-                                <option value="À vista">À vista</option>
-                                <option value="Pix">Pix</option>
-                                <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                <option value="outro">Outro (especificar)</option>
-                            </select>
-                            <input type="text" id="pagamento-descricao-input-outro" placeholder="Especifique a descrição" class="hidden mt-2 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                        </div>
-
-                        <div class="flex items-end gap-2">
-                            <!-- Tipo (R$ / %) -->
-                            <div class="flex-none">
-                                <label for="pagamento-tipo-valor-input" class="block text-sm font-medium text-gray-700">Tipo</label>
-                                <select id="pagamento-tipo-valor-input" class="mt-1 block w-full h-10 px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                                    <option value="percent">%</option>
-                                    <option value="valor">R$</option>
-                                </select>
-                            </div>
-                            <!-- Valor -->
-                            <div class="flex-grow">
-                                <label for="pagamento-valor-input" class="block text-sm font-medium text-gray-700">Valor</label>
-                                <input type="text" id="pagamento-valor-input" inputmode="decimal" placeholder="Ex: 50" class="mt-1 block w-full h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                            </div>
-                            <!-- Desconto na Parcela (%) -->
-                            <div class="flex-none">
-                                <label for="pagamento-desconto-parcela" class="block text-sm font-medium text-gray-700">Desc. (%)</label>
-                                <input type="text" id="pagamento-desconto-parcela" inputmode="decimal" placeholder="0" class="mt-1 block w-20 h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500">
-                            </div>
-                        </div>
-
-                        <!-- Linha 4: Botão de Adicionar -->
-                        <button id="btn-add-parcela" class="w-full h-11 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>
-                            <span>Adicionar Parcela</span>
+                        <!-- Botão que abrirá o novo modal -->
+                        <button type="button" id="btn-abrir-modal-pagamento" class="flex-shrink-0 h-10 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors">
+                            Definir
                         </button>
                     </div>
-                    
-                    <!-- Lista de Parcelas Adicionadas -->
-                    <div class="border-t pt-4 mt-4">
-                        <h4 class="text-md font-semibold text-gray-700 mb-2">Parcelas Definidas:</h4>
-                        <div id="lista-parcelas-container" class="space-y-2">
-                            <p id="parcelas-placeholder" class="text-center text-gray-400 py-4">Nenhuma condição de pagamento adicionada.</p>
-                        </div>
-                    </div>
-
                 </div>
 
-                <!-- Rodapé -->
-                <div class="flex items-center justify-end p-4 bg-gray-50 border-t sticky bottom-0">
-                    <button id="btn-salvar-pagamento" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-blue-700 transition-colors">
-                        Confirmar Condições
-                    </button>
+                <div>
+                    <label for="info-prazo-entrega" class="block text-sm font-medium text-gray-700">Prazo de Entrega/Execução:</label>
+                    <input type="text" id="info-prazo-entrega" placeholder="Ex: 7 dias úteis após aprovação" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
                 </div>
+
+                <div>
+                    <label for="info-garantia" class="block text-sm font-medium text-gray-700">Garantia:</label>
+                    <input type="text" id="info-garantia" placeholder="Ex: 90 dias para o serviço prestado" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                </div>
+                <div>
+                    <label for="info-observacoes" class="block text-sm font-medium text-gray-700">Observações Adicionais:</label>
+                    <textarea id="info-observacoes" rows="3" placeholder="Informações extras, detalhes específicos, etc." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"></textarea>
+                </div>
+
+            </div>
+            <div class="mt-6 text-right">
+                <button id="btn-salvar-info" class="bg-emerald-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-emerald-700 transition-colors">
+                    Confirmar
+                </button>
             </div>
         </div>
+    </div>
       <div id="modal-contato" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
         <div id="modal-contato-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md mx-4 transform transition-all -translate-y-10 opacity-0 duration-300">
             <div class="flex items-center justify-between pb-3 border-b">
@@ -645,8 +592,8 @@ document.addEventListener("DOMContentLoaded", function() {
         return itens.reduce((total, item) => total + (item.quantidade * item.valor), 0);
     }
 
-    function formatarMoeda(value) {
-        return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    function formatarMoedaLocal(valor) {
+        return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     }
 
     function atualizarModalPagamentoUI() {
@@ -695,30 +642,6 @@ document.addEventListener("DOMContentLoaded", function() {
             document.querySelectorAll('.remover-parcela-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => removerParcela(parseInt(e.currentTarget.dataset.id)));
             });
-        }
-    }
-
-    function salvarEstadoOrcamento() {
-        localStorage.setItem('orcamento', JSON.stringify({ itens, contatosExtras }));
-    }
-
-    function carregarEstadoOrcamento() {
-        const estado = localStorage.getItem('orcamento');
-        if (estado) {
-            const { itens, contatosExtras } = JSON.parse(estado);
-            // Atualizar a UI com os dados do estado salvo
-        }
-    }
-
-    function validarCampo(campo) {
-        if (!campo.value.trim()) {
-            campo.classList.add('border-red-500');
-            campo.classList.remove('border-zinc-300');
-            return false;
-        } else {
-            campo.classList.remove('border-red-500');
-            campo.classList.add('border-zinc-300');
-            return true;
         }
     }
 
@@ -779,29 +702,30 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
-        // Calcular o valor líquido da parcela com base no tipo de valor (R$ ou %)
-        let valorBrutoParcela = 0;
-        if (tipoValor === 'valor') {
-            valorBrutoParcela = valorNumerico;
-        } else { // tipo 'percent'
-            valorBrutoParcela = (valorOrcamentoBruto * valorNumerico) / 100;
-        }
-
-        // Calcular o valor do desconto da parcela
-        const descontoDaParcela = (valorBrutoParcela * descontoNumerico) / 100;
-        const valorLiquidoParcela = valorBrutoParcela - descontoDaParcela;
-
-        // Verificar se o valor da parcela excede o valor restante
         const valorTotalLiquido = valorOrcamentoBruto - descontoTotalEmValor;
         const valorAlocado = parcelas.reduce((total, p) => total + p.valor, 0);
         const valorRestante = valorTotalLiquido - valorAlocado;
 
+        let valorBrutoParcela = 0;
+        if (tipoValor === 'valor') {
+            valorBrutoParcela = valorNumerico;
+        } else { // tipo 'percent'
+            // A porcentagem agora é calculada sobre o valor total LÍQUIDO do orçamento
+            valorBrutoParcela = (valorTotalLiquido * valorNumerico) / 100;
+        }
+
+        // Calcula o valor do desconto desta parcela específica
+        const descontoDaParcela = (valorBrutoParcela * descontoNumerico) / 100;
+        
+        // O valor final que esta parcela representa
+        const valorLiquidoParcela = valorBrutoParcela - descontoDaParcela;
+        
         if (valorLiquidoParcela > valorRestante + 0.01) { // 0.01 de tolerância para float
-            alert(`O valor da parcela (${formatarMoeda(valorLiquidoParcela)}) excede o restante a pagar (${formatarMoeda(valorRestante)}).`);
+            alert(`O valor da parcela (${formatarMoedaLocal(valorLiquidoParcela)}) excede o restante a pagar (${formatarMoedaLocal(valorRestante)}).`);
             return;
         }
 
-        // Adicionar a parcela à lista de parcelas
+        // Adiciona o novo objeto parcela à lista
         parcelas.push({
             id: Date.now(),
             descricao: descricao,
@@ -812,7 +736,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // Soma o desconto desta parcela ao desconto total
         descontoTotalEmValor += descontoDaParcela;
         
-        // Limpa os campos para adicionar nova parcela
+        // Limpa os campos para a próxima
         pagamentoDescricaoSelect.value = '';
         pagamentoDescricaoInputOutro.value = '';
         pagamentoDescricaoInputOutro.classList.add('hidden');
@@ -823,63 +747,18 @@ document.addEventListener("DOMContentLoaded", function() {
         // Atualiza toda a UI do modal
         atualizarModalPagamentoUI();
     }
-
-    function atualizarModalPagamentoUI() {
-        // Calcula o valor total líquido a ser pago (bruto - descontos)
-        const valorTotalLiquido = valorOrcamentoBruto - descontoTotalEmValor;
-        
-        // Calcula o valor já alocado nas parcelas
-        const valorAlocado = parcelas.reduce((total, p) => total + p.valor, 0);
-        const valorRestante = valorTotalLiquido - valorAlocado;
-
-        // Atualiza o display do total, desconto e valor restante
-        pagamentoValorTotalEl.textContent = formatarMoeda(valorTotalLiquido);
-        pagamentoValorDescontoEl.textContent = `- ${formatarMoeda(descontoTotalEmValor)}`;
-        pagamentoValorRestanteEl.textContent = formatarMoeda(valorRestante);
-
-        // Atualiza a barra de progresso
-        const progressoPercent = valorTotalLiquido > 0 ? (valorAlocado / valorTotalLiquido) * 100 : 0;
-        pagamentoProgressBar.style.width = `${Math.min(progressoPercent, 100)}%`;
-
-        // Atualiza a lista de parcelas
-        listaParcelasContainer.innerHTML = '';
-        
-        if (parcelas.length === 0) {
-            listaParcelasContainer.appendChild(parcelasPlaceholder);
-        } else {
-            parcelas.forEach(p => {
-                const parcelaDiv = document.createElement('div');
-                parcelaDiv.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
-                
-                let textoParcela = `${p.descricao}: <span class="font-semibold text-emerald-700">${formatarMoeda(p.valor)}</span>`;
-                if (p.desconto > 0) {
-                    textoParcela += ` <span class="text-xs text-amber-600">(Desc. ${formatarMoeda(p.desconto)})</span>`;
-                }
-
-                parcelaDiv.innerHTML = `
-                    <div class="font-medium text-gray-800">${textoParcela}</div>
-                    <button type="button" class="remover-parcela-btn p-1 text-red-400 hover:text-red-600 rounded-full" data-id="${p.id}">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-5 pointer-events-none"><path fill-rule="evenodd" d="M2 8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 8Z" clip-rule="evenodd" /></svg>
-                    </button>
-                `;
-                listaParcelasContainer.appendChild(parcelaDiv);
-            });
-
-            // Adiciona os eventos de remoção para as parcelas
-            document.querySelectorAll('.remover-parcela-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => removerParcela(parseInt(e.currentTarget.dataset.id)));
-            });
-        }
-    }
-
-    // Função para remover uma parcela
+    
     function removerParcela(idParcela) {
         const parcelaRemovida = parcelas.find(p => p.id === idParcela);
         if (parcelaRemovida) {
+            // Subtrai o desconto da parcela removida do total de descontos
             descontoTotalEmValor -= parcelaRemovida.desconto;
         }
-        
+
+        // Filtra a lista, removendo a parcela com o ID correspondente
         parcelas = parcelas.filter(p => p.id !== idParcela);
+        
+        // Atualiza a UI com os novos totais
         atualizarModalPagamentoUI();
     }
     
@@ -1156,33 +1035,6 @@ document.addEventListener("DOMContentLoaded", function() {
         fecharModalContato();
     }
 
-    async function salvarOrcamento() {
-        const formData = new FormData(form);
-        showLoading(); // Exibe o carregamento
-        try {
-            const response = await fetch('/salvar-orcamento/', {
-                method: 'POST',
-                body: formData
-            });
-            if (!response.ok) {
-                throw new Error('Erro ao salvar o orçamento');
-            }
-            alert('Orçamento salvo com sucesso');
-        } catch (error) {
-            alert(error.message);
-        } finally {
-            hideLoading(); // Esconde o carregamento
-        }
-    }
-
-    function showLoading() {
-        // Exibe um carregamento na tela
-    }
-
-    function hideLoading() {
-        // Esconde o carregamento
-    }
-
     function adicionarContato(contato) {
         if (!contato || !contato.nome || !contato.telefone) return;
 
@@ -1361,20 +1213,6 @@ document.addEventListener("DOMContentLoaded", function() {
         
     }
 
-    async function fetchAPI(url, options = {}) {
-        try {
-            const response = await fetch(url, options);
-            if (!response.ok) {
-                throw new Error(`Erro na requisição: ${response.status}`);
-            }
-            return await response.json();
-        } catch (error) {
-            console.error(error);
-            alert(`Erro: ${error.message}`);
-            return null;
-        }
-    }
-
 
     async function handleVerificacaoCliente() {
         const nome = nomeInput.value.trim();
@@ -1466,9 +1304,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    //
-// SUBSTITUA APENAS ESTA FUNÇÃO NO SEU index.html
-//
+
     async function adicionarItem() {
         const nomeVal = itemInput.value.trim();
         const qtdVal = parseInt(itemQtdInput.value, 10);
@@ -1481,67 +1317,65 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
         
-        if (salvar) {
-            const nomeNormalizado = nomeVal.toLowerCase();
-            const catalogoCompleto = [...servicosCatalogo, ...materiaisCatalogo];
-            if (catalogoCompleto.find(item => item.nome.toLowerCase() === nomeNormalizado)) {
-                alert(`O item "${nomeVal}" já existe no catálogo e não pode ser salvo novamente.`);
-                return;
-            }
-        }    
-        
         const valVal = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
         
-        // Objeto base que será adicionado à lista 'itens'
-        let itemParaAdicionar = { 
-            nome: nomeVal, 
-            quantidade: qtdVal, // A quantidade que o usuário digitou
-            valor: valVal, 
-            tipo: tipo,
-            id: `temp-${Date.now()}` // ID temporário inicial
-        };
+        // --- NOVA LÓGICA DE VERIFICAÇÃO ---
+        const nomeNormalizado = nomeVal.toLowerCase();
+        const itemExistente = itens.find(item => item.nome.toLowerCase() === nomeNormalizado);
 
-        if (salvar) {
-            try {
-                const resp = await fetch(`${API_BASE_URL}/api/item/`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ nome: nomeVal, valor: valVal, tipo: tipo })
-                });
+        if (itemExistente) {
+            // Se o item já existe, apenas somamos a quantidade e atualizamos o valor
+            itemExistente.quantidade += qtdVal;
+            itemExistente.valor = valVal; // Atualiza o valor para o mais recente digitado
 
-                // Se a resposta NÃO for OK...
-                if (!resp.ok) {
-                    // ... tentamos ler o detalhe do erro enviado pelo Python.
-                    const errorData = await resp.json(); 
-                    
-                    // Se o status for 409 (Conflict), é a nossa duplicata!
-                    if (resp.status === 409) {
-                        alert(errorData.detail); // Exibe a mensagem exata: "O item 'Solda' já existe..."
-                        return; // IMPORTANTE: Para a execução da função aqui.
+            // Como o item já existe, não precisamos salvá-lo de novo no catálogo
+            // então limpamos a flag, se estiver marcada, para evitar erros.
+            document.getElementById("toggleSalvar").checked = false;
+
+        } else {
+            // Se o item não existe, continuamos com a lógica original de adicionar um novo item
+            let itemParaAdicionar = { 
+                nome: nomeVal, 
+                quantidade: qtdVal,
+                valor: valVal, 
+                tipo: tipo,
+                id: `temp-${Date.now()}`
+            };
+
+            if (salvar) {
+                try {
+                    const resp = await fetch(`${API_BASE_URL}/api/item/`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ nome: nomeVal, valor: valVal, tipo: tipo })
+                    });
+
+                    if (!resp.ok) {
+                        const errorData = await resp.json();
+                        if (resp.status === 409) {
+                            alert(errorData.detail);
+                            return;
+                        }
+                        throw new Error(errorData.detail || "Erro desconhecido do servidor.");
                     }
-                    
-                    // Se for outro tipo de erro, lança para o catch.
-                    throw new Error(errorData.detail || "Erro desconhecido do servidor.");
+
+                    const itemSalvo = await resp.json();
+                    itemParaAdicionar.id = itemSalvo.id;
+                    await carregarCatalogosAPI();
+                } catch (error) {
+                    alert(`Erro ao tentar salvar item no catálogo: ${error.message}`);
+                    return;
                 }
-
-                // Se o item foi salvo com sucesso, pegamos a resposta e atualizamos o ID.
-                const itemSalvo = await resp.json();
-                itemParaAdicionar.id = itemSalvo.id;
-                
-                // Recarrega os catálogos para incluir o novo item.
-                await carregarCatalogosAPI();
-
-            } catch (error) {
-                console.error("Erro ao salvar item:", error);
-                // Mensagem para erros de rede ou outros problemas inesperados.
-                alert(`Erro ao tentar salvar item no catálogo: ${error.message}`);
-                return; // Também paramos a execução se o salvamento falhar.
             }
+            
+            itens.push(itemParaAdicionar);
         }
         
-        // 3. Adiciona na lista e na tela (só executa se tudo deu certo)
-        itens.push(itemParaAdicionar);
-        adicionarItemNaTela(itemParaAdicionar);
+        // ATENÇÃO: a página index.html usa "adicionarItemNaTela" para renderizar
+        // Temos que recriar toda a tabela para refletir as quantidades somadas.
+        itensContainer.innerHTML = ''; // Limpa a tabela
+        itens.forEach(item => adicionarItemNaTela(item)); // Redesenha tudo
+
         limparCamposItem();
     }
 

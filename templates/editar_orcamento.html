@@ -1141,14 +1141,17 @@ document.addEventListener("DOMContentLoaded", function() {
         const qtdVal = parseInt(itemQtdInput.value, 10);
         const valStr = itemValorInput.value;
         const tipoVal = tipoItemSelect.value;
-        if (!nomeVal || isNaN(qtdVal) || !valStr || tipoVal === "default") {
-             alert("Preencha todos os campos do item."); return; 
+        
+        if (!nomeVal || isNaN(qtdVal) || qtdVal <= 0 || !valStr || tipoVal === "default") {
+            alert("Preencha todos os campos do item.");
+            return;
         }
+        
         const valVal = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
         
-        // --- AQUI ESTÁ A LÓGICA PRINCIPAL ---
+        // --- LÓGICA ATUALIZADA ---
         if (idItemEmEdicao) {
-            // **MODO DE ATUALIZAÇÃO**
+            // MODO ATUALIZAÇÃO: Se estamos editando, a lógica é de atualizar o item existente.
             const itemAAtualizar = itens.find(i => String(i.id) === String(idItemEmEdicao));
             if(itemAAtualizar) {
                 itemAAtualizar.nome = nomeVal;
@@ -1157,12 +1160,23 @@ document.addEventListener("DOMContentLoaded", function() {
                 itemAAtualizar.tipo = tipoVal;
             }
         } else {
-            // **MODO DE ADIÇÃO (o comportamento original)**
-            itens.push({ id: `temp-${Date.now()}`, nome: nomeVal, quantidade: qtdVal, valor: valVal, tipo: tipoVal });
-        }
+            // MODO ADIÇÃO: Se NÃO estamos editando, aplicamos a lógica de somar.
+            const nomeNormalizado = nomeVal.toLowerCase();
+            const itemExistente = itens.find(item => item.nome.toLowerCase() === nomeNormalizado);
 
+            if (itemExistente) {
+                // Se o item já existe, soma a quantidade e atualiza o valor.
+                itemExistente.quantidade += qtdVal;
+                itemExistente.valor = valVal;
+            } else {
+                // Se o item não existe, adiciona um novo.
+                itens.push({ id: `temp-${Date.now()}`, nome: nomeVal, quantidade: qtdVal, valor: valVal, tipo: tipoVal });
+            }
+        }
+        
+        // Após adicionar ou atualizar, redesenha a tabela e reseta o formulário
         renderizarItensNaTabela();
-        finalizarEdicao(); // Limpa o formulário e reseta o estado
+        finalizarEdicao(); 
     }
 
     function limparCamposItem() {
