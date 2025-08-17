@@ -559,6 +559,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let contatosExtras = []; 
     let servicosCatalogo = [];
     let materiaisCatalogo = [];
+    let idItemEmEdicao = null;
 
     const form = document.getElementById("orcamentoForm");
     const tableContainer = document.getElementById("tableContainer");
@@ -878,9 +879,35 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function salvarPagamento() {
-        document.getElementById('hidden_condicao_pagamento').value = JSON.stringify(parcelas);
-        displayCondicaoPagamento.textContent = parcelas.length > 0 ? parcelas.map(p => p.descricao).join(' + ') : 'A definir...';
-        btnAbrirModalPagamento.textContent = parcelas.length > 0 ? "Editar" : "Definir";
+        const valorTotalLiquido = valorOrcamentoBruto - descontoTotalEmValor;
+        const valorAlocado = parcelas.reduce((total, p) => total + p.valor, 0);
+
+        if (Math.abs(valorTotalLiquido - valorAlocado) > 0.01) {
+            if (!confirm("O valor total das parcelas não corresponde ao total do orçamento. Deseja confirmar mesmo assim?")) {
+                return;
+            }
+        }
+        
+        // AQUI ESTÁ A CORREÇÃO PRINCIPAL:
+        // Nós só salvaremos o JSON estruturado. Não geramos mais texto com valor aqui.
+        if (parcelas.length > 0) {
+            document.getElementById('hidden_condicao_pagamento').value = JSON.stringify(parcelas);
+            
+            // Atualiza o display visual
+            const resumoVisual = parcelas.map(p => `${p.descricao}`).join(' + ');
+            displayCondicaoPagamento.textContent = resumoVisual;
+            btnAbrirModalPagamento.textContent = "Editar";
+
+        } else {
+            // Se o usuário abre o modal, não adiciona parcelas e salva, 
+            // mantemos o campo oculto como vazio ou "A combinar".
+            // Isso evita que um valor total seja gerado acidentalmente.
+            // É importante que o usuário possa LIMPAR as condições.
+            document.getElementById('hidden_condicao_pagamento').value = 'A combinar'; 
+            displayCondicaoPagamento.textContent = 'A combinar';
+            btnAbrirModalPagamento.textContent = "Definir";
+        }
+
         fecharModalPagamento();
     }
     
@@ -967,31 +994,70 @@ document.addEventListener("DOMContentLoaded", function() {
 
     }
 
+    function iniciarEdicaoItem(itemId) {
+        // Encontra o item no nosso array de dados
+        const itemParaEditar = itens.find(i => String(i.id) === String(itemId));
+        if (!itemParaEditar) return;
+
+        // Guarda o ID do item que estamos editando
+        idItemEmEdicao = itemId;
+
+        // 1. Preenche os campos do formulário com os dados do item
+        itemInput.value = itemParaEditar.nome;
+        itemQtdInput.value = itemParaEditar.quantidade;
+        itemValorInput.value = itemParaEditar.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+        tipoItemSelect.value = itemParaEditar.tipo;
+        updateTipoItemIcon();
+
+        // 2. Muda a aparência e o texto do botão
+        adicionarItemBtn.textContent = 'Atualizar Item';
+        adicionarItemBtn.classList.remove('from-green-500', 'to-green-600', 'hover:from-green-600', 'hover:to-green-700');
+        adicionarItemBtn.classList.add('from-amber-500', 'to-orange-600', 'hover:from-amber-600', 'hover:to-orange-700');
+
+        // 3. Destaca a linha que está sendo editada
+        document.querySelectorAll('#itensContainer tr').forEach(row => {
+            row.classList.remove('bg-amber-100'); // Remove destaque de outras linhas
+            if (row.dataset.id === String(itemId)) {
+                row.classList.add('bg-amber-100'); // Adiciona destaque na linha atual
+            }
+        });
+        
+        // Rola a tela para o topo para que o usuário veja os campos preenchidos
+        itemInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        itemInput.focus();
+    }
+
     function renderizarItensNaTabela() {
-    itensContainer.innerHTML = "";
-    itens.forEach(item => {
-        const rowId = item.id || `temp-${Date.now()}`;
-        const qtd   = Number(item.quantidade ?? item.qtd ?? 0);
-        const val   = Number(
-        typeof item.valor === "string" ? item.valor.replace(/\./g,"").replace(",",".") : item.valor
-        ) || 0;
-        const total = qtd * val;
+        itensContainer.innerHTML = "";
+        itens.forEach(item => {
+            const rowId = item.id || `temp-${Date.now()}`;
+            const total = (item.quantidade || 0) * (item.valor || 0);
+            const tr = document.createElement("tr");
+            
+            // Adiciona classes para o cursor e o hover para indicar que é clicável
+            tr.className = "bg-white border-b hover:bg-gray-50 cursor-pointer"; 
+            tr.dataset.id = rowId;
+            
+            // Adiciona o evento de clique para chamar a nossa nova função
+            tr.onclick = () => iniciarEdicaoItem(rowId);
 
-        const tr = document.createElement("tr");
-        tr.className = "bg-white border-b hover:bg-gray-50";
-        tr.dataset.id = rowId;
-
-        tr.innerHTML = `
-        <td class="px-4 py-3 font-medium text-gray-900 capitalize">${item.nome} (${item.tipo})</td>
-        <td class="px-4 py-3 text-center">${qtd}</td>
-        <td class="px-4 py-3 text-right">${val.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-        <td class="px-4 py-3 text-right">${total.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-        <td class="px-4 py-3 text-center">
-            <button type="button" class="text-red-500 remove-item-btn" data-id="${rowId}">Excluir</button>
-        </td>`;
-        itensContainer.appendChild(tr);
-    });
-    tableContainer.classList.toggle("hidden", itens.length === 0);
+            tr.innerHTML = `<td class="px-4 py-3 font-medium text-gray-900 capitalize">${item.nome} (${item.tipo})</td>
+                            <td class="px-4 py-3 text-center">${item.quantidade}</td>
+                            <td class="px-4 py-3 text-right">${(item.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                            <td class="px-4 py-3 text-right">${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                            <td class="px-4 py-3 text-center"><button type="button" class="text-red-500 remove-item-btn" data-id="${rowId}">Excluir</button></td>`;
+            
+            // **IMPORTANTE**: Precisamos impedir que o clique no botão "Excluir" ative a edição da linha
+            tr.querySelector('.remove-item-btn').onclick = function(event) {
+                event.stopPropagation(); // Impede o evento de "borbulhar" para a linha (tr)
+                const idToRemove = this.dataset.id;
+                itens = itens.filter(i => String(i.id) !== idToRemove);
+                renderizarItensNaTabela();
+            };
+            
+            itensContainer.appendChild(tr);
+        });
+        tableContainer.classList.toggle("hidden", itens.length === 0);
     }
 
     function carregarContatosExtras() {
@@ -1056,13 +1122,47 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
+    function finalizarEdicao() {
+        idItemEmEdicao = null;
+        
+        // Retorna o botão ao estado original
+        adicionarItemBtn.textContent = 'Adicionar Item';
+        adicionarItemBtn.classList.remove('from-amber-500', 'to-orange-600', 'hover:from-amber-600', 'hover:to-orange-700');
+        adicionarItemBtn.classList.add('from-green-500', 'to-green-600', 'hover:from-green-600', 'hover:to-green-700');
+
+        // Remove qualquer destaque da tabela
+        document.querySelectorAll('#itensContainer tr').forEach(row => row.classList.remove('bg-amber-100'));
+        
+        limparCamposItem();
+    }
+    
     function adicionarItem() {
-        const nomeVal = itemInput.value.trim(), qtdVal = parseInt(itemQtdInput.value, 10), valStr = itemValorInput.value, tipoVal = tipoItemSelect.value;
-        if (!nomeVal || isNaN(qtdVal) || !valStr || tipoVal === "default") { alert("Preencha todos os campos do item."); return; }
+        const nomeVal = itemInput.value.trim();
+        const qtdVal = parseInt(itemQtdInput.value, 10);
+        const valStr = itemValorInput.value;
+        const tipoVal = tipoItemSelect.value;
+        if (!nomeVal || isNaN(qtdVal) || !valStr || tipoVal === "default") {
+             alert("Preencha todos os campos do item."); return; 
+        }
         const valVal = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
-        itens.push({ id: `temp-${Date.now()}`, nome: nomeVal, quantidade: qtdVal, valor: valVal, tipo: tipoVal });
+        
+        // --- AQUI ESTÁ A LÓGICA PRINCIPAL ---
+        if (idItemEmEdicao) {
+            // **MODO DE ATUALIZAÇÃO**
+            const itemAAtualizar = itens.find(i => String(i.id) === String(idItemEmEdicao));
+            if(itemAAtualizar) {
+                itemAAtualizar.nome = nomeVal;
+                itemAAtualizar.quantidade = qtdVal;
+                itemAAtualizar.valor = valVal;
+                itemAAtualizar.tipo = tipoVal;
+            }
+        } else {
+            // **MODO DE ADIÇÃO (o comportamento original)**
+            itens.push({ id: `temp-${Date.now()}`, nome: nomeVal, quantidade: qtdVal, valor: valVal, tipo: tipoVal });
+        }
+
         renderizarItensNaTabela();
-        limparCamposItem(); // <-- LINHA ADICIONADA
+        finalizarEdicao(); // Limpa o formulário e reseta o estado
     }
 
     function limparCamposItem() {

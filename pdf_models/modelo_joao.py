@@ -244,24 +244,24 @@ class JoaoPDF(FPDF):
         condicao_pagamento_str = orcamento.condicao_pagamento
         condicao_formatada = condicao_pagamento_str # Usa o texto original como padrão
 
-        # Verifica se o texto parece ser um JSON de lista
+        # Se for um JSON de parcelas, formata
         if condicao_pagamento_str and condicao_pagamento_str.strip().startswith('['):
             try:
-                # Tenta decodificar o JSON para uma lista Python
                 parcelas = json.loads(condicao_pagamento_str)
                 if isinstance(parcelas, list) and parcelas:
-                    # Formata a lista de parcelas em uma string legível
                     partes = []
                     for p in parcelas:
                         descricao = p.get('descricao', 'Parcela')
                         valor = float(p.get('valor', 0))
-                        partes.append(f"{descricao}: {format_brl(valor)}") # Usa a função format_brl que já existe
-                    
-                    # Junta tudo em uma única linha
+                        partes.append(f"{descricao}: {format_brl(valor)}")
                     condicao_formatada = " + ".join(partes)
             except (json.JSONDecodeError, TypeError):
-                # Se não for um JSON válido ou der erro, usa o texto original sem quebrar o programa
-                condicao_formatada = condicao_pagamento_str
+                # Se for um JSON quebrado, limpa qualquer valor R$ no final por segurança
+                condicao_formatada = re.sub(r'\s*R\$\s*[\d.,]+$', '', condicao_pagamento_str.strip())
+
+        # Se for um texto simples (orçamento antigo), limpa o valor R$ do final
+        elif condicao_pagamento_str:
+            condicao_formatada = re.sub(r'\s*R\$\s*[\d.,]+$', '', condicao_pagamento_str.strip())
 
         self.draw_info_line("Condição de Pagamento", condicao_formatada)        
         self.draw_info_line("Prazo de Entrega", orcamento.prazo_entrega)
