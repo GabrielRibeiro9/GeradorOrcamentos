@@ -1,5 +1,6 @@
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, JSON, Column, Relationship
+from datetime import datetime
 import json
 
 # --- Modelo Item (Sem alterações) ---
@@ -19,6 +20,9 @@ class User(SQLModel, table=True):
     
     # --- ADICIONE ESTE NOVO CAMPO ---
     pdf_template_name: str = Field(default="default")
+
+    plano_ilimitado: bool = Field(default=False)          # ADM pode liberar acesso infinito
+    data_expiracao: Optional[datetime] = Field(default=None)
     
     # --- Relacionamentos existentes (não mude) ---
     itens: List["Item"] = Relationship(back_populates="user")

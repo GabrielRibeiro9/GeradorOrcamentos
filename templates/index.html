@@ -504,6 +504,24 @@
             </div>
         </div>
     </div>
+    <div id="modal-aviso" class="hidden fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center z-[100] transition-opacity duration-300">
+        <div id="modal-aviso-box" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md mx-4 transform transition-all -translate-y-10 opacity-0 duration-300">
+            
+            <div id="aviso-header" class="text-center mb-4">
+                <!-- Conteúdo dinâmico aqui (ícone e título) -->
+            </div>
+
+            <div id="aviso-mensagem" class="text-center text-gray-600 mb-6">
+                <!-- Mensagem dinâmica da API aqui -->
+            </div>
+
+            <div class="mt-5 sm:mt-6">
+                <button id="btn-fechar-modal-aviso" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700">
+                    Entendi
+                </button>
+            </div>
+        </div>
+    </div>
 
 <script>
 
@@ -518,6 +536,11 @@ document.addEventListener("DOMContentLoaded", function() {
     let materiaisCatalogo = [];
 
     // --- ELEMENTOS DO DOM ---
+    const modalAviso = document.getElementById('modal-aviso');
+    const modalAvisoBox = document.getElementById('modal-aviso-box');
+    const avisoHeader = document.getElementById('aviso-header');
+    const avisoMensagem = document.getElementById('aviso-mensagem');
+    const btnFecharModalAviso = document.getElementById('btn-fechar-modal-aviso');
     const form = document.getElementById("orcamentoForm");
     const tableContainer = document.getElementById("tableContainer");
     const itensContainer = document.getElementById("itensContainer");
@@ -1310,7 +1333,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (itemExistente) {
             // Se o item já existe, apenas somamos a quantidade e atualizamos o valor
             itemExistente.quantidade += qtdVal;
-            itemExistente.valor = valVal; // Atualiza o valor para o mais recente digitado
+            itemExistente.valor = valVal;
 
             // Como o item já existe, não precisamos salvá-lo de novo no catálogo
             // então limpamos a flag, se estiver marcada, para evitar erros.
@@ -1480,6 +1503,75 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
+    function exibirAviso(status, mensagem) {
+        if (status === 'warning') {
+            avisoHeader.innerHTML = `
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
+                    <svg class="h-6 w-6 text-yellow-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                </div>
+                <h3 class="mt-4 text-lg font-semibold text-gray-900">Atenção!</h3>`;
+        } else if (status === 'blocked') {
+            avisoHeader.innerHTML = `
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                    <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                </div>
+                <h3 class="mt-4 text-lg font-semibold text-gray-900">Acesso Bloqueado</h3>`;
+        }
+        
+        avisoMensagem.textContent = mensagem;
+        
+        modalAviso.classList.remove('hidden');
+        setTimeout(() => { modalAvisoBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
+    }
+
+    function fecharAviso() {
+        modalAvisoBox.classList.add('-translate-y-10', 'opacity-0');
+        setTimeout(() => { modalAviso.classList.add('hidden'); }, 300);
+    }
+
+    async function handleFormSubmit(event) {
+        event.preventDefault();
+        if (itens.length === 0) {
+            alert("Adicione pelo menos um item ao orçamento.");
+            return;
+        }
+        document.getElementById("hiddenItens").value = JSON.stringify(itens);
+        document.getElementById("hiddenContatos").value = JSON.stringify(contatosExtras.filter(c => c.nome && c.telefone));
+
+        const formData = new FormData(form);
+        const submitButton = document.getElementById('gerarOrcamentoBtn');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Salvando...';
+        
+        try {
+            const response = await fetch('/salvar-orcamento/', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                exibirAviso('blocked', result.detail || "Você está bloqueado e não pode salvar.");
+            } else {
+                if (result.status === 'success') {
+                    window.location.href = '/orcamentos';
+                } else if (result.status === 'warning') {
+                    exibirAviso('warning', result.message);
+                    // Quando o usuário fechar o aviso, ele será redirecionado
+                    btnFecharModalAviso.onclick = () => {
+                        fecharAviso();
+                        window.location.href = '/orcamentos';
+                    };
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao enviar formulário:', error);
+            alert('Ocorreu um erro inesperado.');
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Salvar Orçamento';
+        }
+    }
     
     function inicializar() {
         itemValorInput.addEventListener("input", formatarMoeda);
@@ -1501,6 +1593,7 @@ document.addEventListener("DOMContentLoaded", function() {
         btnSalvarPagamento.addEventListener('click', salvarPagamento);
         pagamentoValorInput.addEventListener('input', formatarMoeda); // Esta é para o valor da parcela
         pagamentoDescontoParcelaInput.addEventListener('input', formatarMoeda);
+        btnFecharModalAviso.addEventListener('click', fecharAviso);
         
         pagamentoDescricaoSelect.addEventListener('change', () => {
             if (pagamentoDescricaoSelect.value === 'outro') {
@@ -1567,28 +1660,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     inicializar();
 
-    form.addEventListener("submit", function(e) {
-        const nome = document.getElementById("nome").value.trim();
-        const clienteId = document.getElementById("cliente_id").value.trim();
-
-        if (!clienteId && !nome) {
-            alert("Selecione um cliente existente ou preencha os dados do novo cliente.");
-            e.preventDefault();
-            return;
-        }
-
-        if (itens.length === 0) {
-            alert("Adicione pelo menos um item ao orçamento.");
-            e.preventDefault();
-            return;
-        }
-
-        const contatosValidos = contatosExtras.filter(c => c.nome.trim() !== '' && c.telefone.trim() !== '');
-
-        document.getElementById("hiddenItens").value = JSON.stringify(itens);
-        document.getElementById("hiddenContatos").value = JSON.stringify(contatosValidos);
-        
-    });
+    form.addEventListener("submit", handleFormSubmit);
 
 
 });

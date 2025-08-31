@@ -100,6 +100,14 @@
                         </svg>
                     </a>
                   </li>
+                  <li>
+                    <a href="#" data-target="panel-access-control" class="sidebar-link group flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                        <span class="font-medium text-gray-700">Controle de Acesso</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </a>
+                  </li>
                   {% endif %}
                 </ul>
               </div>
@@ -190,7 +198,44 @@
                     </div>
                     <div id="client-list-container" class="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-2"><p class="text-gray-500 text-center py-4">Carregando clientes...</p></div>
                 </div>
+              </div> <!-- FIM DO PAINEL GERENCIAR CLIENTES -->
+
+              <!-- ESTRUTURA CORRETA: O painel de acesso fica DEPOIS do painel de clientes -->
+              <div id="panel-access-control" class="config-panel hidden">
+                  <div class="flex items-center gap-2 p-4 border-b">
+                      <button class="back-to-menu p-1 text-gray-500 hover:text-gray-800">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                      </button>
+                      <h4 class="text-lg font-semibold text-gray-800">Controle de Acesso de Usuários</h4>
+                  </div>
+                  <div class="p-6 space-y-4">
+                      <div>
+                          <label for="access-control-user-select" class="block text-sm font-medium text-gray-700">Selecione o Usuário</label>
+                          <select id="access-control-user-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-md">
+                              <option>Carregando...</option>
+                          </select>
+                      </div>
+                      <div id="user-status-details" class="hidden p-4 bg-gray-100 rounded-lg border border-gray-200 space-y-2 text-sm">
+                          <p class="font-semibold text-gray-800">Status Atual do Usuário</p>
+                          <p><strong>Acesso:</strong> <span id="status-acesso" class="font-mono p-1 bg-gray-200 rounded text-xs">--</span></p>
+                      </div>
+                      <div id="user-access-actions" class="hidden border-t pt-4 space-y-3">
+                        <h5 class="font-semibold text-gray-700">Gerenciar Acesso</h5>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="concederAcessoVitalicio()" class="w-full px-3 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg shadow hover:bg-emerald-700 transition">Acesso Vitalício</button>
+                            <button onclick="concederAcessoMensal()" class="w-full px-3 py-2 bg-sky-600 text-white text-sm font-semibold rounded-lg shadow hover:bg-sky-700 transition">Liberar 30 Dias</button>
+                        </div>
+                        <button onclick="reverterParaPadrao()" class="w-full px-3 py-2 bg-gray-500 text-white text-sm font-semibold rounded-lg shadow hover:bg-gray-600 transition">Bloquear</button>
+                        
+                        <!-- === BLOCO ADICIONADO ABAIXO === -->
+                        <h5 class="font-semibold text-gray-700 pt-3 border-t mt-4">Definir Data de Expiração Manual</h5>
+                        <div class="flex items-center gap-2">
+                          <input type="date" id="custom-date-input" class="w-full h-10 px-3 border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400">
+                          <button onclick="definirDataPersonalizada()" class="h-10 px-4 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition whitespace-nowrap">Definir Data</button>
+                        </div>
+                      </div>
               </div>
+
           </div> <!-- FECHA #sidebar-content -->
        </div> <!-- FECHA #sidebar-panel -->
   </div> <!-- FECHA #modal-config -->
@@ -373,6 +418,11 @@ const modalEditClient = document.getElementById('modal-edit-client');
 const modalEditClientBox = document.getElementById('modal-edit-client-box');
 const contatosContainer = document.getElementById('contatos-container');
 const contatoFormTemplate = document.getElementById('contato-form-template');
+const userSelect = document.getElementById('access-control-user-select');
+const userStatusDetails = document.getElementById('user-status-details');
+const userAccessActions = document.getElementById('user-access-actions');
+const statusAcessoEl = document.getElementById('status-acesso');
+
 
 // --- LÓGICA DE CARREGAMENTO DOS ORÇAMENTOS ---
 async function carregarOrcamentos() {
@@ -659,6 +709,38 @@ async function carregarListaUsuarios() {
   }
 }
 
+async function definirDataPersonalizada() {
+  const userId = userSelect.value;
+  const customDate = document.getElementById('custom-date-input').value;
+
+  if (!userId || !customDate) {
+      alert("Por favor, selecione um usuário e uma data de expiração válida.");
+      return;
+  }
+  
+  const username = userSelect.options[userSelect.selectedIndex].text;
+  const formattedDate = new Date(customDate + 'T00:00:00').toLocaleDateString('pt-BR');
+  
+  if(!confirm(`Confirma a nova data de expiração de "${username}" para ${formattedDate}?`)) return;
+
+  const formData = new FormData();
+  formData.append('user_id', userId);
+  formData.append('action', 'custom_date');
+  formData.append('custom_date', customDate);
+
+  try {
+    const response = await fetch('/api/admin/user/update-access', { method: 'POST', body: formData });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Erro no servidor.');
+    
+    alert(result.message);
+    document.getElementById('custom-date-input').value = ''; // Limpa o input
+    await mostrarStatusUsuario(); // Atualiza a exibição do status
+  } catch(error) {
+    alert(`Erro: ${error.message}`);
+  }
+}
+
 async function carregarListaClientes() {
   const container = document.getElementById('client-list-container');
   container.innerHTML = `<p class="text-gray-500 text-center py-4">Carregando clientes...</p>`;
@@ -894,6 +976,7 @@ function setupSidebarNavigation() {
           if (targetPanel) {
             if (targetPanelId === 'panel-manage-users') { carregarListaUsuarios(); }
             if (targetPanelId === 'panel-manage-clients') { carregarListaClientes(); }
+            if (targetPanelId === 'panel-access-control') { carregarUsuariosParaControle(); }
             menuPanel.classList.add('hidden');
             targetPanel.classList.remove('hidden');
           }
@@ -910,6 +993,133 @@ function setupSidebarNavigation() {
   });
 }
 
+async function carregarUsuariosParaControle() {
+  userSelect.innerHTML = '<option value="">Carregando...</option>';
+  userStatusDetails.classList.add('hidden');
+  userAccessActions.classList.add('hidden');
+  
+  try {
+    const response = await fetch('/api/admin/users/');
+    if (!response.ok) throw new Error('Falha ao carregar usuários.');
+    const users = await response.json();
+    
+    userSelect.innerHTML = '<option value="">-- Selecione um usuário para gerenciar --</option>';
+    if (users.length === 0) {
+      userSelect.innerHTML = '<option value="">Nenhum outro usuário cadastrado.</option>';
+      return;
+    }
+
+    users.forEach(user => {
+      userSelect.innerHTML += `<option value="${user.id}">${user.username}</option>`;
+    });
+  } catch (error) {
+    console.error(error);
+    userSelect.innerHTML = `<option value="">Erro ao carregar</option>`;
+  }
+}
+
+async function mostrarStatusUsuario() {
+  const userId = userSelect.value;
+  if (!userId) {
+    userStatusDetails.classList.add('hidden');
+    userAccessActions.classList.add('hidden');
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/admin/user/${userId}/status`);
+    if (!response.ok) throw new Error('Falha ao obter status do usuário.');
+    const user = await response.json(); 
+
+    let statusTexto = 'Padrão (Acesso Expirado)';
+    let statusClass = 'bg-red-200 text-red-800'; // Classe para status expirado
+
+    if (user.plano_ilimitado) {
+      statusTexto = 'Vitalício';
+      statusClass = 'bg-emerald-200 text-emerald-800';
+    } else if (user.data_expiracao) {
+      const dataExp = new Date(user.data_expiracao);
+      if (dataExp > new Date()) {
+        statusTexto = `Válido até ${dataExp.toLocaleDateString('pt-BR')}`;
+        statusClass = 'bg-blue-200 text-blue-800';
+      }
+    }
+
+    statusAcessoEl.textContent = statusTexto;
+    statusAcessoEl.className = `font-mono p-1 rounded text-xs ${statusClass}`; // Aplica a classe de cor
+    
+    userStatusDetails.classList.remove('hidden');
+    userAccessActions.classList.remove('hidden');
+
+  } catch (error) {
+    console.error(error);
+    alert('Erro ao carregar os dados do usuário.');
+  }
+}
+
+async function handleAccessUpdate(action) {
+  const userId = userSelect.value;
+  if (!userId) return;
+
+  const username = userSelect.options[userSelect.selectedIndex].text;
+  const actionText = {
+    'lifetime': `conceder acesso VITALÍCIO para "${username}"?`,
+    'monthly': `liberar acesso por 30 dias para "${username}"?`,
+    'default': `REVERTER o acesso de "${username}" para o padrão (EXPIRADO)? Esta ação bloqueará o usuário imediatamente.`
+  }[action];
+  
+  if (!confirm(`Tem certeza que deseja ${actionText}`)) return;
+
+  const formData = new FormData();
+  formData.append('user_id', userId);
+  formData.append('action', action);
+
+  try {
+    const response = await fetch('/api/admin/user/update-access', { method: 'POST', body: formData });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Erro no servidor.');
+    
+    alert(result.message);
+    await mostrarStatusUsuario(); // Atualiza a exibição do status
+  } catch (error) {
+    alert(`Erro: ${error.message}`);
+  }
+}
+
+async function ajustarTotens() {
+  const userId = userSelect.value;
+  const ajuste = parseInt(ajusteTotensInput.value, 10);
+  if (!userId || isNaN(ajuste)) {
+      alert("Selecione um usuário e digite um valor numérico para o ajuste (ex: 5 para adicionar, -2 para remover).");
+      return;
+  }
+  
+  const username = userSelect.options[userSelect.selectedIndex].text;
+  if(!confirm(`Confirma o ajuste de ${ajuste} totens para o usuário "${username}"?`)) return;
+
+  const formData = new FormData();
+  formData.append('user_id', userId);
+  formData.append('adjustment', ajuste);
+
+  try {
+    const response = await fetch('/api/admin/user/adjust-totens', { method: 'POST', body: formData });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || 'Erro no servidor.');
+    
+    alert(result.message);
+    ajusteTotensInput.value = ''; // Limpa o input
+    await mostrarStatusUsuario(); // Atualiza a exibição
+  } catch(error) {
+    alert(`Erro: ${error.message}`);
+  }
+}
+
+// Funções globais para serem chamadas pelos botões
+window.concederAcessoVitalicio = () => handleAccessUpdate('lifetime');
+window.concederAcessoMensal = () => handleAccessUpdate('monthly');
+window.reverterParaPadrao = () => handleAccessUpdate('default');
+window.definirDataPersonalizada = definirDataPersonalizada;
+
 function inicializar() {
     modal.addEventListener('click', (e) => { if (e.target === modal) fecharModalConfig(); });
     modalStatusPdf.addEventListener('click', (e) => { if(e.target === modalStatusPdf) fecharModalStatusPDF(); });
@@ -918,7 +1128,8 @@ function inicializar() {
     btnsFecharModalTipoDocumento.forEach(btn => btn.addEventListener('click', fecharModalTipoDocumento));
     modalTipoDocumento.addEventListener('click', (e) => { if (e.target === modalTipoDocumento) fecharModalTipoDocumento(); });
     document.getElementById('whatsapp-manual-input').addEventListener('input', (e) => mascara(e, '(##) #####-####'));
-    
+    userSelect.addEventListener('change', mostrarStatusUsuario);
+
     btnConfirmarTipoDocumento.addEventListener('click', async () => {
         const orcamentoId = tipoDocumentoOrcamentoIdInput.value;
         const tipoDocumento = document.querySelector('input[name="tipo_documento_escolha"]:checked').value;

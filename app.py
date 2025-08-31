@@ -5,7 +5,7 @@ import json
 import locale
 import secrets
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from urllib.parse import quote
 from sqlalchemy import func, cast, Integer
@@ -23,6 +23,7 @@ from sqlmodel import SQLModel, Session, create_engine, select
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
+from datetime import datetime
 
 # --- IMPORTS DO CLOUDINARY (MOVA ELES PARA CÁ) ---
 import cloudinary
@@ -75,7 +76,13 @@ if not DATABASE_URL:
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(DATABASE_URL, connect_args={})
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=10,             # Número de conexões para manter no pool
+    max_overflow=2,           # Conexões extras permitidas em picos de uso
+    pool_recycle=300,         # Essencial: Recicla conexões a cada 5 minutos (300s)
+    pool_pre_ping=True        # Essencial: Verifica se a conexão está "viva" antes de usar
+)
 
 def create_db_and_tables():
     print("INFO:     Criando/Verificando tabelas no banco de dados PostgreSQL...")
@@ -155,7 +162,43 @@ def get_current_user(request: Request, session: Session = Depends(get_db_session
 async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
-# Em app.py
+def verify_action_permission(user: User = Depends(get_current_user)):
+    """
+    Dependência RIGOROSA que verifica se o usuário pode EXECUTAR uma ação.
+    Acesso é permitido se o usuário for:
+    1. O administrador principal.
+    2. Tiver o plano vitalício (plano_ilimitado).
+    3. Tiver uma data de expiração válida no futuro.
+    """
+    # 1. Pega o nome do administrador do arquivo .env para a verificação
+    admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
+
+    # 2. Permite o acesso imediato se for o admin ou tiver plano vitalício
+    if user.username == admin_user_env or user.plano_ilimitado:
+        return user
+
+    # 3. Verifica se existe uma data de expiração
+    if user.data_expiracao:
+        # Compara a data de expiração com a data e hora atuais (com fuso horário)
+        if user.data_expiracao > datetime.now(timezone.utc):
+            return user # A data é válida, permite o acesso
+
+    # 4. Se nenhuma das condições acima for atendida, o acesso é bloqueado.
+    pix_message = "Para continuar usando, realize o pagamento. Chave PIX (Celular): 19971351371. Valor: R$ 100,00. Após o pagamento, contate o administrador."
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN, 
+        detail=f"Sua assinatura expirou. Não é possível salvar ou atualizar orçamentos. {pix_message}"
+    )
+
+def verify_page_access(user: User = Depends(get_current_user)):
+    """
+    Dependência que apenas verifica se o usuário está logado para permitir
+    a VISUALIZAÇÃO de uma página, sem bloquear por status de assinatura.
+    O bloqueio de ações ocorrerá em suas respectivas rotas.
+    """
+    # A própria dependência get_current_user já garante que o usuário existe e está logado.
+    # Se chegamos aqui, é porque ele pode ver a página.
+    return user
 
 @app.post("/login")
 def login_submit(request: Request, username: str = Form(...), password: str = Form(...)):
@@ -186,7 +229,7 @@ async def home(request: Request, current_user: User = Depends(get_current_user))
     return templates.TemplateResponse("index.html", {"request": request, "user": current_user})
 
 @app.get("/orcamentos", response_class=HTMLResponse)
-async def orcamentos_page(request: Request, current_user: User = Depends(get_current_user)):
+async def orcamentos_page(request: Request, current_user: User = Depends(verify_page_access)):
     admin_username = os.getenv("BASIC_AUTH_USER", "admin")
 
     # Pega a lista de modelos (exceto o 'default') para enviar ao template
@@ -209,13 +252,13 @@ async def orcamentos_page(request: Request, current_user: User = Depends(get_cur
 async def salvar_orcamento_endpoint(
     request: Request,
     session: Session = Depends(get_db_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(verify_action_permission)  
 ):
+    
     form_data = await request.form()
     
     cliente_id_str = form_data.get("cliente_id")
     nome_cliente = form_data.get("nome")
-    # verifica se foi marcado para salvar cliente (caso do toggle, se precisar)
     salvar_cliente_flag = form_data.get("salvar_cliente") == "on"
     contatos_json = form_data.get("contatos", "[]") 
     contatos_data = json.loads(contatos_json)
@@ -345,10 +388,35 @@ async def salvar_orcamento_endpoint(
 
     session.add(orcamento_db)
     session.commit()
-    
-    return RedirectResponse(url="/orcamentos", status_code=303)
 
+    admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
+    # A verificação só se aplica se o usuário não for admin e não tiver plano vitalício
+    if current_user.username != admin_user_env and not current_user.plano_ilimitado and current_user.data_expiracao:
+        dias_restantes = (current_user.data_expiracao - datetime.now(timezone.utc)).days
+        
+        # Se faltam 3 dias ou menos para expirar, envia uma resposta de "sucesso com aviso"
+        if 0 <= dias_restantes <= 3:
+            pix_message = "Para renovar, pague o valor e contate o administrador. Chave PIX (Celular): 19971351371. Valor: R$ 100,00."
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "status": "warning", 
+                    "message": f"Orçamento salvo! Atenção: seu acesso expira em {dias_restantes + 1} dia(s). {pix_message}"
+                }
+            )
 
+    # Se não houver aviso, envia a resposta de sucesso padrão
+    return JSONResponse(
+        status_code=200,
+        content={"status": "success", "message": "Orçamento salvo com sucesso!"}
+    )
+
+# Função para atualizar a data de expiração após pagamento
+def atualizar_data_expiracao(user: User, session: Session):
+    user.data_expiracao = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
+    user.totens = 3  # Restaurar os 3 créditos
+    session.add(user)
+    session.commit()
 
 # ROTA DE API: Lista todos os orçamentos (para o JavaScript)
 @app.get("/api/orcamentos/")
@@ -549,7 +617,7 @@ def gerar_link_whatsapp(
 async def editar_orcamento_page(
     orcamento_id: int, 
     request: Request, 
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(verify_page_access),
     session: Session = Depends(get_db_session) # Usa a sessão da dependência
 ):
     # USAREMOS selectinload PARA GARANTIR QUE O CLIENTE VENHA JUNTO
@@ -580,7 +648,7 @@ async def atualizar_orcamento_submit(
     request: Request,
     orcamento_id: int,
     session: Session = Depends(get_db_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(verify_action_permission)
 ):
     form_data = await request.form()
     
@@ -621,6 +689,7 @@ async def atualizar_orcamento_submit(
         cliente.cidade_uf = form_data.get("cidade_uf")
         cliente.contatos.clear()
         contatos_data = json.loads(form_data.get("contatos", "[]"))
+
         for c_info in contatos_data:
             cliente.contatos.append(Contato(nome=c_info['nome'], telefone=c_info['telefone'], email=c_info.get('email')))
         session.add(cliente)
@@ -652,7 +721,25 @@ async def atualizar_orcamento_submit(
     session.add(orcamento_db)
     session.commit()
     
-    return RedirectResponse(url="/orcamentos?atualizado=true", status_code=status.HTTP_303_SEE_OTHER)
+    admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
+    if current_user.username != admin_user_env and not current_user.plano_ilimitado and current_user.data_expiracao:
+        dias_restantes = (current_user.data_expiracao - datetime.now(timezone.utc)).days
+        
+        if 0 <= dias_restantes <= 3:
+            pix_message = "Para renovar, pague e contate o administrador. Chave PIX (Celular): 19971351371. Valor: R$ 100,00."
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "status": "warning", 
+                    "message": f"Orçamento atualizado! Atenção: seu acesso expira em {dias_restantes + 1} dia(s). {pix_message}"
+                }
+            )
+
+    # Se não houver aviso, envia a resposta de sucesso padrão que o JavaScript irá usar para redirecionar.
+    return JSONResponse(
+        status_code=200,
+        content={"status": "success", "message": "Orçamento atualizado com sucesso!"}
+    )
 
 
 @app.delete("/api/orcamentos/{orcamento_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -1030,6 +1117,97 @@ def list_users(
     users = session.exec(select(User)).all()
     return users
 
+class UserAdminView(BaseModel):
+    id: int
+    username: str
+    plano_ilimitado: bool
+    data_expiracao: Optional[datetime] # Mantido como string, conforme seu models.py
+
+# Altere a rota /api/users/ para usar o novo modelo e ser mais específica
+@app.get("/api/admin/users/", response_model=List[UserAdminView])
+def admin_list_users(
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Lista todos os usuários com dados de acesso para o painel de admin."""
+    admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
+    if current_user.username != admin_user_env:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+    
+    # Exclui o próprio admin da lista de gerenciamento
+    users = session.exec(select(User).where(User.username != admin_user_env)).all()
+    return users
+
+
+@app.get("/api/admin/user/{user_id}/status", response_model=UserAdminView)
+def admin_get_user_status(
+    user_id: int,
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Obtém o status de acesso de um usuário específico."""
+    admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
+    if current_user.username != admin_user_env:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+    return user
+
+
+@app.post("/api/admin/user/update-access")
+def admin_update_user_access(
+    user_id: int = Form(...),
+    action: str = Form(...),
+    custom_date: Optional[str] = Form(None), # Novo campo opcional para data
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Atualiza o tipo de acesso de um usuário."""
+    admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
+    if current_user.username != admin_user_env:
+        raise HTTPException(status_code=403, detail="Acesso negado.")
+
+    user_to_update = session.get(User, user_id)
+    if not user_to_update:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    if action == 'lifetime':
+        user_to_update.plano_ilimitado = True
+        user_to_update.data_expiracao = None
+        message = f"Acesso VITALÍCIO concedido a '{user_to_update.username}'."
+    elif action == 'monthly':
+        user_to_update.plano_ilimitado = False
+        user_to_update.data_expiracao = datetime.now(timezone.utc) + timedelta(days=30)
+        message = f"Acesso por 30 DIAS liberado para '{user_to_update.username}'."
+    
+    # --- NOVA LÓGICA PARA DATA PERSONALIZADA ---
+    elif action == 'custom_date':
+        if not custom_date:
+            raise HTTPException(status_code=400, detail="Nenhuma data foi fornecida.")
+        try:
+            # Converte a data do formulário (YYYY-MM-DD) para um objeto datetime
+            # Adiciona a hora para garantir que a validade se estenda até o final do dia
+            parsed_date = datetime.strptime(custom_date, '%Y-%m-%d').replace(
+                hour=23, minute=59, second=59, tzinfo=timezone.utc
+            )
+            user_to_update.plano_ilimitado = False
+            user_to_update.data_expiracao = parsed_date
+            message = f"A data de expiração de '{user_to_update.username}' foi definida para {parsed_date.strftime('%d/%m/%Y')}."
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD.")
+            
+    elif action == 'default':
+        user_to_update.plano_ilimitado = False
+        user_to_update.data_expiracao = None # Isso efetivamente bloqueia o usuário
+        message = f"O acesso de '{user_to_update.username}' foi revertido para o padrão (EXPIRADO)."
+    else:
+        raise HTTPException(status_code=400, detail="Ação inválida.")
+        
+    session.add(user_to_update)
+    session.commit()
+    return {"message": message}
 
 @app.delete("/api/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
