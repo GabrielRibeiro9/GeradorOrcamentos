@@ -223,17 +223,23 @@
                             <input type="text" id="numero_orcamento" name="numero_orcamento" 
                                 class="w-20 h-6 text-center font-semibold border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400" value="">
                         </div>
-                        <button
-                            type="button"
-                            id="btn-abrir-modal-info"
-                            title="Adicionar Informações Complementares"
-                            class="flex items-center justify-center h-10 w-10 rounded-full bg-white shadow-md border border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:scale-105 active:scale-95 active:shadow-sm transition-all duration-150 group"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-6 group-hover:scale-110 transition-transform duration-200">
-                                <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                                <path fill-rule="evenodd" d="M10 14a1 1 0 0 1-1-1V9a1 1 0 1 1 2 0v4a1 1 0 0 1-1 1zm0-6a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
+                        <div class="relative">
+                            <button
+                                type="button"
+                                id="btn-abrir-modal-info"
+                                title="Adicionar Informações Complementares"
+                                class="flex items-center justify-center h-10 w-10 rounded-full bg-white shadow-md border border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:scale-105 active:scale-95 active:shadow-sm transition-all duration-150 group"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-6 group-hover:scale-110 transition-transform duration-200">
+                                    <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                    <path fill-rule="evenodd" d="M10 14a1 1 0 0 1-1-1V9a1 1 0 1 1 2 0v4a1 1 0 0 1-1 1zm0-6a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                            <span id="info-btn-alert-icon" class="hidden absolute -top-1 -right-1 flex h-4 w-4">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-4 w-4 bg-amber-500 border-2 border-white"></span>
+                            </span>
+                        </div>
                     </div>
             
             <div class="flex flex-col gap-2">
@@ -301,6 +307,12 @@
                         <div id="display-condicao-pagamento" class="flex-grow h-10 px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600 truncate">
                             A definir...
                         </div>
+                        <!-- ÍCONE DE AVISO (COMEÇA ESCONDIDO) -->
+                        <span id="pagamento-aviso-icon" class="hidden text-amber-500" title="O total do orçamento mudou! Por favor, revise as condições de pagamento.">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-6 animate-pulse">
+                                <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
+                            </svg>
+                        </span>
                         <!-- Botão que abrirá o novo modal -->
                         <button type="button" id="btn-abrir-modal-pagamento" class="flex-shrink-0 h-10 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors">
                             Definir
@@ -656,6 +668,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let idGrupoEmEdicao = null;  // Para saber se estamos editando um grupo existente
     let valorOrcamentoBruto = 0;
     let descontoTotalEmValor = 0;
+    let initialTotal = 0;
 
     const icons = {
         servico: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M14.5 10a4.5 4.5 0 004.284-5.882c-.105-.324-.51-.391-.752-.15L15.34 6.66a.454.454 0 01-.493.11 3.01 3.01 0 01-1.618-1.616.455.455 0 01.11-.494l2.694-2.692c.24-.241.174-.647-.15-.752a4.5 4.5 0 00-5.873 4.575c.055.873-.128 1.808-.8 2.368l-7.23 6.024a2.724 2.724 0 103.837 3.837l6.024-7.23c.56-.672 1.495-.855 2.368-.8.096.007.193.01.291.01ZM5 16a1 1 0 10-2 0 1 1 0 002 0Z" clip-rule="evenodd" /><path d="M14.5 11.5c.173 0 .345-.007.514-.022l3.754 3.754a2.5 2.5 0 01-3.536 3.536l-4.41-4.41 2.172-2.607c.052-.063.147-.138.342-.196.202-.06.469-.087.777-.067.128.008.257.012.387.012ZM6 4.586l2.33 2.33a.452.452 0 01-.08.09L6.8 8.214 4.586 6H3.309a.5.5 0 01-.447-.276l-1.7-3.402a.5.5 0 01.093-.577l.49-.49a.5.5 0 01.577-.094l3.402 1.7A.5.5 0 016 3.31v1.277Z" /></svg>`,
@@ -699,6 +712,41 @@ document.addEventListener("DOMContentLoaded", function() {
             modalCatalogo.classList.remove('flex');
             filtroCatalogoInput.value = '';
         }, 300);
+    }
+
+    function verificarEAtualizarAvisoPagamento() {
+        const newTotal = calcularValorTotalOrcamento();
+        const avisoIconModal = document.getElementById('pagamento-aviso-icon');      // Ícone dentro do modal
+        const avisoIconBtn = document.getElementById('info-btn-alert-icon');          // Ícone NOVO sobre o botão (i)
+        const btnPagamentoModal = document.getElementById('btn-abrir-modal-pagamento'); // Botão dentro do modal
+        const btnInfoMain = document.getElementById('btn-abrir-modal-info');          // Botão (i) na tela principal
+
+        if (Math.abs(newTotal - initialTotal) > 0.01) {
+            // Mostra os alertas visuais
+            avisoIconModal.classList.remove('hidden');
+            avisoIconBtn.classList.remove('hidden');
+
+            // Modifica o botão DENTRO do modal
+            btnPagamentoModal.textContent = 'Revisar';
+            btnPagamentoModal.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+            btnPagamentoModal.classList.add('bg-amber-500', 'hover:bg-amber-600');
+            
+            // Adiciona um anel de destaque no botão principal (i)
+            btnInfoMain.classList.add('ring-2', 'ring-amber-400', 'ring-offset-2');
+
+        } else {
+            // Esconde os alertas visuais
+            avisoIconModal.classList.add('hidden');
+            avisoIconBtn.classList.add('hidden');
+
+            // Restaura o botão DENTRO do modal
+            btnPagamentoModal.textContent = document.getElementById('hidden_condicao_pagamento').value.length > 2 ? 'Editar' : 'Definir';
+            btnPagamentoModal.classList.remove('bg-amber-500', 'hover:bg-amber-600');
+            btnPagamentoModal.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+
+            // Remove o anel de destaque do botão principal (i)
+            btnInfoMain.classList.remove('ring-2', 'ring-amber-400', 'ring-offset-2');
+        }
     }
 
     function popularListaModalCatalogo(tipo, filtro) {
@@ -1189,6 +1237,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 const idToRemove = this.dataset.id;
                 itens = itens.filter(i => String(i.id) !== idToRemove);
                 renderizarItensNaTabela();
+
+                verificarEAtualizarAvisoPagamento();
             };
             
             itensContainer.appendChild(tr);
@@ -1313,6 +1363,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // Após adicionar ou atualizar, redesenha a tabela e reseta o formulário
         renderizarItensNaTabela();
         finalizarEdicao(); 
+        verificarEAtualizarAvisoPagamento();
     }
 
     function limparCamposItem() {
@@ -1397,6 +1448,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 const idToRemove = event.target.dataset.id;
                 itens = itens.filter(i => String(i.id) !== idToRemove);
                 renderizarItensNaTabela();
+
+                verificarEAtualizarAvisoPagamento();
             }
             if (event.target.classList.contains('remove-contact-btn')) {
                 const indexToRemove = parseInt(event.target.dataset.index, 10);
@@ -1431,6 +1484,7 @@ document.addEventListener("DOMContentLoaded", function() {
     function inicializar() {
         preencherFormulario();
         renderizarItensNaTabela();
+        initialTotal = calcularValorTotalOrcamento();
 
         carregarContatosExtras();
         carregarCatalogosAPI();
