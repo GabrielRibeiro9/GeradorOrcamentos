@@ -178,6 +178,18 @@
                     <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="item" name="item">
                 </div>
             </div>
+            <div id="ncm-field-container" class="hidden flex-col items-start justify-start gap-2">
+                <label for="itemNCM" class="text-sm font-bold">NCM (apenas para materiais):</label>
+                <div class="relative w-full">
+                    <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
+                        <!-- Ícone para o NCM -->
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-400">
+                            <path fill-rule="evenodd" d="M10.06 2.013c.27.02.537.042.802.066C11.5 2.11 12 2.5 12 3v1h1.28c.352 0 .69.117.97.324l3.193 2.332c.28.204.457.533.457.886v.297c0 .353-.178.682-.458.886l-3.192 2.332a1.25 1.25 0 0 1-.97.324H12v3.088c0 .353-.178.682-.458.886l-3.192 2.332a1.25 1.25 0 0 1-.97.324H6c-.69 0-1.25-.56-1.25-1.25V6.25c0-.69.56-1.25 1.25-1.25h1.25V4c0-.69.56-1.25 1.25-1.25h1.036a5.772 5.772 0 0 1 .524-.737ZM7.5 7.75A.75.75 0 0 0 6.75 8.5v4a.75.75 0 0 0 1.5 0v-4A.75.75 0 0 0 7.5 7.75Zm2.75-.75a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="itemNCM" name="itemNCM" placeholder="Ex: 1234.56.78" inputmode="numeric" oninput="mascaraNCM(event)" maxlength="10">
+                </div>
+            </div>
             <div class="flex flex-wrap items-start justify-start gap-2">
                 <div class="flex flex-col items-start justify-start flex-1 min-w-[80px]">
                     <label class="text-sm font-bold" for="itemQtd">Qtd:</label>
@@ -260,7 +272,73 @@
         <input type="hidden" name="condicao_pagamento" id="hidden_condicao_pagamento" />
         <input type="hidden" name="prazo_entrega" id="hidden_prazo_entrega" />
         <input type="hidden" name="garantia" id="hidden_garantia" />
-        <input type="hidden" name="observacoes" id="hidden_observacoes" />    
+        <input type="hidden" name="observacoes" id="hidden_observacoes" />
+        
+        {% if show_fechamento %}
+
+        <input type="hidden" name="fechamento_json" id="fechamento_json">
+
+        <div id="fechamento-bloco" class="mt-8 p-4 border rounded-xl bg-gray-50">
+        <h2 class="text-lg font-semibold mb-3">Fechamento da Nota</h2>
+
+        <div class="grid sm:grid-cols-2 gap-3">
+            <div>
+            <label class="text-sm font-medium">Valor da Nota/Contrato (R$)</label>
+            <input id="fn-valor-nota" type="text" inputmode="decimal"
+                    class="mt-1 w-full h-10 px-3 border rounded"
+                    placeholder="0,00">
+            </div>
+            <div>
+            <label class="text-sm font-medium">Regime / Preset</label>
+            <select id="fn-preset" class="mt-1 w-full h-10 px-3 border rounded">
+                <option value="personalizado">Personalizado</option>
+                <option value="simples">Simples (alíquota única)</option>
+                <option value="presumido">Presumido (exemplo)</option>
+                <option value="mei">MEI (exemplo)</option>
+            </select>
+            </div>
+        </div>
+
+        <div class="grid sm:grid-cols-3 gap-3 mt-3">
+            <div><label class="text-xs text-gray-600">ISS (%)</label><input id="fn-iss" type="number" step="0.01" class="w-full h-10 px-3 border rounded" value="5"></div>
+            <div><label class="text-xs text-gray-600">INSS retido (%)</label><input id="fn-inss" type="number" step="0.01" class="w-full h-10 px-3 border rounded" value="0"></div>
+            <div><label class="text-xs text-gray-600">IRRF (%)</label><input id="fn-irrf" type="number" step="0.01" class="w-full h-10 px-3 border rounded" value="0"></div>
+            <div><label class="text-xs text-gray-600">PIS (%)</label><input id="fn-pis" type="number" step="0.01" class="w-full h-10 px-3 border rounded" value="0"></div>
+            <div><label class="text-xs text-gray-600">COFINS (%)</label><input id="fn-cofins" type="number" step="0.01" class="w-full h-10 px-3 border rounded" value="0"></div>
+            <div><label class="text-xs text-gray-600">CSLL (%)</label><input id="fn-csll" type="number" step="0.01" class="w-full h-10 px-3 border rounded" value="0"></div>
+            <div class="sm:col-span-3">
+            <label class="text-xs text-gray-600">Outros (R$)</label>
+            <input id="fn-outros" type="text" inputmode="decimal" class="w-full h-10 px-3 border rounded" value="0,00">
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <label class="text-sm font-medium">Outras despesas (R$) — opcional</label>
+            <input id="fn-outras-despesas" type="text" inputmode="decimal" class="mt-1 w-full h-10 px-3 border rounded" value="0,00">
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-3 mt-4">
+            <div class="p-3 bg-white border rounded">
+            <div class="text-xs text-gray-500">Líquido da Nota</div>
+            <div id="fn-res-liquido" class="text-lg font-bold">R$ 0,00</div>
+            <div class="text-xs text-gray-500">Impostos: <span id="fn-res-impostos">R$ 0,00</span></div>
+            </div>
+            <div class="p-3 bg-white border rounded">
+            <div class="text-xs text-gray-500">Custos</div>
+            <div class="text-xs">Mão de obra: <span id="fn-res-mo">R$ 0,00</span></div>
+            <div class="text-xs">Materiais: <span id="fn-res-mat">R$ 0,00</span></div>
+            <div class="text-xs">Outras: <span id="fn-res-outras">R$ 0,00</span></div>
+            </div>
+            <div class="p-3 bg-white border rounded">
+            <div class="text-xs text-gray-500">Lucro</div>
+            <div id="fn-res-lucro" class="text-lg font-bold">R$ 0,00</div>
+            <div class="text-xs">Dízimo (10%): <span id="fn-res-dizimo">R$ 0,00</span></div>
+            <div class="text-xs">Lucro final: <span id="fn-res-lucro-final">R$ 0,00</span></div>
+            </div>
+        </div>
+        </div>
+        {% endif %}
+        
         </form>
     </div>
 
@@ -524,7 +602,6 @@
     </div>
 
 <script>
-
 
 document.addEventListener("DOMContentLoaded", function() {
     
@@ -842,6 +919,32 @@ document.addEventListener("DOMContentLoaded", function() {
         const v = e.target.value.replace(/\D/g, "");
         e.target.value = pattern.replace(/#/g, () => v[i++] || "");
     }
+    window.mascaraNCM = function(event) {
+        const input = event.target;
+        // Pega o valor atual e remove tudo que não for número.
+        let value = input.value.replace(/\D/g, '');
+
+        // Limita o valor a 8 dígitos para garantir que não ultrapasse o tamanho do NCM.
+        value = value.substring(0, 8);
+
+        // Formata a string de dígitos com os pontos.
+        let formattedValue = '';
+        if (value.length > 0) {
+            // Pega os primeiros 4 dígitos.
+            formattedValue = value.substring(0, 4);
+        }
+        if (value.length > 4) {
+            // Adiciona o primeiro ponto e os próximos 2 dígitos.
+            formattedValue += '.' + value.substring(4, 6);
+        }
+        if (value.length > 6) {
+            // Adiciona o segundo ponto e os últimos 2 dígitos.
+            formattedValue += '.' + value.substring(6, 8);
+        }
+
+        // Atualiza o valor do campo de input com a string formatada.
+        input.value = formattedValue;
+    }
     function updateTipoItemIcon() {
         tipoItemIconDiv.innerHTML = icons[tipoItemSelect.value] || icons.default;
     }
@@ -854,7 +957,83 @@ document.addEventListener("DOMContentLoaded", function() {
         itemValorInput.value = "";
         tipoItemSelect.value = "default";
         document.getElementById("toggleSalvar").checked = false;
+        const ncmInput = document.getElementById("itemNCM");
+        if (ncmInput) ncmInput.value = "";
         updateTipoItemIcon();
+        atualizarVisibilidadeNCM();
+    }
+    function renderizarTabelaCompleta() {
+        const thead = tableContainer.querySelector('thead tr');
+        
+        // Limpa o conteúdo atual do cabeçalho e do corpo
+        thead.innerHTML = '';
+        itensContainer.innerHTML = '';
+
+        // 1. Verifica se ALGUM item na lista atual tem um NCM
+        const temNcmNaLista = itens.some(item => item.ncm && item.ncm.trim() !== '');
+
+        // 2. Define os cabeçalhos dinamicamente
+        let headers = ['Item / Tipo', 'Qtd', 'Valor Unit', 'Total', 'Ação'];
+        if (temNcmNaLista) {
+            // Insere 'NCM' na segunda posição do array de cabeçalhos
+            headers.splice(1, 0, 'NCM');
+        }
+
+        // 3. Desenha o cabeçalho (thead) com base nos headers definidos
+        headers.forEach(headerText => {
+            const th = document.createElement('th');
+            th.scope = 'col';
+            th.className = 'px-4 py-3';
+            // >>> MUDANÇA AQUI: Adicionamos 'NCM' à lista <<<
+            if (['Qtd', 'Ação', 'NCM'].includes(headerText)) th.classList.add('text-center');
+            if (['Valor Unit', 'Total'].includes(headerText)) th.classList.add('text-right');
+            th.textContent = headerText;
+            thead.appendChild(th);
+        });
+
+        // 4. Desenha as linhas do corpo da tabela (tbody)
+        itens.forEach(item => {
+            const total = item.quantidade * item.valor;
+            const tr = document.createElement("tr");
+            tr.className = "bg-white border-b border-gray-200 hover:bg-gray-50";
+            tr.dataset.id = item.id;
+
+            // Monta o HTML da linha dinamicamente
+            let rowHTML = `
+                <th scope="row" class="px-4 py-4 font-medium text-gray-900 capitalize align-middle">${item.nome} (${item.tipo})</th>
+            `;
+
+            if (temNcmNaLista) {
+                // Se a coluna NCM existe, adiciona a célula (vazia ou com valor)
+                rowHTML += `<td class="px-4 py-4 text-center align-middle">${item.ncm || ''}</td>`;
+            }
+
+            rowHTML += `
+                <td class="px-4 py-4 text-center align-middle">${item.quantidade}</td>
+                <td class="px-4 py-4 text-right align-middle">${item.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                <td class="px-4 py-4 text-right align-middle">${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                <td class="px-4 py-4 text-center align-middle">
+                    <button type="button" class="text-red-500 hover:text-red-700 p-1 action-remover-item" data-id="${item.id}" title="Excluir item do orçamento">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4 pointer-events-none">
+                            <path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.474.14l-.5-5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .71.787l-.5 5a.75.75 0 1 1-1.474-.14l.5-5a.75.75 0 0 1 .764-.647Z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </td>
+            `;
+            
+            tr.innerHTML = rowHTML;
+            itensContainer.appendChild(tr);
+        });
+
+        // 5. Adiciona os eventos de clique aos novos botões de remoção
+        document.querySelectorAll('.action-remover-item').forEach(button => {
+            button.addEventListener('click', (e) => {
+                removerItem(e.currentTarget.dataset.id);
+            });
+        });
+
+        // 6. Atualiza a visibilidade geral da tabela
+        updateTableVisibility();
     }
     function limparFormularioCompleto() {
         form.reset();
@@ -868,35 +1047,26 @@ document.addEventListener("DOMContentLoaded", function() {
         renderizarSeletor("material");
         preencherNumeroSugerido();
     }
+    function atualizarVisibilidadeNCM() {
+        // Pega a variável que o backend enviou. `tojson` garante que True/False funcionem.
+        const temPermissao = JSON.parse('{{ tem_funcao_analise_custo | tojson }}');
+        const ncmContainer = document.getElementById('ncm-field-container');
 
-    function adicionarItemNaTela(item) {
-        const total = item.quantidade * item.valor;
-        const tr = document.createElement("tr");
-        tr.className = "bg-white border-b border-gray-200 hover:bg-gray-50";
-        tr.dataset.id = item.id;
-        
-        tr.innerHTML = `
-           <th scope="row" class="px-4 py-4 font-medium text-gray-900 capitalize">${item.nome} (${item.tipo})</th>
-           <td class="px-4 py-4 text-center">${item.quantidade}</td>
-           <td class="px-4 py-4 text-right">${item.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-           <td class="px-4 py-4 text-right">${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-           <td class="px-4 py-4 text-center">
-               <button type="button" class="text-red-500 hover:text-red-700 p-1" data-action="remover-item" title="Excluir item do orçamento">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4 pointer-events-none">
-                        <path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.71l.5 5a.75.75 0 1 1-1.474.14l-.5-5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .71.787l-.5 5a.75.75 0 1 1-1.474-.14l.5-5a.75.75 0 0 1 .764-.647Z" clip-rule="evenodd" />
-                    </svg>
-               </button>
-           </td>
-        `;
-        
-        // CORREÇÃO: O listener de evento é adicionado ao botão da linha recém-criada
-        tr.querySelector("[data-action=\"remover-item\"]" ).addEventListener("click", () => {
-            removerItem(item.id);
-        });
+        // Se o elemento não existir na página, não faz nada para evitar erros.
+        if (!ncmContainer) {
+            return;
+        }
 
-        itensContainer.appendChild(tr);
-        updateTableVisibility();
+        // A condição principal: o usuário tem permissão E o tipo é "material"?
+        if (temPermissao === true && tipoItemSelect.value === 'material') {
+            ncmContainer.classList.remove('hidden');
+            ncmContainer.classList.add('flex'); // 'flex' para corresponder ao estilo dos outros campos
+        } else {
+            ncmContainer.classList.add('hidden');
+            ncmContainer.classList.remove('flex');
+        }
     }
+
     // --- FUNÇÕES DE RENDERIZAÇÃO DINÂMICA ---
     
     function renderizarSeletor(tipo) {
@@ -932,7 +1102,9 @@ document.addEventListener("DOMContentLoaded", function() {
         itens = itens.filter(item => String(item.id) !== String(itemId));
         const row = itensContainer.querySelector(`tr[data-id=\'${itemId}\']`);
         if (row) row.remove();
+        renderizarTabelaCompleta();
         updateTableVisibility();
+        if(window.recalcularFechamento) window.recalcularFechamento();
     }
 
     function abrirModalInfo() {
@@ -1212,9 +1384,15 @@ document.addEventListener("DOMContentLoaded", function() {
         itemInput.value = itemSelecionado.nome;
         itemValorInput.value = itemSelecionado.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
         tipoItemSelect.value = tipo;
-        updateTipoItemIcon();
 
-        // 2. Foca no campo de quantidade para agilizar
+        const ncmInput = document.getElementById("itemNCM");
+        if (ncmInput) {
+            // Se o item do catálogo tiver um NCM, preenche. Senão, limpa.
+            ncmInput.value = itemSelecionado.ncm || '';
+        }
+
+        updateTipoItemIcon();
+        atualizarVisibilidadeNCM();
         itemQtdInput.focus();
         
         
@@ -1349,12 +1527,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 id: `temp-${Date.now()}`
             };
 
+            const ncmInput = document.getElementById("itemNCM");
+            if (ncmInput && tipo === 'material' && ncmInput.value.trim()) {
+                itemParaAdicionar.ncm = ncmInput.value.trim();
+            }
+
             if (salvar) {
                 try {
                     const resp = await fetch(`${API_BASE_URL}/api/item/`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ nome: nomeVal, valor: valVal, tipo: tipo })
+                        body: JSON.stringify({ nome: nomeVal, valor: valVal, tipo: tipo, ncm: (tipo === 'material' && document.getElementById("itemNCM")?.value.trim()) || null })
                     });
 
                     if (!resp.ok) {
@@ -1377,12 +1560,11 @@ document.addEventListener("DOMContentLoaded", function() {
             
             itens.push(itemParaAdicionar);
         }
-        
-        // ATENÇÃO: a página index.html usa "adicionarItemNaTela" para renderizar
-        // Temos que recriar toda a tabela para refletir as quantidades somadas.
-        itensContainer.innerHTML = ''; // Limpa a tabela
-        itens.forEach(item => adicionarItemNaTela(item)); // Redesenha tudo
 
+        renderizarTabelaCompleta();
+        
+
+        if(window.recalcularFechamento) window.recalcularFechamento();
         limparCamposItem();
     }
 
@@ -1578,6 +1760,7 @@ document.addEventListener("DOMContentLoaded", function() {
         itemValorInput.addEventListener("blur", limparEFormatarMoeda);
         tipoItemSelect.addEventListener("change", updateTipoItemIcon);
         tipoItemSelect.addEventListener("change", atualizarVisibilidadeSeta);
+        tipoItemSelect.addEventListener("change", atualizarVisibilidadeNCM);
         document.getElementById("telefone").addEventListener("input", (e) => mascara(e, "(##) #####-####"));
         document.getElementById("cep").addEventListener("input", (e) => mascara(e, "#####-###"));
         document.getElementById("cep").addEventListener("blur", consultarCep);
@@ -1638,6 +1821,93 @@ document.addEventListener("DOMContentLoaded", function() {
         updateTableVisibility();
         updateTipoItemIcon();
         atualizarVisibilidadeSeta();
+        atualizarVisibilidadeNCM();
+
+        const fechamentoBloco = document.getElementById('fechamento-bloco');
+        if (fechamentoBloco) { // Só executa se o bloco realmente existir na página
+            // helpers
+            const toNumberBR = v => Number(String(v).replace(/\./g,'').replace(',','.')) || 0;
+            const toBR = n => n.toLocaleString('pt-BR',{minimumFractionDigits:2});
+            const moneyFields = ['fn-valor-nota','fn-outros','fn-outras-despesas'].map(id=>document.getElementById(id));
+            function maskMoney(el){ el.addEventListener('input', () => {
+                const raw = el.value.replace(/[^\d,]/g,'');
+                const parts = raw.split(',');
+                let int = parts[0].replace(/\D/g,'');
+                if(!int) { el.value=''; return; }
+                int = int.replace(/^0+(?=\d)/,'');
+                const formatted = (int.length>2? int.slice(0,-2)+','+int.slice(-2): int);
+                el.value = formatted;
+            });}
+            moneyFields.forEach(el => el && maskMoney(el));
+
+            // Atalho para elementos
+            const $ = id => document.getElementById(id);
+
+            // presets
+            function applyPreset() {
+                const regime = $('fn-preset').value;
+                const map = { iss:0, inss:0, irrf:0, pis:0, cofins:0, csll:0 };
+                if (regime==='simples') map.iss = 3;
+                if (regime==='presumido'){ map.iss=5; map.pis=0.65; map.cofins=3; map.csll=1; }
+                ['iss','inss','irrf','pis','cofins','csll'].forEach(k => $('fn-'+k).value = map[k] || 0);
+                calcularFechamento();
+            }
+
+            // Lê a tabela (usando a variável 'itens' global que já existe)
+            function lerTotaisPorTipo(){
+                let mo=0, mat=0;
+                // AQUI ESTÁ A CORREÇÃO PRINCIPAL: USAR A VARIÁVEL 'itens' JÁ EXISTENTE
+                itens.forEach(item => {
+                    const total = item.quantidade * item.valor;
+                    if (item.tipo === 'servico') mo += total;
+                    if (item.tipo === 'material') mat += total;
+                });
+                return {mo, mat};
+            }
+
+            function calcularFechamento(){
+                const bruto = toNumberBR($('fn-valor-nota').value);
+                const outrosImpostos = toNumberBR($('fn-outros').value);
+                const perc = ['iss','inss','irrf','pis','cofins','csll'].map(k => Number($('fn-'+k).value||0)).reduce((a,b)=>a+b,0);
+                const impostosTotal = bruto * (perc/100) + outrosImpostos;
+                const liquido = Math.max(0, bruto - impostosTotal);
+
+                const {mo, mat} = lerTotaisPorTipo();
+                const outras = toNumberBR($('fn-outras-despesas').value);
+                const custos = mo + mat + outras;
+
+                const lucro = liquido - custos;
+                const dizimo = lucro > 0 ? lucro * 0.10 : 0;
+                const lucroFinal = lucro - dizimo;
+
+                $('fn-res-impostos').textContent = 'R$ ' + toBR(impostosTotal);
+                $('fn-res-liquido').textContent  = 'R$ ' + toBR(liquido);
+                $('fn-res-mo').textContent       = 'R$ ' + toBR(mo);
+                $('fn-res-mat').textContent      = 'R$ ' + toBR(mat);
+                $('fn-res-outras').textContent   = 'R$ ' + toBR(outras);
+                $('fn-res-lucro').textContent    = 'R$ ' + toBR(lucro);
+                $('fn-res-dizimo').textContent   = 'R$ ' + toBR(dizimo);
+                $('fn-res-lucro-final').textContent = 'R$ ' + toBR(lucroFinal);
+
+                const payload = { bruto, impostosTotal, liquido, mo, mat, outras, custos, lucro, dizimo, lucroFinal,
+                                aliquotas:{iss:Number($('fn-iss').value||0),inss:Number($('fn-inss').value||0),irrf:Number($('fn-irrf').value||0),pis:Number($('fn-pis').value||0),cofins:Number($('fn-cofins').value||0),csll:Number($('fn-csll').value||0)}, outrosImpostos };
+                $('fechamento_json').value = JSON.stringify(payload);
+            }
+
+            // Adiciona listeners aos inputs do bloco de fechamento
+            ['fn-valor-nota','fn-iss','fn-inss','fn-irrf','fn-pis','fn-cofins','fn-csll','fn-outros','fn-outras-despesas']
+                .forEach(id => $(id).addEventListener('input', calcularFechamento));
+            $('fn-preset').addEventListener('change', applyPreset);
+            
+            // CORREÇÃO: Observa a variável 'itens' em vez da DOM diretamente
+            // Nós chamaremos 'calcularFechamento' manualmente quando a lista 'itens' for modificada
+            
+            applyPreset();
+            calcularFechamento();
+
+            // Expõe a função para ser chamada de fora
+            window.recalcularFechamento = calcularFechamento;
+        } 
 
 
     }

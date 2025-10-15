@@ -39,11 +39,14 @@ from security import get_password_hash, verify_password
 from pdf_models.modelo_joao import gerar_pdf_joao
 from pdf_models.modelo_cacador import gerar_pdf_cacador
 from pdf_models.modelo_apresentacao import gerar_pdf_apresentacao
+from pdf_models.modelo_construtora_araras import gerar_pdf_construtora_araras
+from pdf_models.modelo_relatorio_custo import gerar_pdf_relatorio_custo
 
 PDF_GENERATORS = {
     "joao": gerar_pdf_joao,
     "cacador": gerar_pdf_cacador,
     "apresentacao": gerar_pdf_apresentacao,
+    "construtora_araras": gerar_pdf_construtora_araras,
     "default": gerar_pdf_apresentacao 
 }
 
@@ -110,7 +113,7 @@ app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "uma_ch
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory="templates") 
 
-    # --- LÓGICA PARA CRIAR O PRIMEIRO USUÁRIO ---
+# --- LÓGICA PARA CRIAR O PRIMEIRO USUÁRIO ---
 with Session(engine) as session:
     # Verifica se já existe algum usuário no banco
     user_in_db = session.exec(select(User)).first()
@@ -129,6 +132,13 @@ with Session(engine) as session:
         session.add(admin_user)
         session.commit()
         print(f"Usuário '{admin_username}' criado com sucesso com a senha padrão.")
+
+FECHAMENTO_USERS = [u.strip().lower() for u in os.getenv("FECHAMENTO_USERS", "").split(",") if u.strip()]
+
+def show_fechamento_for(user) -> bool:
+    if not user or not getattr(user, "username", None):
+        return False
+    return user.username.lower() in FECHAMENTO_USERS        
 
 # --- AUTENTICAÇÃO E ROTAS DE PÁGINAS ---
 @app.exception_handler(StarletteHTTPException)
@@ -226,7 +236,7 @@ async def logout(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request, current_user: User = Depends(get_current_user)):
-    return templates.TemplateResponse("index.html", {"request": request, "user": current_user})
+    return templates.TemplateResponse("index.html", {"request": request, "user": current_user, "show_fechamento": show_fechamento_for(current_user), "tem_funcao_analise_custo": current_user.tem_funcao_analise_custo})
 
 @app.get("/orcamentos", response_class=HTMLResponse)
 async def orcamentos_page(request: Request, current_user: User = Depends(verify_page_access)):
@@ -295,6 +305,12 @@ async def salvar_orcamento_endpoint(
         
         session.add(cliente_existente)
         session.commit()
+
+        if current_user.contador_orcamento_override is not None:
+            current_user.contador_orcamento_override = None
+            session.add(current_user)
+            session.commit()
+            
         session.refresh(cliente_existente)
         
         cliente_para_orcamento = cliente_existente
@@ -418,7 +434,6 @@ def atualizar_data_expiracao(user: User, session: Session):
     session.add(user)
     session.commit()
 
-# ROTA DE API: Lista todos os orçamentos (para o JavaScript)
 @app.get("/api/orcamentos/")
 def listar_orcamentos_api(
     user: User = Depends(get_current_user), 
@@ -426,28 +441,70 @@ def listar_orcamentos_api(
 ):
     statement = (
         select(Orcamento)
-        # O .options(selectinload...) não é mais estritamente necessário aqui, 
-        # mas não prejudica se ficar.
-        .options(selectinload(Orcamento.cliente)) 
         .where(Orcamento.user_id == user.id)
         .order_by(Orcamento.id.desc())
     )
     orcamentos = session.exec(statement).all()
     resultado = []
     for o in orcamentos:
-        # --- CORREÇÃO APLICADA AQUI ---
-        # Agora, nós SEMPRE usamos os campos do próprio orçamento.
-        # Eles representam a "foto" correta dos dados no momento da última atualização.
+        
+        # --- LÓGICA DE CÁLCULO ADICIONADA ---
+        total_servicos = 0
+        total_materiais = 0
+        # O campo 'itens' é um JSON, então o tratamos como um dicionário
+        for item in o.itens:
+            # Garantimos que os campos existem e são numéricos
+            quantidade = int(item.get('quantidade', 0))
+            valor = float(item.get('valor', 0))
+            
+            if item.get('tipo') == 'servico':
+                total_servicos += quantidade * valor
+            elif item.get('tipo') == 'material':
+                total_materiais += quantidade * valor
+        # --- FIM DA LÓGICA ---
+        
         resultado.append({
             "id": o.id,
             "numero": o.numero,
-            "nome": o.nome_cliente,  # Usa diretamente o nome salvo NO orçamento.
+            "nome": o.nome_cliente,
             "data_emissao": o.data_emissao,
             "total_geral": o.total_geral,
-            "telefone": o.telefone_cliente # Usa diretamente o telefone salvo NO orçamento.
+            "telefone": o.telefone_cliente,
+            "total_servicos": total_servicos,       # <- Novo campo
+            "total_materiais": total_materiais,     # <- Novo campo
         })
     return resultado
 
+@app.get("/api/orcamento-detalhes/{orcamento_id}")
+def get_orcamento_detalhes(
+    orcamento_id: int,
+    user: User = Depends(get_current_user), 
+    session: Session = Depends(get_db_session)
+):
+    """ Busca os detalhes de um único orçamento para garantir dados atualizados. """
+    orcamento = session.get(Orcamento, orcamento_id)
+    
+    if not orcamento or orcamento.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado.")
+    
+    # Reutilizamos a mesma lógica de cálculo da lista para consistência
+    total_servicos = 0
+    total_materiais = 0
+    for item in orcamento.itens:
+        quantidade = int(item.get('quantidade', 0))
+        valor = float(item.get('valor', 0))
+        if item.get('tipo') == 'servico':
+            total_servicos += quantidade * valor
+        elif item.get('tipo') == 'material':
+            total_materiais += quantidade * valor
+            
+    return {
+        "id": orcamento.id,
+        "numero": orcamento.numero,
+        "total_geral": orcamento.total_geral,
+        "total_servicos": total_servicos,
+        "total_materiais": total_materiais,
+    }
 
 
 # --- ROTAS DA API PARA ITENS DE CATÁLOGO ---
@@ -538,6 +595,40 @@ async def gerar_e_salvar_pdf_protegido(
     pdf_bytes = pdf_buffer.getvalue()
 
     nome_arquivo = f"{orcamento.status.replace(' ', '_')}_{orcamento.numero}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{nome_arquivo}"'}
+    )
+
+@app.get("/orcamento/{orcamento_id}/relatorio-custo", response_class=StreamingResponse)
+async def gerar_pdf_relatorio_custo_endpoint(
+    orcamento_id: int,
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    GERA O PDF DE RELATÓRIO DE CUSTO INTERNO.
+    Apenas o usuário com a permissão pode acessar.
+    """
+    if not current_user.tem_funcao_analise_custo:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado.")
+    
+    statement = select(Orcamento).where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
+    orcamento = session.exec(statement).first()
+
+    if not orcamento:
+        raise HTTPException(status_code=404, detail="Orçamento não encontrado.")
+    
+    # Verifica se a análise já foi preenchida
+    if orcamento.valor_obra_total is None:
+         raise HTTPException(status_code=400, detail="A análise de custo para este orçamento ainda não foi preenchida.")
+
+    pdf_buffer = io.BytesIO()
+    gerar_pdf_relatorio_custo(file_path=pdf_buffer, orcamento=orcamento)
+    pdf_bytes = pdf_buffer.getvalue()
+
+    nome_arquivo = f"Relatorio_Custo_Orc_{orcamento.numero}.pdf"
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
@@ -637,7 +728,7 @@ async def editar_orcamento_page(
     # O resto do seu código já estava correto
     return templates.TemplateResponse(
         "editar_orcamento.html", 
-        {"request": request, "user": current_user, "orcamento": orcamento}
+        {"request": request, "user": current_user, "orcamento": orcamento, "show_fechamento": show_fechamento_for(current_user),"tem_funcao_analise_custo": current_user.tem_funcao_analise_custo}
     )
 
 # SUBSTITUA A FUNÇÃO ATUALIZAR INTEIRA POR ESTA:
@@ -760,41 +851,74 @@ def deletar_orcamento(
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@app.get("/api/proximo-numero/")
-def get_proximo_numero(current_user: User = Depends(get_current_user), session: Session = Depends(get_db_session)):
-    # Busca o último orçamento DESTE usuário, ordenando pelo número como inteiro
+@app.get("/api/orcamento/{orcamento_id}/analise-custo", status_code=status.HTTP_200_OK)
+def get_dados_analise_custo(
+    orcamento_id: int,
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Busca e retorna os dados da análise de custo de um orçamento específico,
+    se eles existirem.
+    """
+    # Verifica se o usuário tem a permissão para usar a função
+    if not current_user.tem_funcao_analise_custo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Você não tem permissão para acessar esta funcionalidade."
+        )
 
-    ultimo_orcamento = session.exec(
-        select(Orcamento)
-        .where(Orcamento.user_id == current_user.id)
-        .order_by(cast(Orcamento.numero, Integer).desc())
-    ).first()
+    orcamento = session.get(Orcamento, orcamento_id)
     
-    proximo_numero_int = (int(ultimo_orcamento.numero) if ultimo_orcamento else 0) + 1
-    return {"proximo_numero": str(proximo_numero_int).zfill(4)}
+    # Verifica se o orçamento existe e se pertence ao usuário logado
+    if not orcamento or orcamento.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Orçamento não encontrado.")
+    
+    # Retorna apenas os campos relevantes em um dicionário
+    return {
+        "valor_obra_total": orcamento.valor_obra_total,
+        "percentual_imposto_servico": orcamento.percentual_imposto_servico,
+        "percentual_imposto_material": orcamento.percentual_imposto_material,
+        "custo_mao_de_obra": orcamento.custo_mao_de_obra,
+        "custo_materiais": orcamento.custo_materiais,
+        "despesas_extras": orcamento.despesas_extras or [],
+    }
+
+@app.get("/api/proximo-numero/")
+def get_proximo_numero(response: Response, current_user: User = Depends(get_current_user), session: Session = Depends(get_db_session)):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    
+    override_base = current_user.contador_orcamento_override
+    if override_base is not None:
+        proximo_numero_final = override_base + 1
+        return {"proximo_numero": str(proximo_numero_final).zfill(4)}
+
+    # Se não há override, faz a lógica normal do banco
+    ultimo_orcamento_db = session.exec(
+        select(Orcamento).where(Orcamento.user_id == current_user.id).order_by(cast(Orcamento.numero, Integer).desc())
+    ).first()
+    proximo_numero_natural = (int(ultimo_orcamento_db.numero) + 1) if ultimo_orcamento_db and ultimo_orcamento_db.numero.isdigit() else 1
+    return {"proximo_numero": str(proximo_numero_natural).zfill(4)}
     
 @app.post("/api/resetar-contador/")
 async def resetar_contador_endpoint(
-    novo_inicio: int = Form(...)
+    novo_inicio: int = Form(...),
+    current_user: User = Depends(get_current_user), # Pega o usuário logado
+    session: Session = Depends(get_db_session)      # Pega a sessão do banco
 ):
     """
-    Redefine o contador de orçamentos para um novo valor inicial.
-    Se o valor for 0, o próximo orçamento será o 1.
+    Redefine o contador de orçamentos para um novo valor inicial para o usuário logado.
     """
     if novo_inicio < 0:
         raise HTTPException(status_code=400, detail="O número inicial não pode ser negativo.")
     
-    file_path = "orcamento_number.txt"
-    try:
-        # Escreve o novo valor inicial no arquivo.
-        # O próximo get_next_orcamento_number() lerá este valor.
-        with open(file_path, "w") as f:
-            f.write(str(novo_inicio))
-        
-        return {"message": f"Contador de orçamentos reiniciado com sucesso. O próximo número será {novo_inicio + 1}."}
+    # Salva o novo valor no campo do usuário
+    current_user.contador_orcamento_override = novo_inicio
+    session.add(current_user)
+    session.commit()
     
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao resetar o contador: {e}")
+    proximo_numero = novo_inicio + 1
+    return {"message": f"Contador reiniciado com sucesso. O próximo número será {str(proximo_numero).zfill(4)}."}
 
 @app.post("/api/users/", status_code=status.HTTP_201_CREATED)
 def create_user(
@@ -868,6 +992,20 @@ class ClienteUpdate(BaseModel):
     bairro: Optional[str] = None
     cidade_uf: Optional[str] = None
     contatos: List[ContatoUpdate] = []
+    
+class DespesaExtraItem(BaseModel):
+    descricao: str
+    valor: float    
+
+class AnaliseCustoUpdate(BaseModel):
+    valor_obra_total: float
+    percentual_imposto_servico: float
+    percentual_imposto_material: float
+    custo_mao_de_obra: float
+    custo_materiais: float 
+    despesas_extras: List[DespesaExtraItem] = [] 
+
+
 
 # --- ROTAS DA API PARA CLIENTES ---
 # SUBSTITUA esta função de API inteira no app.py
@@ -912,6 +1050,62 @@ def get_orcamento_contatos(
             telefones_adicionados.add(telefone_normalizado)
             
     return contatos_unicos
+
+@app.post("/api/orcamento/{orcamento_id}/analise-custo", status_code=status.HTTP_200_OK)
+def salvar_dados_analise_custo(
+    orcamento_id: int,
+    dados: AnaliseCustoUpdate, # Usa o modelo Pydantic para validar os dados
+    session: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Salva ou atualiza os dados da análise de custo de um orçamento.
+    """
+    if not current_user.tem_funcao_analise_custo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Você não tem permissão para salvar estas informações."
+        )
+        
+    orcamento_db = session.get(Orcamento, orcamento_id)
+    if not orcamento_db or orcamento_db.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Orçamento não encontrado.")
+    
+    # Atualiza os campos do orçamento com os dados recebidos
+    orcamento_db.valor_obra_total = dados.valor_obra_total
+    orcamento_db.percentual_imposto_servico = dados.percentual_imposto_servico
+    orcamento_db.percentual_imposto_material = dados.percentual_imposto_material
+    orcamento_db.custo_mao_de_obra = dados.custo_mao_de_obra
+    orcamento_db.custo_materiais = dados.custo_materiais
+    orcamento_db.despesas_extras = [item.model_dump() for item in dados.despesas_extras]
+
+    # --- RECÁLCULO DO LUCRO COM IMPOSTOS SEPARADOS ---
+    # 1. Pega os totais brutos de serviços e materiais dos itens do orçamento
+    total_servicos_bruto = sum(item['valor'] * item['quantidade'] for item in orcamento_db.itens if item['tipo'] == 'servico')
+    total_materiais_bruto = sum(item['valor'] * item['quantidade'] for item in orcamento_db.itens if item['tipo'] == 'material')
+    
+    # 2. Calcula o valor de cada imposto separadamente
+    valor_imposto_servico = total_servicos_bruto * (dados.percentual_imposto_servico / 100)
+    valor_imposto_material = total_materiais_bruto * (dados.percentual_imposto_material / 100)
+    
+    # 3. Calcula o valor líquido subtraindo ambos impostos da receita bruta total
+    receita_liquida = dados.valor_obra_total - valor_imposto_servico - valor_imposto_material
+    
+    # 4. Calcula os custos
+    custo_despesas = sum(item.valor for item in dados.despesas_extras)
+    custo_total = dados.custo_mao_de_obra + dados.custo_materiais + custo_despesas
+    
+    # 5. Calcula o lucro final
+    lucro_bruto = receita_liquida - custo_total
+    
+    orcamento_db.lucro_previsto = lucro_bruto
+    orcamento_db.valor_dizimo = lucro_bruto * 0.10 if lucro_bruto > 0 else 0
+
+    session.add(orcamento_db)
+    session.commit()
+    
+    return {"message": "Análise de custo salva com sucesso!"}
+
 
 @app.get("/api/clientes/", response_model=List[ClienteComContatosResponse]) 
 def listar_clientes_api(

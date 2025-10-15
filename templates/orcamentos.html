@@ -5,6 +5,8 @@
   <title>Meus Orçamentos</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@popperjs/core@2"></script>
+  <script src="https://unpkg.com/tippy.js@6"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
@@ -121,7 +123,8 @@
                   <h4 class="text-lg font-semibold text-gray-800">Reiniciar Contagem</h4>
                 </div>
                 <div class="p-6 space-y-4">
-                  <p class="text-sm text-gray-600">Defina o número a partir do qual a contagem de orçamentos irá continuar. Se digitar '0', o próximo será o Nº 0001.</p>
+                  <p class="text-sm text-gray-600">Para reiniciar a contagem, digite o número do **último** orçamento gerado. Por exemplo, se digitar '0', o próximo orçamento a ser criado será o Nº 0001. Se digitar '50', o próximo será o 51.</p>
+                    <label for="novo_numero_inicial" class="text-sm font-medium text-gray-700 whitespace-nowrap">Último Nº gerado:</label>
                   <div class="flex items-center gap-3">  
                     <label for="novo_numero_inicial" class="text-sm font-medium text-gray-700 whitespace-nowrap">Iniciar em:</label>
                     <input type="number" id="novo_numero_inicial" value="0" class="w-full h-10 text-center font-semibold border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400">
@@ -398,7 +401,157 @@
       </div>
   </template>
 
+  <template id="despesa-dinamica-template">
+    <div class="flex items-center gap-2 despesa-dinamica-row">
+        <input type="text" placeholder="Descrição (ex: Deslocamento)" class="despesa-descricao w-2/3 px-2 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+        <input type="text" inputmode="decimal" placeholder="R$ 0,00" class="despesa-valor w-1/3 px-2 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 text-right">
+        <button type="button" onclick="removerLinhaDespesa(this)" class="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full" title="Remover Despesa">
+            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>
+        </button>
+    </div>
+  </template>
+
+  <div id="modal-analise-custo" class="hidden fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div id="modal-analise-custo-box" class="bg-gray-50 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all -translate-y-10 opacity-0 duration-300 flex flex-col max-h-[90vh]">
+        
+        <!-- Cabeçalho -->
+        <div class="flex items-center justify-between p-4 border-b bg-white rounded-t-xl sticky top-0 z-10">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="text-lg font-semibold text-gray-800 truncate">Análise de Lucratividade</h3>
+                    <p id="analise-custo-titulo-orcamento" class="text-sm text-gray-500">Orçamento #0000</p>
+                </div>
+            </div>
+            <button onclick="fecharModalAnaliseCusto()" class="text-gray-400 hover:text-gray-600 text-3xl flex-shrink-0 ml-4">×</button>
+            <input type="hidden" id="analise-custo-orcamento-id">
+        </div>
+
+        <!-- Novo corpo do modal com seções claras -->
+          <div class="p-4 sm:p-6 space-y-6 overflow-y-auto overscroll-contain">
+            <!-- Seção de Entradas do Usuário -->
+            <div class="space-y-4">
+
+                <div class="bg-white p-4 rounded-lg border shadow-sm">
+                    <h4 class="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path d="M8.433 7.418c.158-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM10 8c0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267v-1.7c.22.07.409.164.567.267C9.93 7.66 10 7.886 10 8z" /><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v1.077a4.602 4.602 0 00-1.74.885c-.41.254-.74.634-.908 1.1a1 1 0 101.817.81c.046-.1.1-.184.17-.253a2.305 2.305 0 011.66- .594V11a1 1 0 102 0v-1.077a4.602 4.602 0 001.74-.885c.41-.254.74-.634.908-1.1a1 1 0 10-1.817-.81c-.046.1-.1.184-.17.253a2.305 2.305 0 01-1.66.594V5z" clip-rule="evenodd" /></svg>
+                        Receita Bruta do Orçamento
+                      <span class="ml-auto" data-tippy-content="Este é o valor total do orçamento, servindo como ponto de partida para a análise de custos.">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-help" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                          </svg>
+                      </span>
+                    </h4>
+                    <input type="text" id="ac-valor-obra" readonly class="analise-custo-input mt-1 w-full p-3 text-lg font-bold border border-gray-200 bg-gray-100 rounded-md shadow-inner" placeholder="R$ 0,00">
+                </div>
+
+                <!-- Card 2: Todas as Deduções e Custos -->
+                <div class="bg-white p-4 rounded-lg border shadow-sm">
+                    <h4 class="font-semibold text-gray-700 mb-3 border-b pb-2 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clip-rule="evenodd" /></svg>
+                        Deduções & Custos da Obra
+                    </h4>
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label for="ac-mao-de-obra" class="text-sm font-medium text-gray-600 flex items-center">
+                              Custo Mão de Obra (R$)
+                              <span class="ml-1" data-tippy-content="Insira o custo real pago pela mão de obra, não o valor cobrado no orçamento.">
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>
+                              </span>
+                            </label>
+                            <input type="text" id="ac-mao-de-obra" inputmode="decimal" class="analise-custo-input mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="R$ 0,00">
+                        </div>
+                        <div>
+                            <label for="ac-materiais" class="text-sm font-medium text-gray-600">Custo Materiais (R$)</label>
+                            <input type="text" id="ac-materiais" inputmode="decimal" class="analise-custo-input mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="R$ 0,00">
+                        </div>
+                        <div>
+                            <label for="ac-imposto-servico" class="text-sm font-medium text-gray-600">Imposto Serviço (%)</label>
+                        <input type="text" id="ac-imposto-servico" inputmode="decimal" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="0,00 %">
+                    </div>
+                    <div>
+                        <label for="ac-imposto-material" class="text-sm font-medium text-gray-600">Imposto Material (%)</label>
+                        <input type="text" id="ac-imposto-material" inputmode="decimal" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="0,00 %">
+                        </div>
+                        <div class="sm:col-span-2 space-y-2" id="dynamic-expenses-area">
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm font-medium text-gray-600">Outras Despesas</label>
+                                <button type="button" onclick="adicionarLinhaDespesa()" class="px-2 py-1 text-xs font-semibold text-white bg-indigo-500 rounded-md hover:bg-indigo-600 flex items-center gap-1">
+                                    <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
+                                    Adicionar
+                                </button>
+                            </div>
+                            <div id="despesas-dinamicas-container" class="space-y-2 border-t pt-2">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Seção de Resultados (Calculados) -->
+            <div class="space-y-3">
+                <h4 class="font-semibold text-gray-700 pt-4 border-t">Resultado da Análise</h4>
+
+                <!-- Custo Total -->
+                <div class="flex justify-between items-center text-sm p-3 bg-white rounded-md border">
+                    <span class="font-medium text-gray-600 flex items-center">
+                      Soma de custos/impostos
+                      <span class="ml-1" data-tippy-content="Este é o resultado da soma de todos os campos do card 'Deduções & Custos da Obra'.">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>
+                      </span>
+                    </span>
+                    <span id="ac-resultado-custo-total" class="font-semibold text-lg text-red-600">R$ 0,00</span>
+                </div>
+
+                <!-- Card de Lucro com ID para mudança de cor -->
+                <div id="ac-lucro-card" class="p-4 bg-green-600 text-white rounded-lg shadow-lg flex items-center justify-between mt-2 transition-colors duration-300">
+                    <span class="font-bold text-xl flex items-center">
+                      Lucro Líquido
+                      <span class="ml-1" data-tippy-content="Resultado final: Receita Bruta - Soma de todos os custos e impostos.">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white/70 hover:text-white cursor-help" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>
+                      </span>
+                      :
+                    </span>
+                    <span id="ac-resultado-lucro" class="font-extrabold text-2xl whitespace-nowrap">R$ 0,00</span>
+                </div>
+                
+                <!-- Card Opcional do Dízimo -->
+                <div class="p-3 bg-gray-100 rounded-lg flex items-center justify-between border">
+                    <span class="text-sm font-medium text-gray-800">Valor Sugerido para Dízimo (10%)</span>
+                    <span id="ac-resultado-dizimo" class="font-bold text-lg text-gray-700">R$ 0,00</span>
+                </div>
+            </div>
+
+        <!-- Rodapé com Botões -->
+        <div class="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 p-4 border-t bg-gray-100 rounded-b-xl sticky bottom-0 z-10">
+            <!-- Botão Secundário (Relatório) -->
+            <button onclick="gerarRelatorioCusto()" type="button" class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" />
+                </svg>
+                <span>Gerar PDF</span>
+            </button>
+            
+            <!-- Botão Principal (Salvar) -->
+            <button id="btn-salvar-analise" onclick="salvarAnaliseCusto()" type="button" class="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+              <svg id="btn-salvar-analise-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M5 4a2 2 0 012-2h6.293a2 2 0 011.414.586l2.828 2.828A2 2 0 0118 6.707V16a2 2 0 01-2 2H7a2 2 0 01-2-2V4zm3 0a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V5a1 1 0 00-1-1H8z" />
+              </svg>
+              <div id="btn-salvar-analise-spinner" class="hidden h-5 w-5 border-2 border-t-indigo-200 border-white rounded-full animate-spin"></div>
+              <span id="btn-salvar-analise-text">Salvar Análise</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+const modalAnaliseCusto = document.getElementById('modal-analise-custo');
+const modalAnaliseCustoBox = document.getElementById('modal-analise-custo-box');
+let orcamentosCarregados = [];  
 const modalEmail = document.getElementById('modal-email');
 const modalEmailBox = document.getElementById('modal-email-box');
 const sidebarPanel = document.getElementById('sidebar-panel');
@@ -423,7 +576,45 @@ const userSelect = document.getElementById('access-control-user-select');
 const userStatusDetails = document.getElementById('user-status-details');
 const userAccessActions = document.getElementById('user-access-actions');
 const statusAcessoEl = document.getElementById('status-acesso');
+let analiseJaFoiSalva = false;
+let totalServicosBruto = 0;  
+let totalMateriaisBruto = 0;
 
+// Funções para Despesas Dinâmicas
+window.adicionarLinhaDespesa = function() {
+    const template = document.getElementById('despesa-dinamica-template');
+    const container = document.getElementById('despesas-dinamicas-container');
+    const clone = template.content.cloneNode(true);
+    const valorInput = clone.querySelector('.despesa-valor');
+    
+    // Adiciona os mesmos listeners de formatação e cálculo aos novos inputs
+    valorInput.addEventListener('input', () => {
+        let value = valorInput.value.replace(/\D/g, "");
+        if (value) {
+            value = (parseFloat(value) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            valorInput.value = "R$ " + value;
+        } else {
+            valorInput.value = '';
+        }
+        calcularAnaliseCusto(); // Recalcula tudo a cada digitação
+    });
+
+    valorInput.addEventListener('blur', () => {
+        const numericValue = parseCurrency(valorInput.value);
+        valorInput.value = formatCurrency(numericValue);
+    });
+
+    // Adiciona o listener para o input de descrição também recalcular
+    const descricaoInput = clone.querySelector('.despesa-descricao');
+    descricaoInput.addEventListener('input', calcularAnaliseCusto);
+
+    container.appendChild(clone);
+}
+
+window.removerLinhaDespesa = function(button) {
+    button.closest('.despesa-dinamica-row').remove();
+    calcularAnaliseCusto(); // Recalcula tudo após remover uma linha
+}
 
 // --- LÓGICA DE CARREGAMENTO DOS ORÇAMENTOS ---
 async function carregarOrcamentos() {
@@ -433,32 +624,55 @@ async function carregarOrcamentos() {
         const res = await fetch('/api/orcamentos/');
         if (!res.ok) throw new Error('Falha ao carregar os dados.');
         const orcamentos = await res.json();
+        orcamentosCarregados = orcamentos;
         lista.innerHTML = "";
         if (!orcamentos.length) {
             lista.innerHTML = `<div class="py-8 text-center text-gray-400">Nenhum orçamento encontrado.</div>`;
             return;
         }
         orcamentos.forEach(orc => {
-            const totalFormatado = parseFloat(orc.total_geral).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            lista.innerHTML += `
-            <div id="orcamento-card-${orc.id}" class="bg-white shadow-md rounded-lg px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-gray-200">
-                <div class="flex items-center gap-4 flex-grow min-w-0">
-                    <span class="font-bold text-emerald-600">#${String(orc.numero).padStart(4, '0')}</span>
-                    <span class="text-gray-800 truncate" title="${orc.nome}">${orc.nome}</span>
-                    <span class="text-xs text-gray-400 whitespace-nowrap">(${orc.data_emissao})</span>
-                </div>
-                <div class="flex items-center justify-between flex-grow sm:flex-grow-0 sm:w-80">
-                    <span class="text-emerald-600 font-bold text-lg">R$ ${totalFormatado}</span>
-                    <div class="flex items-center gap-2">
-                        <button onclick="editarOrcamento(${orc.id})" title="Editar Orçamento" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
-                        <button onclick="abrirModalStatusPDF(${orc.id})" title="Ver PDF" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" /></svg></button>
-                        <button onclick="abrirModalTipoDocumento(${orc.id}, 'email')" title="Enviar por E-mail" class="p-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" /><path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" /></svg>
-                        </button>
-                        <button onclick="abrirModalTipoDocumento(${orc.id}, 'whatsapp')" title="Enviar por WhatsApp" class="p-2 rounded bg-green-500 text-white hover:bg-green-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
-                        <button onclick="deletarOrcamento(${orc.id})" title="Excluir Orçamento" class="p-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
-                    </div>
-                </div>
+          const totalFormatado = parseFloat(orc.total_geral).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+          // Mantemos a lógica para o botão de análise condicional
+          const botaoAnalise = `
+              {% if user.tem_funcao_analise_custo %}
+              <button onclick="abrirModalAnaliseCusto(${orc.id})" title="Análise de Custo da Obra" class="p-2 rounded bg-yellow-400 text-yellow-900 hover:bg-yellow-500 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M2 3a1 1 0 011-1h14a1 1 0 011 1v1a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" />
+                      <path fill-rule="evenodd" d="M3 7h14v9a1 1 0 01-1 1H4a1 1 0 01-1-1V7zm2 2a1 1 0 011 1v4a1 1 0 11-2 0V10a1 1 0 011-1zm5 0a1 1 0 011 1v4a1 1 0 11-2 0V10a1 1 0 011-1zm4 1a1 1 0 10-2 0v4a1 1 0 102 0V11z" clip-rule="evenodd" />
+                  </svg>
+              </button>
+              {% endif %}
+          `;
+
+          // ===== NOVO TEMPLATE HTML DO CARD =====
+          lista.innerHTML += `
+          <div id="orcamento-card-${orc.id}" class="bg-white shadow-md rounded-lg p-3 flex flex-col space-y-2 border border-gray-200">
+              
+              <!-- 1. LINHA SUPERIOR: Informações do Orçamento -->
+              <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span class="font-bold text-lg text-emerald-600">#${String(orc.numero).padStart(4, '0')}</span>
+                  <span class="font-semibold text-gray-800 truncate">${orc.nome}</span>
+                  <span class="text-xs text-gray-400 whitespace-nowrap">(${orc.data_emissao})</span>
+              </div>
+
+              <!-- 2. LINHA DO MEIO: Valor Total (Alinhado à Direita) -->
+              <div class="flex justify-start items-baseline mt-1">
+                <span class="text-xl font-bold text-emerald-600">R$ ${totalFormatado}</span>
+              </div>
+
+              <!-- 3. LINHA INFERIOR: Botões de Ação (Alinhados à Direita) -->
+              <div class="flex items-center gap-2 justify-end border-t border-gray-200 mt-2 pt-2">
+                  <button onclick="editarOrcamento(${orc.id})" title="Editar Orçamento" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
+                  <button onclick="abrirModalStatusPDF(${orc.id})" title="Ver PDF" class="p-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" /></svg></button>
+                  <button onclick="abrirModalTipoDocumento(${orc.id}, 'email')" title="Enviar por E-mail" class="p-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" /><path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" /></svg></button>
+                  
+                  ${botaoAnalise.trim()}
+
+                  <button onclick="abrirModalTipoDocumento(${orc.id}, 'whatsapp')" title="Enviar por WhatsApp" class="p-2 rounded bg-green-500 text-white hover:bg-green-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.789 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg></button>
+                  <button onclick="deletarOrcamento(${orc.id})" title="Excluir Orçamento" class="p-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
+              </div>
+          </div>
             </div>`;
         });
     } catch (e) {
@@ -468,6 +682,272 @@ async function carregarOrcamentos() {
 }
 
 // --- FUNÇÕES GERAIS ---
+
+window.abrirModalAnaliseCusto = async function(orcamentoId) {
+    // 1. ANTES DE TUDO: Buscamos os dados mais recentes do orçamento da nossa nova API
+    let orcamento;
+    try {
+        const orcamentoRes = await fetch(`/api/orcamento-detalhes/${orcamentoId}`);
+        if (!orcamentoRes.ok) {
+            throw new Error('Falha ao buscar detalhes atualizados do orçamento.');
+        }
+        orcamento = await orcamentoRes.json();
+        window.totalServicosBruto = orcamento.total_servicos || 0;
+        window.totalMateriaisBruto = orcamento.total_materiais || 0;
+    } catch (error) {
+        console.error(error);
+        alert("Não foi possível carregar os dados atualizados do orçamento. Tente atualizar a página.");
+        return;
+    }
+    
+    // Agora que temos os dados FRESCOS, o resto da função continua...
+
+    document.getElementById('analise-custo-orcamento-id').value = orcamentoId;
+    document.getElementById('analise-custo-titulo-orcamento').textContent = `Orçamento #${String(orcamento.numero).padStart(4, '0')}`;
+    
+    // Busca os dados da ANÁLISE (que pode ter sido salva antes)
+    try {
+      const response = await fetch(`/api/orcamento/${orcamentoId}/analise-custo`);
+      if (!response.ok) { throw new Error('Não foi possível carregar a análise salva.'); }
+      const dadosSalvos = await response.json();
+      
+      analiseJaFoiSalva = dadosSalvos.valor_obra_total !== null;
+      // Limpa todos os campos antes de preencher
+      document.getElementById('ac-mao-de-obra').value = '';
+      document.getElementById('ac-materiais').value = '';
+      document.getElementById('ac-imposto-servico').value = '';
+      document.getElementById('ac-imposto-material').value = '';
+      // Limpa o container de despesas antigas
+      document.getElementById('despesas-dinamicas-container').innerHTML = '';
+      
+      // Preenche o VALOR BRUTO com o dado ATUALIZADO
+      document.getElementById('ac-valor-obra').value = formatCurrency(orcamento.total_geral);
+      
+      // --- PREENCHIMENTO DOS CAMPOS DE CUSTO ---
+
+      document.getElementById('ac-mao-de-obra').value = dadosSalvos.custo_mao_de_obra ? formatCurrency(dadosSalvos.custo_mao_de_obra) : '';
+
+      if (dadosSalvos.custo_materiais != null) {
+          document.getElementById('ac-materiais').value = formatCurrency(dadosSalvos.custo_materiais);
+      } else {
+          document.getElementById('ac-materiais').value = formatCurrency(orcamento.total_materiais);
+      }
+
+      document.getElementById('ac-imposto-servico').value = dadosSalvos.percentual_imposto_servico ? dadosSalvos.percentual_imposto_servico.toFixed(2).replace('.', ',') + ' %' : '';
+      document.getElementById('ac-imposto-material').value = dadosSalvos.percentual_imposto_material ? dadosSalvos.percentual_imposto_material.toFixed(2).replace('.', ',') + ' %' : '';
+
+      // --- LÓGICA DE PREENCHIMENTO DAS DESPESAS EXTRAS (NO LOCAL CORRETO) ---
+      if (dadosSalvos.despesas_extras && dadosSalvos.despesas_extras.length > 0) {
+          dadosSalvos.despesas_extras.forEach(despesa => {
+              adicionarLinhaDespesa(); // Cria uma nova linha em branco
+              const container = document.getElementById('despesas-dinamicas-container');
+              const novaLinha = container.lastElementChild; // Pega a linha que acabamos de adicionar
+              if (novaLinha) {
+                  novaLinha.querySelector('.despesa-descricao').value = despesa.descricao;
+                  novaLinha.querySelector('.despesa-valor').value = formatCurrency(despesa.valor);
+              }
+          });
+      }
+      
+      // Abre o modal e calcula os resultados
+      calcularAnaliseCusto(); 
+      modalAnaliseCusto.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+      setTimeout(() => {
+          modalAnaliseCustoBox.classList.remove('-translate-y-10', 'opacity-0');
+          document.getElementById('ac-mao-de-obra').focus();
+      }, 50);
+
+    } catch (error) {
+        console.error("Erro ao buscar dados da análise:", error);
+        alert("Ocorreu um erro ao carregar os dados da análise. Tente novamente.");
+    }
+}
+
+function fecharModalAnaliseCusto() {
+    modalAnaliseCustoBox.classList.add('-translate-y-10', 'opacity-0');
+    setTimeout(() => {
+        modalAnaliseCusto.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden'); // <-- REMOVE A CLASSE
+    }, 300);
+}
+
+// --- Funções Auxiliares para Cálculo e Formatação ---
+function parseCurrency(value) {
+    if (typeof value !== 'string' || value.trim() === '') return 0;
+    // Remove "R$", pontos de milhar e substitui vírgula por ponto para conversão
+    return parseFloat(value.replace("R$", "").trim().replace(/\./g, "").replace(",", ".")) || 0;
+}
+
+function formatCurrency(value) {
+    if (isNaN(value) || value === null) value = 0;
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+// --- A Função Principal que faz a Mágica ---
+function calcularAnaliseCusto() {
+    // 1. Pega os valores dos inputs de CUSTO
+    const custoMaoDeObra = parseCurrency(document.getElementById('ac-mao-de-obra').value);
+    const custoMateriais = parseCurrency(document.getElementById('ac-materiais').value);
+    let totalDespesasExtras = 0;
+    document.querySelectorAll('.despesa-dinamica-row').forEach(row => {
+        totalDespesasExtras += parseCurrency(row.querySelector('.despesa-valor').value);
+    });
+
+    // 2. Pega os valores de IMPOSTO
+    const percImpostoServico = parseFloat(document.getElementById('ac-imposto-servico').value.replace(",", ".")) || 0;
+    const percImpostoMaterial = parseFloat(document.getElementById('ac-imposto-material').value.replace(",", ".")) || 0;
+    
+    // 3. Pega a RECEITA BRUTA
+    const receitaBrutaTotal = parseCurrency(document.getElementById('ac-valor-obra').value);
+    
+    // PRECISAMOS DOS VALORES BRUTOS SEPARADOS, QUE JÁ BUSCAMOS ANTES
+    // Acessamos de uma variável global que será definida ao abrir o modal
+    const valorImpostoServico = (window.totalServicosBruto || 0) * (percImpostoServico / 100);
+    const valorImpostoMaterial = (window.totalMateriaisBruto || 0) * (percImpostoMaterial / 100);
+
+    // 4. Calcula totais
+    const receitaLiquida = receitaBrutaTotal - valorImpostoServico - valorImpostoMaterial;
+    const custoTotal = custoMaoDeObra + custoMateriais + totalDespesasExtras;
+    const lucroLiquido = receitaLiquida - custoTotal;
+    const dizimo = lucroLiquido > 0 ? lucroLiquido * 0.10 : 0;
+    
+    // 5. Calcula o 'Soma de Todos os Custos e Impostos' para exibição
+    const somaDeTodasAsSaidas = custoTotal + valorImpostoServico + valorImpostoMaterial;
+
+    // 6. Atualiza a interface
+    document.getElementById('ac-resultado-custo-total').textContent = formatCurrency(somaDeTodasAsSaidas);
+    document.getElementById('ac-resultado-lucro').textContent = formatCurrency(lucroLiquido);
+    document.getElementById('ac-resultado-dizimo').textContent = formatCurrency(dizimo);
+
+    // 7. Feedback Visual (continua igual)
+    const lucroCard = document.getElementById('ac-lucro-card');
+    if (lucroLiquido >= 0) {
+        lucroCard.classList.remove('bg-red-600');
+        lucroCard.classList.add('bg-green-600');
+    } else {
+        lucroCard.classList.remove('bg-green-600');
+        lucroCard.classList.add('bg-red-600');
+    }
+}
+
+async function salvarAnaliseCusto() {
+    const orcamentoId = document.getElementById('analise-custo-orcamento-id').value;
+    
+    // Elementos do botão
+    const btn = document.getElementById('btn-salvar-analise');
+    const icon = document.getElementById('btn-salvar-analise-icon');
+    const spinner = document.getElementById('btn-salvar-analise-spinner');
+    const text = document.getElementById('btn-salvar-analise-text');
+
+    // Estado 1: "Salvando..."
+    btn.disabled = true;
+    icon.classList.add('hidden');
+    spinner.classList.remove('hidden');
+    text.textContent = 'Salvando...';
+    // Remove cores de feedback anteriores para garantir que o botão volte a ser índigo
+    btn.classList.remove('bg-emerald-500', 'bg-red-600');
+    btn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+
+    const despesasExtrasList = [];
+    document.querySelectorAll('.despesa-dinamica-row').forEach(row => {
+        const descricao = row.querySelector('.despesa-descricao').value.trim();
+        const valor = parseCurrency(row.querySelector('.despesa-valor').value);
+        if (descricao && valor > 0) {
+            despesasExtrasList.push({ descricao: descricao, valor: valor });
+        }
+    });
+
+    const dadosParaSalvar = {
+        valor_obra_total: parseCurrency(document.getElementById('ac-valor-obra').value),
+        percentual_imposto_servico: parseFloat(document.getElementById('ac-imposto-servico').value.replace(',', '.')) || 0,
+        percentual_imposto_material: parseFloat(document.getElementById('ac-imposto-material').value.replace(',', '.')) || 0,
+        custo_mao_de_obra: parseCurrency(document.getElementById('ac-mao-de-obra').value),
+        custo_materiais: parseCurrency(document.getElementById('ac-materiais').value),
+        despesas_extras: despesasExtrasList
+    };
+
+    try {
+        const response = await fetch(`/api/orcamento/${orcamentoId}/analise-custo`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(dadosParaSalvar),
+        });
+
+        if (!response.ok) {
+            const result = await response.json().catch(() => ({ detail: 'Erro de comunicação.' }));
+            throw new Error(result.detail || 'Erro ao salvar os dados.');
+        }
+        
+        // Estado 2: Sucesso
+        analiseJaFoiSalva = true; // Atualiza a flag para o botão Gerar PDF
+        
+        spinner.classList.add('hidden');
+        text.textContent = 'Salvo!';
+        
+        // Troca o SVG para o ícone de "check"
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" stroke="currentColor" fill="none" stroke-width="2"/>`; 
+        icon.classList.remove('hidden');
+        
+        // Muda a cor do botão para verde
+        btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+        btn.classList.add('bg-emerald-500');
+
+        // Volta ao estado normal após 1.5 segundos
+        setTimeout(() => {
+            btn.disabled = false;
+            text.textContent = 'Salvar Análise';
+            // Restaura o SVG original do ícone de disquete
+            icon.innerHTML = `<path d="M5 4a2 2 0 012-2h6.293a2 2 0 011.414.586l2.828 2.828A2 2 0 0118 6.707V16a2 2 0 01-2 2H7a2 2 0 01-2-2V4zm3 0a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V5a1 1 0 00-1-1H8z" />`;
+            btn.classList.remove('bg-emerald-500');
+            btn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+        }, 1500);
+
+    } catch (error) {
+        console.error("Erro ao salvar análise de custo:", error);
+        
+        // Estado 3: Erro
+        spinner.classList.add('hidden');
+        text.textContent = 'Erro ao Salvar';
+
+        // Troca o ícone para um "X" de erro
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" stroke="currentColor" fill="none" stroke-width="2"/>`;
+        icon.classList.remove('hidden');
+        
+        // Muda a cor do botão para vermelho
+        btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+        btn.classList.add('bg-red-600');
+
+        // Exibe o alerta com o erro
+        alert(`Ocorreu um erro: ${error.message}`);
+        
+        // Restaura o botão ao estado normal IMEDIATAMENTE após o usuário fechar o alert
+        btn.disabled = false;
+        text.textContent = 'Salvar Análise';
+        icon.innerHTML = `<path d="M5 4a2 2 0 012-2h6.293a2 2 0 011.414.586l2.828 2.828A2 2 0 0118 6.707V16a2 2 0 01-2 2H7a2 2 0 01-2-2V4zm3 0a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V5a1 1 0 00-1-1H8z" />`;
+        btn.classList.remove('bg-red-600');
+        btn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+    }
+}
+
+function gerarRelatorioCusto() {
+    const orcamentoId = document.getElementById('analise-custo-orcamento-id').value;
+    if (!orcamentoId) {
+        alert("ID do orçamento não encontrado.");
+        return;
+    }
+
+    // --- VERIFICAÇÃO SÍNCRONA USANDO NOSSA VARIÁVEL ---
+    if (!analiseJaFoiSalva) {
+        alert("Por favor, salve a análise pelo menos uma vez antes de gerar o relatório em PDF.");
+        return; 
+    }
+
+    // Como a verificação é instantânea, a chamada window.open acontece no mesmo
+    // evento do clique, e o navegador não deve bloqueá-la.
+    window.open(`/orcamento/${orcamentoId}/relatorio-custo`, '_blank');
+}
+
 window.editarOrcamento = function(id) { window.location.href = `/editar-orcamento/${id}`; }
 function isMobile() { return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent); }
 window.mascara = function(e, pattern) {
@@ -1131,6 +1611,68 @@ function inicializar() {
     document.getElementById('whatsapp-manual-input').addEventListener('input', (e) => mascara(e, '(##) #####-####'));
     userSelect.addEventListener('change', mostrarStatusUsuario);
 
+    modalAnaliseCusto.addEventListener('click', (e) => { 
+        if (e.target === modalAnaliseCusto) fecharModalAnaliseCusto(); 
+    });
+    
+    // Pega todos os inputs da nossa nova calculadora
+    const inputsAnaliseCusto = document.querySelectorAll('.analise-custo-input');
+
+    inputsAnaliseCusto.forEach(input => {
+        // Quando o usuário DIGITA, recalcula tudo em tempo real
+        input.addEventListener('input', () => {
+            // Se o campo for de porcentagem, permite vírgula
+            if (input.id !== 'ac-imposto') {
+                 // Máscara de moeda simples
+                let value = input.value.replace(/\D/g, "");
+                if (value) {
+                    value = (parseFloat(value) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                    input.value = "R$ " + value;
+                } else {
+                    input.value = '';
+                }
+            }
+            calcularAnaliseCusto();
+        });
+        
+        // Quando o usuário CLICA FORA, garante a formatação
+        input.addEventListener('blur', () => {
+             if (input.id !== 'ac-imposto') {
+                const numericValue = parseCurrency(input.value);
+                input.value = formatCurrency(numericValue);
+             } else {
+                const percValue = parseFloat(input.value.replace(',','.')) || 0;
+                input.value = percValue.toFixed(2).replace('.',',') + ' %';
+             }
+        });
+    });
+
+    const camposDePorcentagem = [
+        document.getElementById('ac-imposto-servico'), 
+        document.getElementById('ac-imposto-material')
+    ];
+
+    camposDePorcentagem.forEach(input => {
+        if (!input) return; // Se o elemento não existir, ignora
+
+        // Ao digitar, recalcula
+        input.addEventListener('input', calcularAnaliseCusto);
+
+        // Ao sair do campo (blur), garante a formatação com " %"
+        input.addEventListener('blur', () => {
+             // Pega o valor, substitui vírgula por ponto para o cálculo,
+             // e define 0 se o campo estiver vazio ou inválido.
+             const percValue = parseFloat(input.value.replace(',', '.')) || 0;
+             // Formata de volta para o padrão brasileiro com duas casas decimais e o símbolo de porcentagem.
+             input.value = percValue.toFixed(2).replace('.', ',') + ' %';
+        });
+
+        // Ao focar (entrar) no campo, remove o " %" para facilitar a edição.
+        input.addEventListener('focus', () => {
+            input.value = input.value.replace(' %', '').trim();
+        });
+    });
+
     btnConfirmarTipoDocumento.addEventListener('click', async () => {
         const orcamentoId = tipoDocumentoOrcamentoIdInput.value;
         const tipoDocumento = document.querySelector('input[name="tipo_documento_escolha"]:checked').value;
@@ -1211,6 +1753,7 @@ function inicializar() {
     
     carregarOrcamentos();
     setupSidebarNavigation();
+    tippy('[data-tippy-content]');
 }
 
 document.addEventListener('DOMContentLoaded', inicializar);

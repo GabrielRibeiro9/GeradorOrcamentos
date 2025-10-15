@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Any
 from sqlmodel import Field, SQLModel, JSON, Column, Relationship
 from datetime import datetime
 import json
@@ -9,6 +9,7 @@ class Item(SQLModel, table=True):
     tipo: str
     nome: str
     valor: float
+    ncm: Optional[str] = Field(default=None, index=True)
     user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     user: Optional["User"] = Relationship(back_populates="itens")
 
@@ -23,6 +24,9 @@ class User(SQLModel, table=True):
 
     plano_ilimitado: bool = Field(default=False)          # ADM pode liberar acesso infinito
     data_expiracao: Optional[datetime] = Field(default=None)
+    tem_funcao_analise_custo: bool = Field(default=False)
+
+    contador_orcamento_override: Optional[int] = Field(default=None)
     
     # --- Relacionamentos existentes (não mude) ---
     itens: List["Item"] = Relationship(back_populates="user")
@@ -73,7 +77,16 @@ class Orcamento(SQLModel, table=True):
     observacoes: Optional[str] = Field(default=None)
     status: Optional[str] = Field(default="Orçamento", index=True)
     contatos_extras: List["ContatoOrcamento"] = Relationship(back_populates="orcamento", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
-    
+    despesas_extras: Optional[Any] = Field(default=None, sa_column=Column(JSON))
+
+    valor_obra_total: Optional[float] = Field(default=None)
+    percentual_imposto_servico: Optional[float] = Field(default=None)
+    percentual_imposto_material: Optional[float] = Field(default=None)
+    custo_mao_de_obra: Optional[float] = Field(default=None)
+    custo_materiais: Optional[float] = Field(default=None)
+    lucro_previsto: Optional[float] = Field(default=None)
+    valor_dizimo: Optional[float] = Field(default=None)
+
     user_id: Optional[int] = Field(default=None, foreign_key="user.id")
     user: Optional["User"] = Relationship(back_populates="orcamentos")
 
