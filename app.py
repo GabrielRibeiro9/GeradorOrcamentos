@@ -305,11 +305,6 @@ async def salvar_orcamento_endpoint(
         
         session.add(cliente_existente)
         session.commit()
-
-        if current_user.contador_orcamento_override is not None:
-            current_user.contador_orcamento_override = None
-            session.add(current_user)
-            session.commit()
             
         session.refresh(cliente_existente)
         
@@ -318,40 +313,55 @@ async def salvar_orcamento_endpoint(
 
     # CASO 2: Um cliente NOVO está sendo criado e salvo
     elif not cliente_id_str and nome_cliente and salvar_cliente_flag:
-        cliente_novo = Cliente(
-            nome=nome_cliente,
-            telefone=form_data.get("telefone"),
-            cep=form_data.get("cep"),
-            logradouro=form_data.get("logradouro"),
-            numero_casa=form_data.get("numero_casa"),
-            complemento=form_data.get("complemento"),
-            bairro=form_data.get("bairro"),
-            cidade_uf=form_data.get("cidade_uf"),
-            user_id=current_user.id
+        # --- INÍCIO DA CORREÇÃO ---
+        # 1. Verifica se um cliente com o mesmo nome já existe (ignorando maiúsculas/minúsculas)
+        statement = select(Cliente).where(
+            func.lower(Cliente.nome) == func.lower(nome_cliente),
+            Cliente.user_id == current_user.id
         )
-        session.add(cliente_novo)
-        session.commit() # Salva o cliente para obter um ID
-        session.refresh(cliente_novo)
+        cliente_existente = session.exec(statement).first()
 
-        # Agora cria os contatos vinculados ao novo cliente
+        target_cliente = cliente_existente or Cliente(user_id=current_user.id)
+        
+        # 2. Atualiza os dados do cliente (seja ele novo ou existente) com os dados do formulário
+        target_cliente.nome = nome_cliente
+        target_cliente.telefone = form_data.get("telefone")
+        target_cliente.cep = form_data.get("cep")
+        target_cliente.logradouro = form_data.get("logradouro")
+        target_cliente.numero_casa = form_data.get("numero_casa")
+        target_cliente.complemento = form_data.get("complemento")
+        target_cliente.bairro = form_data.get("bairro")
+        target_cliente.cidade_uf = form_data.get("cidade_uf")
+
+        # Se o cliente já existia, carrega os contatos para poder limpá-los
+        if cliente_existente:
+             session.refresh(target_cliente, attribute_names=["contatos"])
+             for contato in target_cliente.contatos:
+                 session.delete(contato)
+
+        session.add(target_cliente)
+        session.commit()
+        session.refresh(target_cliente)
+
+        # 3. Adiciona os novos contatos (a lógica original)
         for contato_info in contatos_data:
             session.add(Contato(
                 nome=contato_info['nome'],
                 telefone=contato_info['telefone'],
                 email=contato_info.get('email'),
-                cliente_id=cliente_novo.id
+                cliente_id=target_cliente.id
             ))
-
+        
         session.commit()
-        session.refresh(cliente_novo)
+        session.refresh(target_cliente)
 
-        cliente_para_orcamento = cliente_novo
-        cliente_id_para_orcamento = cliente_novo.id
+        cliente_para_orcamento = target_cliente
+        cliente_id_para_orcamento = target_cliente.id
 
     # CASO 3: Um cliente existente foi selecionado, mas NENHUMA alteração foi feita/salva
     elif cliente_id_str:
         cliente_para_orcamento = session.get(Cliente, int(cliente_id_str))
-        cliente_id_para_orcamento = cliente_para_orcamento.id    
+        cliente_id_para_orcamento = cliente_para_orcamento.id     
 
     # --- LÓGICA DO ORÇAMENTO (como já estava)
     itens_data = json.loads(form_data.get("itens"))
@@ -404,6 +414,11 @@ async def salvar_orcamento_endpoint(
 
     session.add(orcamento_db)
     session.commit()
+
+    if current_user.contador_orcamento_override is not None:
+        current_user.contador_orcamento_override = None
+        session.add(current_user)
+        session.commit()
 
     admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
     # A verificação só se aplica se o usuário não for admin e não tiver plano vitalício
@@ -886,39 +901,34 @@ def get_dados_analise_custo(
 
 @app.get("/api/proximo-numero/")
 def get_proximo_numero(response: Response, current_user: User = Depends(get_current_user), session: Session = Depends(get_db_session)):
+    # evita cache do navegador/proxy
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    
-    override_base = current_user.contador_orcamento_override
-    if override_base is not None:
-        proximo_numero_final = override_base + 1
-        return {"proximo_numero": str(proximo_numero_final).zfill(4)}
 
-    # Se não há override, faz a lógica normal do banco
-    ultimo_orcamento_db = session.exec(
-        select(Orcamento).where(Orcamento.user_id == current_user.id).order_by(cast(Orcamento.numero, Integer).desc())
-    ).first()
-    proximo_numero_natural = (int(ultimo_orcamento_db.numero) + 1) if ultimo_orcamento_db and ultimo_orcamento_db.numero.isdigit() else 1
-    return {"proximo_numero": str(proximo_numero_natural).zfill(4)}
+    maior_numero = session.exec(
+        select(func.max(cast(Orcamento.numero, Integer))).where(Orcamento.user_id == current_user.id)
+    ).one_or_none()
+
+    proximo = (maior_numero ) + 1
+    return {"proximo_numero": str(proximo).zfill(4)}
     
 @app.post("/api/resetar-contador/")
 async def resetar_contador_endpoint(
-    novo_inicio: int = Form(...),
+    proximo_numero_desejado: int = Form(...),
     current_user: User = Depends(get_current_user), # Pega o usuário logado
     session: Session = Depends(get_db_session)      # Pega a sessão do banco
 ):
     """
     Redefine o contador de orçamentos para um novo valor inicial para o usuário logado.
     """
-    if novo_inicio < 0:
-        raise HTTPException(status_code=400, detail="O número inicial não pode ser negativo.")
+    if proximo_numero_desejado < 1:
+        raise HTTPException(status_code=400, detail="O próximo número do orçamento deve ser 1 ou maior.")
     
     # Salva o novo valor no campo do usuário
-    current_user.contador_orcamento_override = novo_inicio
+    current_user.contador_orcamento_override = proximo_numero_desejado
     session.add(current_user)
     session.commit()
     
-    proximo_numero = novo_inicio + 1
-    return {"message": f"Contador reiniciado com sucesso. O próximo número será {str(proximo_numero).zfill(4)}."}
+    return {"message": f"Contador redefinido. O próximo orçamento a ser criado será o Nº {str(proximo_numero_desejado).zfill(4)}."}
 
 @app.post("/api/users/", status_code=status.HTTP_201_CREATED)
 def create_user(

@@ -1919,19 +1919,26 @@ document.addEventListener("DOMContentLoaded", function() {
 
     async function preencherNumeroSugerido() {
         try {
-            const response = await fetch('/api/proximo-numero/');
+            const response = await fetch('/api/proximo-numero/', { cache: 'no-store' });
             if (!response.ok) {
-                console.error('Falha ao buscar próximo número.');
-                document.getElementById('numero_orcamento').value = "0001"; // Fallback
-                return;
+            console.error('Falha ao buscar próximo número.');
+            document.getElementById('numero_orcamento').value = "0001";
+            return;
             }
             const data = await response.json();
             document.getElementById('numero_orcamento').value = data.proximo_numero;
         } catch (error) {
             console.error("Erro ao buscar próximo número:", error);
-            document.getElementById('numero_orcamento').placeholder = "Erro"; 
+            document.getElementById('numero_orcamento').placeholder = "Erro";
         }
     }
+
+    preencherNumeroSugerido();
+
+    // NOVO: quando voltar da lista de orçamentos, reexecuta mesmo vindo do bfcache
+    window.addEventListener('pageshow', (ev) => {
+        if (ev.persisted) preencherNumeroSugerido(); // voltou do histórico
+    });
 
     inicializar();
 

@@ -123,7 +123,7 @@
                   <h4 class="text-lg font-semibold text-gray-800">Reiniciar Contagem</h4>
                 </div>
                 <div class="p-6 space-y-4">
-                  <p class="text-sm text-gray-600">Para reiniciar a contagem, digite o número do **último** orçamento gerado. Por exemplo, se digitar '0', o próximo orçamento a ser criado será o Nº 0001. Se digitar '50', o próximo será o 51.</p>
+                  <p class="text-sm text-gray-600">Para definir a próxima numeração, digite qual será o **próximo** número. Ex: Se digitar '51', o próximo orçamento criado será o Nº 0051.</p>
                     <label for="novo_numero_inicial" class="text-sm font-medium text-gray-700 whitespace-nowrap">Último Nº gerado:</label>
                   <div class="flex items-center gap-3">  
                     <label for="novo_numero_inicial" class="text-sm font-medium text-gray-700 whitespace-nowrap">Iniciar em:</label>
@@ -677,7 +677,6 @@ async function carregarOrcamentos() {
         });
 
         tippy('[data-tippy-content]');
-        
     } catch (e) {
         console.error("Erro ao carregar orçamentos:", e);
         lista.innerHTML = `<div class="py-8 text-center text-red-400">Erro ao carregar orçamentos.</div>`;
