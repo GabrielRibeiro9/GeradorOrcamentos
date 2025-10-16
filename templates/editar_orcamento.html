@@ -469,7 +469,7 @@
             <div class="bg-gray-50 p-4 rounded-lg border sticky top-0">
                 <!-- ... (o conteúdo dos indicadores de valor continua o mesmo) ... -->
                 <div class="flex justify-between items-center mb-2">
-                    <span class="font-medium text-gray-600">Total com Desconto:</span>
+                    <span class="font-medium text-gray-600" data-tippy-content="Este é o valor total do orçamento que precisa ser coberto pelas parcelas, já considerando os descontos aplicados.">Total com Desconto:</span>
                     <span id="pagamento-valor-total" class="font-bold text-emerald-600 text-xl">R$ 0,00</span>
                 </div>
                 <div class="flex justify-between items-center text-sm mb-3">
@@ -477,7 +477,7 @@
                     <span id="pagamento-valor-desconto" class="font-bold text-amber-700">- R$ 0,00</span>
                 </div>
                 <div class="flex justify-between items-center text-lg mb-2">
-                    <span class="font-medium text-gray-600">Restante a alocar (nesta opção):</span>
+                    span class="font-medium text-gray-600" data-tippy-content="Mostra quanto ainda falta distribuir em parcelas para completar o valor total desta opção de pagamento.">Restante a alocar (nesta opção):</span>
                     <span id="pagamento-valor-restante" class="font-bold text-blue-600">R$ 0,00</span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2.5">
@@ -489,7 +489,7 @@
                 <div class="space-y-4 pt-2">
                     <!-- Linha 1: Descrição da Parcela -->
                     <div>
-                        <label for="pagamento-descricao-select" class="block text-sm font-medium text-gray-700">Descrição</label>
+                        <label for="pagamento-descricao-select" class="block text-sm font-medium text-gray-700" data-tippy-content="Selecione um nome para esta parcela (Ex: Entrada, Sinal) ou escolha 'Outro' para digitar um nome personalizado.">Descrição</label>
                         <select id="pagamento-descricao-select" class="mt-1 block w-full h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
                             <option value="">-- Selecione --</option>
                             <option value="Entrada">Entrada</option>
@@ -505,7 +505,7 @@
                     <div class="flex items-end gap-2">
                         <!-- Tipo (R$ / %) -->
                         <div class="flex-none">
-                            <label for="pagamento-tipo-valor-input" class="block text-sm font-medium text-gray-700">Tipo</label>
+                            <label for="pagamento-tipo-valor-input" class="block text-sm font-medium text-gray-700" data-tippy-content="Defina se o valor da parcela será calculado como um percentual (%) do total do orçamento ou como um valor fixo (R$).">Tipo</label>
                             <select id="pagamento-tipo-valor-input" class="mt-1 block w-full h-10 px-2 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
                                 <option value="percent">%</option>
                                 <option value="valor">R$</option>
@@ -513,18 +513,18 @@
                         </div>
                         <!-- Valor -->
                         <div class="flex-grow">
-                            <label for="pagamento-valor-input" class="block text-sm font-medium text-gray-700">Valor</label>
+                            <label for="pagamento-valor-input" class="block text-sm font-medium text-gray-700" data-tippy-content="Digite o valor ou a porcentagem desta parcela.">Valor</label>
                             <input type="text" id="pagamento-valor-input" inputmode="decimal" placeholder="Ex: 50" class="mt-1 block w-full h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
                         </div>
                         <!-- Desconto na Parcela (%) -->
                         <div class="flex-none">
-                            <label for="pagamento-desconto-parcela" class="block text-sm font-medium text-gray-700">Desc. (%)</label>
+                            <label for="pagamento-desconto-parcela" class="block text-sm font-medium text-gray-700" data-tippy-content="Aplique um desconto em porcentagem APENAS sobre esta parcela. Útil para descontos de pagamento à vista ou antecipado.">Desc. (%)</label>
                             <input type="text" id="pagamento-desconto-parcela" inputmode="decimal" placeholder="0" class="mt-1 block w-20 h-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500">
                         </div>
                     </div>
                     
                     <!-- Linha 4: Botão de Adicionar -->
-                        <button id="btn-add-parcela" class="w-full h-11 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
+                        <button id="btn-add-parcela" data-tippy-content="Adiciona a parcela configurada acima à 'opção em construção'. Você pode adicionar várias parcelas para formar uma opção de pagamento completa." class="w-full h-11 px-4 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>
                             <span>Adicionar Parcela a esta Opção</span>
                         </button>
@@ -535,7 +535,7 @@
                     <div id="lista-parcelas-grupo-atual" class="space-y-2 p-2 bg-blue-50/50 rounded-lg border-l-4 border-blue-400">
                         <!-- As parcelas do grupo atual aparecerão aqui -->
                     </div>
-                    <button id="btn-salvar-grupo" type="button" class="w-full mt-3 h-11 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                    <button id="btn-salvar-grupo" type="button" data-tippy-content="Salva o conjunto de parcelas que você montou como uma nova opção de pagamento e limpa os campos para você criar outra, se desejar." class="w-full mt-3 h-11 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.052-.143Z" clip-rule="evenodd" /></svg>
                         <span>Finalizar e Adicionar Opção</span>
                     </button>
@@ -553,7 +553,7 @@
 
             <!-- Rodapé -->
             <div class="flex items-center justify-end p-4 bg-gray-50 border-t sticky bottom-0">
-                <button id="btn-salvar-pagamento" class="bg-emerald-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-emerald-700 transition-colors">
+                <button id="btn-salvar-pagamento" data-tippy-content="Salva todas as opções de pagamento criadas e fecha este modal." class="bg-emerald-600 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-emerald-700 transition-colors">
                     Confirmar Todas as Condições
                 </button>
             </div>
