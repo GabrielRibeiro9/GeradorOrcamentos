@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulário de Orçamento</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
 </head>
 <header class="bg-gradient-to-r from-emerald-500 to-teal-600 shadow-lg px-4 sm:px-6 py-3 flex items-center justify-between text-white sticky top-0 z-50">
   <!-- Esquerda: Avatar + Nome -->
@@ -55,9 +57,9 @@
                             <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-5.5-2.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM10 12a5.99 5.99 0 0 0-4.793 2.39A6.483 6.483 0 0 0 10 16.5a6.483 6.483 0 0 0 4.793-2.11A5.99 5.99 0 0 0 10 12Z" clip-rule="evenodd" />
                         </svg>
                     </div>
-                    <input class="h-10 w-full ps-10 pe-20 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="nome" name="nome" required>
+                    <input data-tippy-content="Nome do cliente ou da empresa. Se o cliente já existir, os dados podem ser carregados automaticamente." class="h-10 w-full ps-10 pe-20 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="nome" name="nome" required>
                     <!-- O botão que abre o modal -->
-                    <button type="button" id="btnAbrirModalClientes" class="absolute inset-y-0 end-0 flex items-center justify-center px-3 border-l border-zinc-300 text-zinc-600 hover:bg-zinc-100 transition-colors rounded-e-lg">
+                    <button type="button" id="btnAbrirModalClientes" data-tippy-content="Buscar um cliente já cadastrado" class="absolute inset-y-0 end-0 flex items-center justify-center px-3 border-l border-zinc-300 text-zinc-600 hover:bg-zinc-100 transition-colors rounded-e-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4"><path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h8a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 12.5v-9ZM4 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5H4Z" /><path d="M7.25 5.5a.75.75 0 0 0 0 1.5h1.5a.75.75 0 0 0 0-1.5h-1.5Z" /><path fill-rule="evenodd" d="M4.75 9.75a.75.75 0 0 1 .75-.75h5.5a.75.75 0 0 1 0 1.5H5.5a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" clip-rule="evenodd" /></svg>
                     </button>
                 </div>
@@ -68,7 +70,7 @@
                     <label for="cep" class="text-sm font-bold">CEP:</label>
                     <div class="relative w-full">
                         <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M9.293 2.293a1 1 0 0 1 1.414 0l7 7A1 1 0 0 1 17 11h-1v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6H3a1 1 0 0 1-.707-1.707l7-7Z" clip-rule="evenodd" /></svg></div>
-                        <input class="h-10 w-full ps-10 pr-2 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="cep" name="cep" placeholder="_____-___" maxlength="9" inputmode="numeric">
+                        <input data-tippy-content="Digite o CEP e pressione TAB para preencher o endereço automaticamente" class="h-10 w-full ps-10 pr-2 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="cep" name="cep" placeholder="_____-___" maxlength="9" inputmode="numeric">
                     </div>
                 </div>
                 <div class="flex flex-col items-start justify-start flex-1 min-w-[120px]">
@@ -120,10 +122,10 @@
                     </div>
 
                     <!-- O campo de Telefone (como no original, mas com padding à direita) -->
-                    <input class="h-10 w-full ps-10 pe-12 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="tel" id="telefone" name="telefone" placeholder="(99) 99999-9999" maxlength="15">
+                    <input data-tippy-content="Telefone principal para contato com o cliente." class="h-10 w-full ps-10 pe-12 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="tel" id="telefone" name="telefone" placeholder="(99) 99999-9999" maxlength="15">
                     
                     <!-- NOVO: O botão "+" discreto, posicionado dentro do campo -->
-                    <button type="button" id="btnAdicionarContato" class="absolute inset-y-0 end-0 flex items-center justify-center h-10 w-10 text-zinc-600 hover:bg-zinc-100 transition-colors rounded-e-lg border-l border-zinc-300">
+                    <button type="button" id="btnAdicionarContato" data-tippy-content="Adicionar outros contatos (nome, telefone, e-mail) a este orçamento." class="absolute inset-y-0 end-0 flex items-center justify-center h-10 w-10 text-zinc-600 hover:bg-zinc-100 transition-colors rounded-e-lg border-l border-zinc-300">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
                           <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
                         </svg>
@@ -140,7 +142,7 @@
 
             <div class="flex items-center justify-start -mt-3">
                 <label class="inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="toggleSalvarCliente" name="salvar_cliente" class="sr-only peer">
+                    <input type="checkbox" id="toggleSalvarCliente" name="salvar_cliente" class="sr-only peer" data-tippy-content="Se ativado, salva ou atualiza os dados deste cliente no seu cadastro para uso futuro.">
                     <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                     <span class="ms-3 text-sm font-medium text-gray-900">Salvar cliente?</span>
                 </label>
@@ -154,19 +156,19 @@
                 <label for="descricaoServico" class="text-sm font-bold">Descrição do serviço:</label>
                 <div class="relative w-full">
                     <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" /></svg></div>
-                    <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="descricaoServico" name="descricao_servico" placeholder="Descreva o serviço a ser executado" required>
+                    <input data-tippy-content="Um resumo geral do trabalho a ser feito. Ex: 'Servico de pintura de area externa'" class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="descricaoServico" name="descricao_servico" placeholder="Descreva o serviço a ser executado" required>
                 </div>
             </div>
             
             <div class="flex flex-col items-start justify-start gap-2">
                 <label for="selectServico" class="text-sm font-bold">Serviço do Catálogo:</label>
-                <div id="containerServico" class="relative w-full">
+                <div id="containerServico" class="relative w-full" data-tippy-content="Selecione um serviço pré-cadastrado no seu catálogo para preencher os campos de item automaticamente.">
                     <!-- O JavaScript vai preencher este espaço -->
                 </div>
             </div>
             <div class="flex flex-col items-start justify-start gap-2">
                 <label for="selectMaterial" class="text-sm font-bold">Material do Catálogo:</label>
-                <div id="containerMaterial" class="relative w-full">
+                <div id="containerMaterial" class="relative w-full" data-tippy-content="Selecione um material pré-cadastrado no seu catálogo para preencher os campos de item automaticamente.">
                     <!-- O JavaScript vai preencher este espaço -->
                 </div>
             </div>
@@ -175,16 +177,16 @@
                 <label for="item" class="text-sm font-bold">Item:</label>
                 <div class="relative w-full">
                     <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" /></svg></div>
-                    <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="item" name="item">
+                    <input data-tippy-content="Descreva o serviço ou material específico. Ex: 'Pintura de area externa' ou 'Tinta acrílica branca (lata 18L)'" class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="item" name="item">
                 </div>
             </div>
             <div id="ncm-field-container" class="hidden flex-col items-start justify-start gap-2">
-                <label for="itemNCM" class="text-sm font-bold">NCM (apenas para materiais):</label>
+                <label for="itemNCM" class="text-sm font-bold">NCM:</label>
                 <div class="relative w-full">
                     <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
                         <!-- Ícone para o NCM -->
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-400">
-                            <path fill-rule="evenodd" d="M10.06 2.013c.27.02.537.042.802.066C11.5 2.11 12 2.5 12 3v1h1.28c.352 0 .69.117.97.324l3.193 2.332c.28.204.457.533.457.886v.297c0 .353-.178.682-.458.886l-3.192 2.332a1.25 1.25 0 0 1-.97.324H12v3.088c0 .353-.178.682-.458.886l-3.192 2.332a1.25 1.25 0 0 1-.97.324H6c-.69 0-1.25-.56-1.25-1.25V6.25c0-.69.56-1.25 1.25-1.25h1.25V4c0-.69.56-1.25 1.25-1.25h1.036a5.772 5.772 0 0 1 .524-.737ZM7.5 7.75A.75.75 0 0 0 6.75 8.5v4a.75.75 0 0 0 1.5 0v-4A.75.75 0 0 0 7.5 7.75Zm2.75-.75a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
+                            <path fill-rule="evenodd" d="M2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H2Zm13 2a1 1 0 0 0-1 1v4a1 1 0 0 0 2 0V8a1 1 0 0 0-1-1Zm-3 1a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v4a1 1 0 0 1-2 0V8Zm-4-1a1 1 0 0 0-1 1v4a1 1 0 0 0 2 0V8a1 1 0 0 0-1-1ZM4 8a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v4a1 1 0 0 1-2 0V8Z" clip-rule="evenodd" />
                         </svg>
                     </div>
                     <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="itemNCM" name="itemNCM" placeholder="Ex: 1234.56.78" inputmode="numeric" oninput="mascaraNCM(event)" maxlength="10">
@@ -207,7 +209,7 @@
                 </div>
                 <div class="flex flex-col items-start justify-start flex-1 min-w-[80px]">
                     <label class="text-sm font-bold" for="tipoItem">Tipo:</label>
-                    <div class="relative w-full">
+                    <div class="relative w-full" data-tippy-content="Classifique o item como 'Serviço' (mão de obra) ou 'Material' (produto). Isso ajuda a organizar o orçamento e os cálculos.">
                         <div id="tipoItemIcon" class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"></div>
                         <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none tipoItemSeta">                           
                         </div>
@@ -223,7 +225,7 @@
             
                         <!-- Esquerda: Toggle para Salvar no Catálogo -->
                         <label class="inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="toggleSalvar" class="sr-only peer">
+                            <input type="checkbox" id="toggleSalvar" class="sr-only peer" data-tippy-content="Se ativado, salva este item no seu catálogo de Serviços ou Materiais para uso rápido em futuros orçamentos.">
                             <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                             <span class="ms-3 text-sm font-medium text-gray-900">Salvar item?</span>
                         </label>
@@ -232,14 +234,17 @@
                         <div class="flex items-center gap-2">
                             <label for="numero_orcamento" class="text-sm font-medium text-gray-700">Nº:</label>
                             <input type="text" id="numero_orcamento" name="numero_orcamento" 
+                                data-tippy-content="Número sequencial do orçamento. O sistema sugere o próximo número disponível."
                                 class="w-20 h-6 text-center font-semibold border border-zinc-300 rounded-md shadow-sm focus:outline-zinc-400" value="">
+                                
                         </div>
 
                         <button
                             type="button"
                             id="btn-abrir-modal-info"
-                            title="Adicionar Informações Complementares"
+                            data-tippy-content="Adicionar Condições de Pagamento, Prazo de Entrega, Garantia e Observações"
                             class="flex items-center justify-center h-10 w-10 rounded-full bg-white shadow-md border border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:scale-105 active:scale-95 active:shadow-sm transition-all duration-150 group"
+                        
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-6 group-hover:scale-110 transition-transform duration-200">
                                 <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -249,7 +254,7 @@
                     </div>
             
             <div class="flex flex-col gap-2">
-                <button id="adicionarItemBtn" class="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold uppercase tracking-wide rounded-2xl shadow-lg transform hover:-translate-y-0.5 transition-all duration-200" type="button">Adicionar Item</button>
+                <button id="adicionarItemBtn" data-tippy-content="Adiciona o item preenchido à lista abaixo. Se um item com o mesmo nome já existir, as quantidades serão somadas." class="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold uppercase tracking-wide rounded-2xl shadow-lg transform hover:-translate-y-0.5 transition-all duration-200" type="button">Adicionar Item</button>
                 <button id="gerarOrcamentoBtn" class="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold uppercase tracking-wide rounded-xl shadow-md transform hover:-translate-y-0.5 transition-all duration-200" type="submit">Salvar Orçamento</button>
             </div>
             
@@ -1931,6 +1936,7 @@ document.addEventListener("DOMContentLoaded", function() {
     inicializar();
 
     form.addEventListener("submit", handleFormSubmit);
+    tippy('[data-tippy-content]');
 
 
 });

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Orçamento #{{ orcamento.numero }}</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
 </head>
 <body>
     <script id="orcamento-json" type="application/json">
@@ -124,7 +126,7 @@
                     <input class="h-10 w-full ps-10 pe-12 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="tel" id="telefone" name="telefone" placeholder="(99) 99999-9999" maxlength="15">
                     
                     <!-- NOVO: O botão "+" discreto, posicionado dentro do campo -->
-                    <button type="button" id="btnAdicionarContato" class="absolute inset-y-0 end-0 flex items-center justify-center h-10 w-10 text-zinc-600 hover:bg-zinc-100 transition-colors rounded-e-lg border-l border-zinc-300">
+                    <button type="button" id="btnAdicionarContato" data-tippy-content="Adicionar um novo contato (nome, telefone, e-mail) apenas para este orçamento." class="absolute inset-y-0 end-0 flex items-center justify-center h-10 w-10 text-zinc-600 hover:bg-zinc-100 transition-colors rounded-e-lg border-l border-zinc-300">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
                           <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
                         </svg>
@@ -141,7 +143,7 @@
 
             <div class="flex items-center justify-start -mt-3">
                 <label class="inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="toggleSalvarCliente" name="salvar_cliente" class="sr-only peer">
+                    <input type="checkbox" id="toggleSalvarCliente" name="salvar_cliente" class="sr-only peer" data-tippy-content="Se ativado, qualquer alteração nos dados do cliente (nome, endereço, contatos) será salva permanentemente no seu cadastro de clientes.">
                     <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                     <span class="ms-3 text-sm font-medium text-gray-900">Salvar cliente?</span>
                 </label>
@@ -223,7 +225,7 @@
             
                         <!-- Esquerda: Toggle para Salvar no Catálogo -->
                         <label class="inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="toggleSalvar" class="sr-only peer">
+                            <input type="checkbox" id="toggleSalvar" class="sr-only peer" data-tippy-content="Se este for um item novo, ative para salvá-lo no seu catálogo de produtos para uso futuro.">
                             <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                             <span class="ms-3 text-sm font-medium text-gray-900">Salvar item?</span>
                         </label>
@@ -238,7 +240,7 @@
                             <button
                                 type="button"
                                 id="btn-abrir-modal-info"
-                                title="Adicionar Informações Complementares"
+                                data-tippy-content="Adicionar/Editar Condições de Pagamento, Prazo de Entrega, Garantia e Observações"
                                 class="flex items-center justify-center h-10 w-10 rounded-full bg-white shadow-md border border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:scale-105 active:scale-95 active:shadow-sm transition-all duration-150 group"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-6 group-hover:scale-110 transition-transform duration-200">
@@ -254,8 +256,8 @@
                     </div>
             
             <div class="flex flex-col gap-2">
-                <button id="adicionarItemBtn" class="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold uppercase tracking-wide rounded-2xl shadow-lg transform hover:-translate-y-0.5 transition-all duration-200" type="button">Adicionar Item</button>
-                <button id="gerarOrcamentoBtn" class="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold uppercase tracking-wide rounded-xl shadow-md transform hover:-translate-y-0.5 transition-all duration-200" type="submit">Atualizar Orçamento</button>
+                <button id="adicionarItemBtn" data-tippy-content="Adiciona o item preenchido à lista abaixo. Se um item com o mesmo nome já existir, as quantidades serão somadas." class="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold uppercase tracking-wide rounded-2xl shadow-lg transform hover:-translate-y-0.5 transition-all duration-200" type="button">Adicionar Item</button>
+                <button id="gerarOrcamentoBtn" data-tippy-content="Salva todas as alterações feitas no orçamento, incluindo dados do cliente e a lista de itens." class="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold uppercase tracking-wide rounded-xl shadow-md transform hover:-translate-y-0.5 transition-all duration-200" type="submit">Atualizar Orçamento</button>
             </div>
             
             <div class="relative overflow-x-auto shadow-md sm:rounded-lg hidden" id="tableContainer">
@@ -1575,6 +1577,7 @@ document.addEventListener("DOMContentLoaded", function() {
         atualizarVisibilidadeNCM();
 
         adicionarEventListeners();
+        tippy('[data-tippy-content]');
     }
 
     inicializar();
