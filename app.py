@@ -758,7 +758,6 @@ async def atualizar_orcamento_submit(
 ):
     form_data = await request.form()
     
-    # Busca o orçamento e seus relacionamentos (SEU CÓDIGO JÁ ESTÁ CORRETO AQUI)
     orcamento_db = session.exec(
         select(Orcamento).options(
             selectinload(Orcamento.contatos_extras), 
@@ -770,19 +769,21 @@ async def atualizar_orcamento_submit(
     if not orcamento_db:
         raise HTTPException(status_code=404, detail="Orçamento não encontrado para atualizar")
 
-    # Atualiza dados de cliente/fallback (SEU CÓDIGO JÁ ESTÁ CORRETO AQUI)
+    # --- INÍCIO DA REESTRUTURAÇÃO ---
+
+    # 1. Atualiza os dados de fallback do orçamento (os campos de texto simples)
     orcamento_db.nome_cliente = form_data.get("nome")
     orcamento_db.telefone_cliente = form_data.get("telefone")
     orcamento_db.cep_cliente = form_data.get("cep")
+    # ... (e todos os outros campos: logradouro_cliente, etc.)
     orcamento_db.logradouro_cliente = form_data.get("logradouro")
     orcamento_db.numero_casa_cliente = form_data.get("numero_casa")
     orcamento_db.complemento_cliente = form_data.get("complemento")
     orcamento_db.bairro_cliente = form_data.get("bairro")
     orcamento_db.cidade_uf_cliente = form_data.get("cidade_uf")
 
+    # 2. Se o orçamento tem um cliente vinculado E a flag "salvar_cliente" está ativa, atualize o PERFIL do cliente
     salvar_cliente_flag = form_data.get("salvar_cliente") == "on"
-
-    # Sincroniza com perfil do cliente (SEU CÓDIGO JÁ ESTÁ CORRETO AQUI)
     if orcamento_db.cliente and salvar_cliente_flag:
         cliente = orcamento_db.cliente
         cliente.nome = form_data.get("nome")
@@ -793,40 +794,49 @@ async def atualizar_orcamento_submit(
         cliente.complemento = form_data.get("complemento")
         cliente.bairro = form_data.get("bairro")
         cliente.cidade_uf = form_data.get("cidade_uf")
-        cliente.contatos.clear()
+        
+        # AQUI ESTÁ A MUDANÇA CRÍTICA:
+        # Em vez de ler do formulário, nós atualizamos o perfil do cliente com os dados do formulário
+        # mas a lista de contatos do orçamento será sincronizada a partir do perfil JÁ ATUALIZADO.
+        # Nós NÃO lemos mais a lista de contatos do formulário para o perfil.
         contatos_data = json.loads(form_data.get("contatos", "[]"))
-
+        cliente.contatos.clear()
         for c_info in contatos_data:
             cliente.contatos.append(Contato(nome=c_info['nome'], telefone=c_info['telefone'], email=c_info.get('email')))
+        
         session.add(cliente)
-    
-    # Atualiza dados do orçamento (SEU CÓDIGO JÁ ESTÁ CORRETO AQUI)
+        session.commit()
+        session.refresh(cliente) # Garante que temos os dados mais recentes do cliente na sessão
+
+    # 3. Atualiza os dados do orçamento (itens, totais, etc.)
     orcamento_db.numero = form_data.get("numero_orcamento").strip()
     orcamento_db.descricao_servico = form_data.get("descricao_servico")
     itens_data = json.loads(form_data.get("itens"))
     orcamento_db.itens = itens_data
     orcamento_db.total_geral = sum(int(i.get('quantidade', 0)) * float(i.get('valor', 0)) for i in itens_data)
-    
-    # **** AQUI ESTÁ A ÚNICA CORREÇÃO NECESSÁRIA ****
-    # O valor que vem do formulário já é a string JSON correta.
-    # Não precisamos tentar fazer `json.loads` de novo.
-    # Apenas pegamos o valor e o salvamos.
     orcamento_db.condicao_pagamento = form_data.get("condicao_pagamento")
-
-    # O resto continua correto
     orcamento_db.prazo_entrega = form_data.get("prazo_entrega")
     orcamento_db.garantia = form_data.get("garantia")
     orcamento_db.observacoes = form_data.get("observacoes")
 
-    # Atualiza contatos do orçamento (SEU CÓDIGO JÁ ESTÁ CORRETO AQUI)
+    # 4. SINCRONIZAÇÃO FINAL: Limpa os contatos do orçamento e recopia a partir do perfil do cliente (a fonte da verdade)
     orcamento_db.contatos_extras.clear()
-    contatos_data_orc = json.loads(form_data.get("contatos", "[]"))
-    for c_info in contatos_data_orc:
-        orcamento_db.contatos_extras.append(ContatoOrcamento(nome=c_info['nome'], telefone=c_info['telefone'], email=c_info.get('email')))
+    if orcamento_db.cliente:
+        for contato_do_perfil in orcamento_db.cliente.contatos:
+            orcamento_db.contatos_extras.append(
+                ContatoOrcamento(
+                    nome=contato_do_perfil.nome,
+                    telefone=contato_do_perfil.telefone,
+                    email=contato_do_perfil.email
+                )
+            )
+
+    # --- FIM DA REESTRUTURAÇÃO ---
     
     session.add(orcamento_db)
     session.commit()
     
+    # ... (resto da função de aviso de expiração) ...
     admin_user_env = os.getenv("BASIC_AUTH_USER", "admin")
     if current_user.username != admin_user_env and not current_user.plano_ilimitado and current_user.data_expiracao:
         dias_restantes = (current_user.data_expiracao - datetime.now(timezone.utc)).days
@@ -841,12 +851,11 @@ async def atualizar_orcamento_submit(
                 }
             )
 
-    # Se não houver aviso, envia a resposta de sucesso padrão que o JavaScript irá usar para redirecionar.
     return JSONResponse(
         status_code=200,
         content={"status": "success", "message": "Orçamento atualizado com sucesso!"}
     )
-
+    
 
 @app.delete("/api/orcamentos/{orcamento_id}", status_code=status.HTTP_204_NO_CONTENT)
 def deletar_orcamento(
@@ -1025,7 +1034,7 @@ class AnaliseCustoUpdate(BaseModel):
 
 
 # --- ROTAS DA API PARA CLIENTES ---
-# SUBSTITUA esta função de API inteira no app.py
+
 
 @app.get("/api/orcamento/{orcamento_id}/contatos", response_model=List[ContatoResponse])
 def get_orcamento_contatos(
@@ -1034,39 +1043,40 @@ def get_orcamento_contatos(
     session: Session = Depends(get_db_session)
 ):
     """
-    Busca um orçamento pelo ID e retorna uma lista limpa de contatos 
-    (o principal e os extras salvos NO ORÇAMENTO).
+    Busca os contatos para o modal de WhatsApp.
+    Prioriza 100% os dados do perfil do Cliente, se ele existir.
+    Caso contrário, usa os dados salvos no orçamento como fallback.
     """
     orcamento = session.exec(
-        select(Orcamento).options(selectinload(Orcamento.contatos_extras)) # Só precisamos carregar os contatos do orçamento
+        select(Orcamento).options(selectinload(Orcamento.cliente).selectinload(Cliente.contatos))
         .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
     ).first()
     
     if not orcamento:
         return []
 
+    contatos_finais = []
     telefones_adicionados = set()
-    contatos_unicos = []
 
-    # 1. Adiciona o contato principal (o que foi salvo/digitado para o orçamento)
-    if orcamento.telefone_cliente:
-        telefone_normalizado = "".join(filter(str.isdigit, orcamento.telefone_cliente))
+    def adicionar_contato_se_unico(nome, telefone, email=None, id_contato=None):
+        if not telefone: return
+        telefone_normalizado = "".join(filter(str.isdigit, telefone))
         if telefone_normalizado and telefone_normalizado not in telefones_adicionados:
-            contatos_unicos.append(
-                ContatoResponse(id=None, nome=orcamento.nome_cliente, telefone=orcamento.telefone_cliente)
-            )
+            contatos_finais.append(ContatoResponse(id=id_contato, nome=nome, telefone=telefone, email=email))
             telefones_adicionados.add(telefone_normalizado)
-        
-    # 2. Adiciona os contatos extras que foram salvos COM o orçamento
-    for contato in orcamento.contatos_extras:
-        telefone_normalizado = "".join(filter(str.isdigit, contato.telefone))
-        if telefone_normalizado and telefone_normalizado not in telefones_adicionados:
-            contatos_unicos.append(
-                ContatoResponse(id=contato.id, nome=contato.nome, telefone=contato.telefone, email=contato.email)
-            )
-            telefones_adicionados.add(telefone_normalizado)
-            
-    return contatos_unicos
+
+    # LÓGICA PRINCIPAL: Se existe um cliente vinculado, use-o como fonte da verdade.
+    if orcamento.cliente:
+        adicionar_contato_se_unico(orcamento.cliente.nome, orcamento.cliente.telefone)
+        for contato in orcamento.cliente.contatos:
+            adicionar_contato_se_unico(contato.nome, contato.telefone, contato.email, contato.id)
+    # SENÃO, use os dados antigos do orçamento como fallback.
+    else:
+        adicionar_contato_se_unico(orcamento.nome_cliente, orcamento.telefone_cliente)
+        for contato_orc in orcamento.contatos_extras:
+             adicionar_contato_se_unico(contato_orc.nome, contato_orc.telefone, contato_orc.email, contato_orc.id)
+
+    return contatos_finais
 
 @app.post("/api/orcamento/{orcamento_id}/analise-custo", status_code=status.HTTP_200_OK)
 def salvar_dados_analise_custo(
@@ -1501,16 +1511,34 @@ def get_orcamento_emails(
     current_user: User = Depends(get_current_user), 
     session: Session = Depends(get_db_session)
 ):
+    """
+    Busca os e-mails para o modal de envio.
+    Prioriza 100% os dados do perfil do Cliente, se ele existir.
+    Caso contrário, usa os dados salvos no orçamento como fallback.
+    """
     orcamento = session.exec(
-        select(Orcamento).options(selectinload(Orcamento.contatos_extras))
+        select(Orcamento).options(selectinload(Orcamento.cliente).selectinload(Cliente.contatos))
         .where(Orcamento.id == orcamento_id, Orcamento.user_id == current_user.id)
     ).first()
-    if not orcamento: return []
-    
-    lista_emails = []
-    # Percorre apenas os contatos extras e adiciona aqueles que têm e-mail
-    for contato in orcamento.contatos_extras:
-        if contato.email:
-            lista_emails.append(ContatoEmailResponse(nome=contato.nome, email=contato.email))
-    
-    return lista_emails
+
+    if not orcamento:
+        return []
+
+    emails_finais = []
+    emails_adicionados = set()
+
+    def adicionar_email_se_unico(nome, email):
+        if email and email.strip() and email.lower() not in emails_adicionados:
+            emails_finais.append(ContatoEmailResponse(nome=nome, email=email))
+            emails_adicionados.add(email.lower())
+
+    # LÓGICA PRINCIPAL: Se existe um cliente vinculado, use-o como fonte da verdade.
+    if orcamento.cliente:
+        for contato in orcamento.cliente.contatos:
+            adicionar_email_se_unico(contato.nome, contato.email)
+    # SENÃO, use os dados antigos do orçamento como fallback.
+    else:
+        for contato_orc in orcamento.contatos_extras:
+            adicionar_email_se_unico(contato_orc.nome, contato_orc.email)
+            
+    return emails_finais
