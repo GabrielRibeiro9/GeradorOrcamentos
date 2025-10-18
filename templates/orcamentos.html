@@ -1384,18 +1384,36 @@ async function deletarUsuario(userId, username) {
 async function resetarContador() {
     const inputNumero = document.getElementById('novo_numero_inicial');
     const novoValor = inputNumero.value;
-    if (novoValor === "" || isNaN(parseInt(novoValor)) || parseInt(novoValor) < 0) { alert("Por favor, insira um número válido (0 ou maior)."); return; }
-    if (!confirm(`Tem certeza? O próximo orçamento será o Nº ${String(parseInt(novoValor) + 1).padStart(4, '0')}.`)) return;
+    if (novoValor === "" || isNaN(parseInt(novoValor)) || parseInt(novoValor) < 1) { // Garante que o número seja pelo menos 1
+        alert("Por favor, insira um número válido (1 ou maior)."); 
+        return; 
+    }
+
+    // CORREÇÃO 1: Mensagem de confirmação mais clara.
+    if (!confirm(`Tem certeza? O próximo orçamento a ser criado será o Nº ${String(parseInt(novoValor)).padStart(4, '0')}.`)) return;
+
     try {
         const formData = new FormData();
-        formData.append('novo_inicio', novoValor);
+        // CORREÇÃO 2: Alterado o nome do campo para corresponder ao backend.
+        formData.append('proximo_numero_desejado', novoValor); 
+        
         const response = await fetch('/api/resetar-contador/', { method: 'POST', body: formData });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.detail || "Erro desconhecido.");
+        
+        if (!response.ok) {
+            // Tenta extrair uma mensagem de erro mais legível.
+            const errorMsg = result.detail || "Ocorreu um erro desconhecido.";
+            throw new Error(errorMsg);
+        }
+
         alert(result.message);
         fecharModalConfig();
+        // Opcional: Recarregar a página para que o novo número apareça na página de criação.
+        window.location.href = '/'; 
+
     } catch (error) {
         console.error("Erro ao resetar contador:", error);
+        // Agora o alerta exibirá a mensagem de erro correta, e não [object Object].
         alert(`Ocorreu um erro: ${error.message}`);
     }
 }

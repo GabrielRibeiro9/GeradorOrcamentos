@@ -904,11 +904,18 @@ def get_proximo_numero(response: Response, current_user: User = Depends(get_curr
     # evita cache do navegador/proxy
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
 
+    # 1. VERIFICA SE HÁ UM NÚMERO DE REINICIALIZAÇÃO DEFINIDO PELO USUÁRIO
+    if current_user.contador_orcamento_override is not None:
+        proximo = current_user.contador_orcamento_override
+        return {"proximo_numero": str(proximo).zfill(4)}
+
+    # 2. SE NÃO HOUVER, EXECUTA A LÓGICA PADRÃO
     maior_numero = session.exec(
         select(func.max(cast(Orcamento.numero, Integer))).where(Orcamento.user_id == current_user.id)
     ).one_or_none()
-
-    proximo = (maior_numero ) + 1
+    
+    # Se não houver nenhum orçamento, começa do 1
+    proximo = (maior_numero or 0) + 1
     return {"proximo_numero": str(proximo).zfill(4)}
     
 @app.post("/api/resetar-contador/")
