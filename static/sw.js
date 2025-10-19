@@ -1,8 +1,8 @@
-// ATENÇÃO: Mudamos a versão para 'v7' para forçar a atualização final.
-const CACHE_VERSION = 'v7';
+// ATENÇÃO: Mudamos a versão para 'v8' para garantir que esta nova lógica seja instalada.
+const CACHE_VERSION = 'v8';
 const CACHE_NAME = `gerador-orcamentos-cache-${CACHE_VERSION}`;
 
-// Lista de todos os recursos essenciais do "esqueleto" do app.
+// Arquivos do "esqueleto" do aplicativo (App Shell).
 const APP_SHELL_URLS = [
   '/',
   '/login',
@@ -15,55 +15,44 @@ const APP_SHELL_URLS = [
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js'
 ];
 
-// Evento de Instalação: Salva o App Shell no cache.
+// Instala o Service Worker e cacheia o App Shell.
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log(`[Service Worker] Cacheando App Shell (v${CACHE_VERSION}).`);
-      // Faz requisições no-cors para os recursos externos
-      const externalRequests = URLS_TO_CACHE.filter(url => url.startsWith('http'))
-        .map(url => new Request(url, { mode: 'no-cors' }));
-
-      // Junta as URLs locais com as requisições externas
-      const localUrls = URLS_TO_CACHE.filter(url => !url.startsWith('http'));
-      return cache.addAll([...localUrls, ...externalRequests]);
-    })
-    .catch(err => console.error("Falha ao cachear o App Shell:", err))
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log(`[Service Worker] Cacheando App Shell (v${CACHE_VERSION}).`);
+        const externalRequests = APP_SHELL_URLS.filter(url => url.startsWith('http'))
+          .map(url => new Request(url, { mode: 'no-cors' }));
+        const localUrls = APP_SHELL_URLS.filter(url => !url.startsWith('http'));
+        return cache.addAll([...localUrls, ...externalRequests]);
+      })
+      .catch(err => console.error("Falha ao cachear o App Shell:", err))
   );
 });
 
-
-// Evento de Ativação: Limpa os caches antigos.
+// Limpa caches antigos quando uma nova versão é ativada.
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] Limpando cache antigo:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys().then(cacheNames => Promise.all(
+      cacheNames
+        .filter(cacheName => cacheName !== CACHE_NAME)
+        .map(cacheName => caches.delete(cacheName))
+    ))
   );
   return self.clients.claim();
 });
 
-
-// Evento Fetch: Lida com as requisições de rede.
+// Intercepta requisições.
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') {
-    return;
-  }
+  if (event.request.method !== 'GET') { return; }
 
-  // Estratégia: Network First, falling back to Cache
+  // Estratégia "Network falling back to Cache".
+  // Sempre tenta a rede primeiro. Se falhar, usa o cache.
+  // Isso funciona para TUDO: páginas, API e PDFs.
   event.respondWith(
     fetch(event.request)
       .then(networkResponse => {
-        // --- CORREÇÃO IMPORTANTE AQUI ---
-        // Se a resposta for válida, nós a colocamos no cache.
-        // Respostas do tipo 'opaque' (para CDNs) são válidas, mas não podemos cloná-las.
+        // Se a resposta da rede for válida, a clona e a salva no cache.
         if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then(cache => {
@@ -73,15 +62,8 @@ self.addEventListener('fetch', event => {
         return networkResponse;
       })
       .catch(() => {
-        // Se a rede falhar (estamos offline), busca no cache.
-        console.log('[Service Worker] Rede falhou, tentando buscar no cache:', event.request.url);
-        return caches.match(event.request)
-          .then(cachedResponse => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // Se não estiver no cache e a rede falhar, o navegador mostrará a página de erro.
-          });
+        // Se a rede falhar, retorna a correspondência do cache.
+        return caches.match(event.request);
       })
   );
 });

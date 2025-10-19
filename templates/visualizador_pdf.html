@@ -56,13 +56,13 @@
             <!-- Container dos Botões -->
             <div class="flex items-center gap-2">
                 <!-- Botão de Download -->
-                <a id="download-btn" href="#" download="documento.pdf" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded flex items-center gap-2 whitespace-nowrap" title="Baixar o documento">
+                <button id="download-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded flex items-center gap-2 whitespace-nowrap" title="Baixar o documento">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
                     </svg>
                     <span class="hidden sm:inline">Baixar</span>
-                </a>
-                
+                </button>
+                                
                 <!-- Botão Voltar -->
                 <button onclick="history.back()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded flex items-center gap-2 whitespace-nowrap">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -82,71 +82,95 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', async function() {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
+        document.addEventListener('DOMContentLoaded', function() {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
 
-        const viewerContainer = document.getElementById('viewer-container');
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const downloadBtn = document.getElementById('download-btn'); // <-- 1. Pega o elemento do botão
-        const params = new URLSearchParams(window.location.search);
-        const pdfUrl = params.get('url');
+            const viewerContainer = document.getElementById('viewer-container');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const downloadBtn = document.getElementById('download-btn');
+            const params = new URLSearchParams(window.location.search);
+            const pdfUrl = params.get('url');
 
-        if (!pdfUrl) {
-            loadingIndicator.textContent = "Erro: URL do PDF não encontrada.";
-            if(downloadBtn) downloadBtn.style.display = 'none'; // Esconde o botão se houver erro
-            return;
-        }
-        
-        // --- INÍCIO DA CORREÇÃO ---
-        // 2. Define o link de download no botão
-        if (downloadBtn) {
-            downloadBtn.href = pdfUrl;
+            // --- INÍCIO DA NOVA FUNÇÃO DE DOWNLOAD ---
+            async function forceDownload(url) {
+                // Desabilita o botão para evitar cliques múltiplos
+                downloadBtn.disabled = true;
+                downloadBtn.innerHTML = 'Baixando...';
 
-            // 3. (Opcional, mas melhora a experiência) Define um nome de arquivo
-            // Tenta extrair o nome do arquivo da URL original, se possível
-            try {
-                // Decodifica a URL para obter o caminho real
-                let decodedUrl = decodeURIComponent(pdfUrl);
-                // Extrai o que vem depois da última barra, que geralmente é o nome do arquivo
-                let filename = decodedUrl.substring(decodedUrl.lastIndexOf('/') + 1).split('?')[0];
-                if (filename) {
-                   downloadBtn.setAttribute('download', filename);
-                }
-            } catch(e) {
-                console.warn("Não foi possível extrair o nome do arquivo da URL.");
-            }
-        }
-
-            try {
-                // Carrega o documento PDF a partir da URL
-                const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
-                loadingIndicator.style.display = 'none'; // Esconde o indicador de carregamento
-
-                // Renderiza todas as páginas do PDF
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
+                try {
+                    // 1. Busca o arquivo PDF como um conjunto de bytes (blob)
+                    const response = await fetch(url);
+                    const blob = await response.blob();
                     
-                    const viewport = page.getViewport({ scale: 1.5 }); // Pega o viewport com uma escala base
+                    // 2. Extrai o nome do arquivo da URL
+                    let filename = "documento.pdf";
+                    try {
+                        let decodedUrl = decodeURIComponent(url);
+                        filename = decodedUrl.substring(decodedUrl.lastIndexOf('/') + 1).split('?')[0];
+                    } catch(e) { /* Usa o nome padrão se falhar */ }
+
+                    // 3. Cria um link temporário na memória
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+
+                    // 4. Simula o clique no link para iniciar o download
+                    document.body.appendChild(link);
+                    link.click();
                     
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
+                    // 5. Limpa o link da memória
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(link.href);
 
-                    // Adiciona o canvas ao container antes de renderizar
-                    viewerContainer.appendChild(canvas);
-
-                    const renderContext = {
-                        canvasContext: context,
-                        viewport: viewport
-                    };
-                    await page.render(renderContext).promise;
+                } catch (error) {
+                    console.error('Erro ao baixar o PDF:', error);
+                    alert('Não foi possível baixar o arquivo. Verifique sua conexão e tente novamente.');
+                } finally {
+                    // Reabilita o botão após a tentativa de download
+                    downloadBtn.disabled = false;
+                    downloadBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                        <span class="hidden sm:inline">Baixar</span>`;
                 }
-
-            } catch (error) {
-                console.error("Erro ao carregar ou renderizar o PDF:", error);
-                loadingIndicator.textContent = "Falha ao carregar o documento. Verifique o link e tente novamente.";
             }
+            // --- FIM DA NOVA FUNÇÃO DE DOWNLOAD ---
+
+
+            if (!pdfUrl) {
+                loadingIndicator.textContent = "Erro: URL do PDF não encontrada.";
+                if (downloadBtn) downloadBtn.style.display = 'none';
+                return;
+            }
+            
+            // Atribui o evento de clique ao botão
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', () => {
+                    forceDownload(pdfUrl);
+                });
+            }
+            
+            async function renderPdf() {
+                try {
+                    const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+                    loadingIndicator.style.display = 'none';
+
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const viewport = page.getViewport({ scale: 1.5 });
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        viewerContainer.appendChild(canvas);
+                        await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    }
+                } catch (error) {
+                    console.error("Erro ao carregar ou renderizar o PDF:", error);
+                    loadingIndicator.textContent = "Falha ao carregar o documento.";
+                }
+            }
+            
+            renderPdf();
         });
     </script>
     <script>

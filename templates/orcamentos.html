@@ -535,7 +535,7 @@
         <!-- Rodapé com Botões -->
         <div class="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 p-4 border-t bg-gray-100 rounded-b-xl sticky bottom-0 z-10">
             <!-- Botão Secundário (Relatório) -->
-            <button onclick="gerarRelatorioCusto()" type="button" class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <button id="btn-gerar-relatorio-custo" onclick="gerarRelatorioCusto()" type="button" class="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" />
                 </svg>
@@ -756,7 +756,30 @@ window.abrirModalAnaliseCusto = async function(orcamentoId) {
               }
           });
       }
-      
+       const btnGerarRelatorio = document.getElementById('btn-gerar-relatorio-custo');
+      if (btnGerarRelatorio) {
+          if (!navigator.onLine) {
+              // Se estiver offline, verifica se o relatório está no cache
+              const relatorioUrl = `${window.location.origin}/orcamento/${orcamentoId}/relatorio-custo`;
+              caches.open(`gerador-orcamentos-cache-v8`).then(cache => { // Use a MESMA versão do sw.js!
+                  cache.match(relatorioUrl).then(response => {
+                      if (response) {
+                          // Cacheado: mantém o botão ativo
+                          btnGerarRelatorio.disabled = false;
+                          btnGerarRelatorio.classList.remove('opacity-50', 'cursor-not-allowed');
+                      } else {
+                          // Não cacheado: desativa o botão
+                          btnGerarRelatorio.disabled = true;
+                          btnGerarRelatorio.classList.add('opacity-50', 'cursor-not-allowed');
+                      }
+                  });
+              });
+          } else {
+              // Se estiver online, o botão está sempre ativo
+              btnGerarRelatorio.disabled = false;
+              btnGerarRelatorio.classList.remove('opacity-50', 'cursor-not-allowed');
+          }
+      }
       // Abre o modal e calcula os resultados
       calcularAnaliseCusto(); 
       modalAnaliseCusto.classList.remove('hidden');
@@ -836,6 +859,36 @@ function calcularAnaliseCusto() {
     } else {
         lucroCard.classList.remove('bg-green-600');
         lucroCard.classList.add('bg-red-600');
+    }
+}
+
+async function forceDownload(url, btnElement) {
+    const originalContent = btnElement.innerHTML; // Salva o conteúdo original do botão
+    btnElement.disabled = true;
+    btnElement.innerHTML = 'Baixando...';
+
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        let filename = "documento.pdf";
+        try {
+            let decodedUrl = decodeURIComponent(url);
+            filename = decodedUrl.substring(decodedUrl.lastIndexOf('/') + 1).split('?')[0];
+        } catch(e) {}
+
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename || "relatorio.pdf"; // Nome de fallback
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(link.href);
+    } catch (error) {
+        console.error('Erro ao baixar:', error);
+        alert('Não foi possível baixar o arquivo. Verifique sua conexão e tente novamente.');
+    } finally {
+        btnElement.disabled = false;
+        btnElement.innerHTML = originalContent; // Restaura o conteúdo original
     }
 }
 
@@ -940,23 +993,22 @@ async function salvarAnaliseCusto() {
 
 function gerarRelatorioCusto() {
     const orcamentoId = document.getElementById('analise-custo-orcamento-id').value;
+    const btnElement = document.getElementById('btn-gerar-relatorio-custo');
+
     if (!orcamentoId) {
         alert("ID do orçamento não encontrado.");
         return;
     }
-
     if (!analiseJaFoiSalva) {
-        alert("Por favor, salve a análise pelo menos uma vez antes de gerar o relatório em PDF.");
+        alert("Por favor, salve a análise pelo menos uma vez antes de gerar o relatório.");
         return;
     }
-
-    // 1. Monta a URL do PDF do relatório de custo.
-    const pdfUrl = `/orcamento/${orcamentoId}/relatorio-custo`;
-    window.location.href = `/visualizar-pdf?url=${encodeURIComponent(pdfUrl)}`;
     
-
-    // 3. (Opcional, mas recomendado) Fecha o modal de análise após iniciar a navegação.
-    fecharModalAnaliseCusto();
+    // Monta a URL do relatório de custo.
+    const pdfUrl = `/orcamento/${orcamentoId}/relatorio-custo`;
+    
+    // Chama a função de download forçado, passando a URL e o próprio botão.
+    forceDownload(pdfUrl, btnElement);
 }
 
 window.editarOrcamento = function(id) { window.location.href = `/editar-orcamento/${id}`; }
@@ -1300,18 +1352,63 @@ async function deletarCliente(clienteId, nomeCliente) {
 }
 
 function updateActionButtonsAvailability() {
-        const isOnline = navigator.onLine;
-        const actionButtons = document.querySelectorAll('button[onclick^="editarOrcamento"], button[onclick^="abrirModalStatusPDF"], button[onclick^="abrirModalTipoDocumento"], button[onclick^="deletarOrcamento"]');
-        
-        actionButtons.forEach(button => {
-            button.disabled = !isOnline;
-            if (!isOnline) {
+    const isOnline = navigator.onLine;
+    // SELETOR ATUALIZADO: Ignora os botões de visualização de PDF.
+    const actionButtons = document.querySelectorAll('button[onclick^="editarOrcamento"], button[onclick^="abrirModalTipoDocumento"], button[onclick^="deletarOrcamento"], button[onclick^="abrirModalAnaliseCusto"]');
+    
+    actionButtons.forEach(button => {
+        button.disabled = !isOnline;
+        button.classList.toggle('opacity-50', !isOnline);
+        button.classList.toggle('cursor-not-allowed', !isOnline);
+    });
+
+    // Chama a nova função para verificar o cache dos PDFs individualmente.
+    checkCacheStatusForPdfButtons();
+}
+
+async function checkCacheStatusForPdfButtons() {
+    // Seleciona todos os botões de visualização de PDF na página.
+    const pdfButtons = document.querySelectorAll('button[onclick^="abrirModalStatusPDF"]');
+
+    // Se não houver Service Worker ativo, desabilita tudo e encerra.
+    if (!navigator.serviceWorker.controller) {
+        pdfButtons.forEach(button => {
+            button.disabled = true;
+            button.classList.add('opacity-50', 'cursor-not-allowed');
+        });
+        return;
+    }
+    
+    try {
+        const cache = await caches.open(`gerador-orcamentos-cache-v8`); // Use a MESMA versão do sw.js!
+        const cachedRequests = await cache.keys();
+        const cachedUrls = cachedRequests.map(req => req.url);
+
+        pdfButtons.forEach(button => {
+            // Extrai o ID do orçamento a partir do atributo 'onclick' do botão.
+            const orcamentoId = button.getAttribute('onclick').match(/\d+/)[0];
+            
+            // Monta as URLs possíveis para os PDFs daquele orçamento.
+            const orcamentoPdfUrl = `${window.location.origin}/orcamento/${orcamentoId}/pdf?status=Orçamento`;
+            const notaPdfUrl = `${window.location.origin}/orcamento/${orcamentoId}/pdf?status=Nota de Serviço`;
+
+            // Verifica se QUALQUER uma das URLs do PDF está no cache.
+            const isCached = cachedUrls.some(url => url === orcamentoPdfUrl || url === notaPdfUrl);
+
+            // Se estiver offline E o PDF não estiver no cache, desabilita o botão.
+            if (!navigator.onLine && !isCached) {
+                button.disabled = true;
                 button.classList.add('opacity-50', 'cursor-not-allowed');
             } else {
+                // Em todos os outros casos (online, ou offline com cache), o botão fica habilitado.
+                button.disabled = false;
                 button.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         });
+    } catch (error) {
+        console.error("Erro ao verificar o cache para botões de PDF:", error);
     }
+}
 
     // Função que observa a lista e aplica o status aos novos botões
     const observer = new MutationObserver((mutations) => {
