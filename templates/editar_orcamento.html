@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editar Orçamento #{{ orcamento.numero }}</title>
+    <meta name="theme-color" content="#10b981">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+    <link rel="shortcut icon" href="/static/icons/favicon.ico">
+
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
@@ -1582,6 +1589,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
     inicializar();
 });
+</script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/static/sw.js').then(registration => {
+                console.log('ServiceWorker registrado com sucesso:', registration.scope);
+            }).catch(error => {
+                console.log('Falha ao registrar o ServiceWorker:', error);
+            });
+        });
+    }
 </script>
 </body>
 </html>
