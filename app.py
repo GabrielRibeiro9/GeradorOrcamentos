@@ -12,7 +12,7 @@ from sqlalchemy import func, cast, Integer
 
 # --- Imports do FastAPI e bibliotecas ---
 from fastapi import FastAPI, HTTPException, status, Form, Request, Depends, Response, Header, Path, Query
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -233,6 +233,11 @@ def login_submit(request: Request, username: str = Form(...), password: str = Fo
 async def visualizar_pdf_page(request: Request):
     """ Rota para a página que exibe o PDF dentro de um iframe. """
     return templates.TemplateResponse("visualizador_pdf.html", {"request": request})
+
+@app.get("/sw.js", response_class=FileResponse)
+async def service_worker():
+    """ Rota para servir o arquivo do service worker a partir da raiz. """
+    return FileResponse(os.path.join(STATIC_DIR, "sw.js"))
 
 @app.get("/logout")
 async def logout(request: Request):

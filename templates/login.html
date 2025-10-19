@@ -126,5 +126,16 @@
             document.getElementById('currentYear').textContent = new Date().getFullYear();
         });
     </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').then(registration => { // <-- CORREÇÃO AQUI
+                console.log('ServiceWorker registrado com sucesso na raiz:', registration.scope);
+            }).catch(error => {
+                console.log('Falha ao registrar o ServiceWorker na raiz:', error);
+            });
+        });
+    }
+</script>
 </body>
 </html>

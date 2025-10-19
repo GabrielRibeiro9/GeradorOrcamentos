@@ -52,12 +52,25 @@
         <!-- Cabeçalho fixo com o botão Voltar -->
         <header class="bg-gray-800 text-white p-3 flex items-center justify-between flex-shrink-0 z-10 shadow-lg">
             <h1 class="text-lg font-semibold truncate">Visualizador</h1>
-            <button onclick="history.back()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2 whitespace-nowrap">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-                Voltar
-            </button>
+
+            <!-- Container dos Botões -->
+            <div class="flex items-center gap-2">
+                <!-- Botão de Download -->
+                <a id="download-btn" href="#" download="documento.pdf" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded flex items-center gap-2 whitespace-nowrap" title="Baixar o documento">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="hidden sm:inline">Baixar</span>
+                </a>
+                
+                <!-- Botão Voltar -->
+                <button onclick="history.back()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded flex items-center gap-2 whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    Voltar
+                </button>
+            </div>
         </header>
 
         <!-- Container principal onde o PDF será renderizado -->
@@ -70,18 +83,39 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
-            // Define o worker para processar o PDF em segundo plano
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
 
-            const viewerContainer = document.getElementById('viewer-container');
-            const loadingIndicator = document.getElementById('loading-indicator');
-            const params = new URLSearchParams(window.location.search);
-            const pdfUrl = params.get('url');
+        const viewerContainer = document.getElementById('viewer-container');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const downloadBtn = document.getElementById('download-btn'); // <-- 1. Pega o elemento do botão
+        const params = new URLSearchParams(window.location.search);
+        const pdfUrl = params.get('url');
 
-            if (!pdfUrl) {
-                loadingIndicator.textContent = "Erro: URL do PDF não encontrada.";
-                return;
+        if (!pdfUrl) {
+            loadingIndicator.textContent = "Erro: URL do PDF não encontrada.";
+            if(downloadBtn) downloadBtn.style.display = 'none'; // Esconde o botão se houver erro
+            return;
+        }
+        
+        // --- INÍCIO DA CORREÇÃO ---
+        // 2. Define o link de download no botão
+        if (downloadBtn) {
+            downloadBtn.href = pdfUrl;
+
+            // 3. (Opcional, mas melhora a experiência) Define um nome de arquivo
+            // Tenta extrair o nome do arquivo da URL original, se possível
+            try {
+                // Decodifica a URL para obter o caminho real
+                let decodedUrl = decodeURIComponent(pdfUrl);
+                // Extrai o que vem depois da última barra, que geralmente é o nome do arquivo
+                let filename = decodedUrl.substring(decodedUrl.lastIndexOf('/') + 1).split('?')[0];
+                if (filename) {
+                   downloadBtn.setAttribute('download', filename);
+                }
+            } catch(e) {
+                console.warn("Não foi possível extrair o nome do arquivo da URL.");
             }
+        }
 
             try {
                 // Carrega o documento PDF a partir da URL
@@ -115,5 +149,16 @@
             }
         });
     </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').then(registration => { // <-- CORREÇÃO AQUI
+                console.log('ServiceWorker registrado com sucesso na raiz:', registration.scope);
+            }).catch(error => {
+                console.log('Falha ao registrar o ServiceWorker na raiz:', error);
+            });
+        });
+    }
+</script>
 </body>
 </html>

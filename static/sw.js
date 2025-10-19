@@ -1,18 +1,13 @@
-// ATENÇÃO: Mudamos a versão para 'v3' para forçar a atualização do Service Worker.
-const CACHE_VERSION = 'v3'; 
+// ATENÇÃO: Mudamos a versão para 'v7' para forçar a atualização final.
+const CACHE_VERSION = 'v7';
 const CACHE_NAME = `gerador-orcamentos-cache-${CACHE_VERSION}`;
 
-// Lista de TODOS os arquivos essenciais para o funcionamento offline.
-const URLS_TO_CACHE = [
-  // Páginas principais
+// Lista de todos os recursos essenciais do "esqueleto" do app.
+const APP_SHELL_URLS = [
   '/',
   '/login',
   '/orcamentos',
-
-  // Arquivo de manifesto PWA
-  '/manifest.json',
-
-  // === RECURSOS EXTERNOS ESSENCIAIS ADICIONADOS AQUI ===
+  '/static/manifest.json',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/@popperjs/core@2',
   'https://unpkg.com/tippy.js@6',
@@ -20,18 +15,25 @@ const URLS_TO_CACHE = [
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js'
 ];
 
-// Evento de Instalação: Salva os arquivos essenciais no cache.
+// Evento de Instalação: Salva o App Shell no cache.
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[Service Worker] Cacheando todos os recursos essenciais.');
-        return cache.addAll(URLS_TO_CACHE);
-      })
+    caches.open(CACHE_NAME).then(cache => {
+      console.log(`[Service Worker] Cacheando App Shell (v${CACHE_VERSION}).`);
+      // Faz requisições no-cors para os recursos externos
+      const externalRequests = URLS_TO_CACHE.filter(url => url.startsWith('http'))
+        .map(url => new Request(url, { mode: 'no-cors' }));
+
+      // Junta as URLs locais com as requisições externas
+      const localUrls = URLS_TO_CACHE.filter(url => !url.startsWith('http'));
+      return cache.addAll([...localUrls, ...externalRequests]);
+    })
+    .catch(err => console.error("Falha ao cachear o App Shell:", err))
   );
 });
 
-// Evento de Ativação: Limpa os caches antigos (como o 'v2' que estava incompleto).
+
+// Evento de Ativação: Limpa os caches antigos.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -48,34 +50,38 @@ self.addEventListener('activate', event => {
   return self.clients.claim();
 });
 
-// Evento Fetch: Estratégia "Stale-While-Revalidate" para a API e "Cache First" para o resto.
+
+// Evento Fetch: Lida com as requisições de rede.
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') {
     return;
   }
-  
-  const requestUrl = new URL(event.request.url);
 
-  // Estratégia para a API: Tenta o cache, depois a rede, e atualiza.
-  if (requestUrl.pathname.startsWith('/api/')) {
-    event.respondWith(
-      caches.open(CACHE_NAME).then(cache => {
-        return cache.match(event.request).then(cachedResponse => {
-          const fetchPromise = fetch(event.request).then(networkResponse => {
-            cache.put(event.request, networkResponse.clone());
-            return networkResponse;
+  // Estratégia: Network First, falling back to Cache
+  event.respondWith(
+    fetch(event.request)
+      .then(networkResponse => {
+        // --- CORREÇÃO IMPORTANTE AQUI ---
+        // Se a resposta for válida, nós a colocamos no cache.
+        // Respostas do tipo 'opaque' (para CDNs) são válidas, mas não podemos cloná-las.
+        if (networkResponse && (networkResponse.ok || networkResponse.type === 'opaque')) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
           });
-          return cachedResponse || fetchPromise;
-        });
+        }
+        return networkResponse;
       })
-    );
-  } 
-  // Estratégia para o resto: Tenta o cache primeiro. Se falhar, busca na rede.
-  else {
-    event.respondWith(
-      caches.match(event.request).then(response => {
-        return response || fetch(event.request);
+      .catch(() => {
+        // Se a rede falhar (estamos offline), busca no cache.
+        console.log('[Service Worker] Rede falhou, tentando buscar no cache:', event.request.url);
+        return caches.match(event.request)
+          .then(cachedResponse => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            // Se não estiver no cache e a rede falhar, o navegador mostrará a página de erro.
+          });
       })
-    );
-  }
+  );
 });
