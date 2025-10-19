@@ -951,7 +951,7 @@ function gerarRelatorioCusto() {
     }
 
     // 1. Monta a URL do PDF do relatório de custo.
-    const pdfUrl = `/orcamento/${orcamentoId}/relatorio-custo#view=FitH`;
+    const pdfUrl = `/orcamento/${orcamentoId}/relatorio-custo`;
     window.location.href = `/visualizar-pdf?url=${encodeURIComponent(pdfUrl)}`;
     
 
@@ -1723,14 +1723,14 @@ function inicializar() {
 
     document.getElementById('btn-gerar-orcamento').addEventListener('click', () => {
         const id = pdfOrcamentoIdInput.value;
-        const pdfUrl = `/orcamento/${id}/pdf?status=Orçamento#view=FitH`;
+        const pdfUrl = `/orcamento/${id}/pdf?status=Orçamento`;
         window.location.href = `/visualizar-pdf?url=${encodeURIComponent(pdfUrl)}`;
         fecharModalStatusPDF();
     });
 
     document.getElementById('btn-gerar-nota').addEventListener('click', () => {
         const id = pdfOrcamentoIdInput.value;
-        const pdfUrl = `/orcamento/${id}/pdf?status=Nota de Serviço#view=FitH`;
+        const pdfUrl = `/orcamento/${id}/pdf?status=Nota de Serviço`;
         window.location.href = `/visualizar-pdf?url=${encodeURIComponent(pdfUrl)}`;
         fecharModalStatusPDF();
     });

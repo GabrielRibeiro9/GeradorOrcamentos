@@ -2,53 +2,116 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Visualizador de Documento</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Biblioteca PDF.js (versão estável) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    
     <style>
-        /* Garante que o body e o html ocupem toda a tela e remove margens */
         html, body {
             margin: 0;
             padding: 0;
             height: 100%;
             width: 100%;
-            overflow: hidden; /* Impede a rolagem do corpo da página */
+            overflow: hidden;
+            background-color: #525659; /* Cor de fundo cinza, comum em visualizadores */
+        }
+        #app-container {
             display: flex;
             flex-direction: column;
+            height: 100vh;
         }
-        iframe {
-            flex-grow: 1; /* Faz o iframe ocupar todo o espaço restante */
-            border: none;
-            width: 100%;
+        #viewer-main-container {
+            flex-grow: 1;
+            overflow: auto; /* Permite scroll se o zoom for aplicado */
+            -webkit-overflow-scrolling: touch; /* Melhora a rolagem em iOS */
+        }
+        #viewer-container {
+            position: relative;
+        }
+        #viewer-container canvas {
+            display: block;
+            margin: 1rem auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            max-width: 100%;
+        }
+        #loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.2rem;
         }
     </style>
 </head>
 <body>
-    <!-- Cabeçalho fixo com o botão Voltar -->
-    <header class="bg-gray-800 text-white p-3 flex items-center justify-between flex-shrink-0">
-        <h1 class="text-lg font-semibold">Visualizador de Documento</h1>
-        <button onclick="history.back()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-            </svg>
-            Voltar
-        </button>
-    </header>
+    <div id="app-container">
+        <!-- Cabeçalho fixo com o botão Voltar -->
+        <header class="bg-gray-800 text-white p-3 flex items-center justify-between flex-shrink-0 z-10 shadow-lg">
+            <h1 class="text-lg font-semibold truncate">Visualizador</h1>
+            <button onclick="history.back()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2 whitespace-nowrap">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+                Voltar
+            </button>
+        </header>
 
-    <!-- O iframe onde o PDF será carregado -->
-    <iframe id="pdf-frame" title="Visualizador de PDF"></iframe>
+        <!-- Container principal onde o PDF será renderizado -->
+        <div id="viewer-main-container">
+            <div id="viewer-container">
+                <div id="loading-indicator">Carregando documento...</div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Pega a URL do PDF do parâmetro da página
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Define o worker para processar o PDF em segundo plano
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
+
+            const viewerContainer = document.getElementById('viewer-container');
+            const loadingIndicator = document.getElementById('loading-indicator');
             const params = new URLSearchParams(window.location.search);
             const pdfUrl = params.get('url');
-            
-            if (pdfUrl) {
-                // Define a URL do PDF no iframe
-                document.getElementById('pdf-frame').src = pdfUrl;
-            } else {
-                document.body.innerHTML = '<h1 style="text-align: center; margin-top: 50px;">Erro: URL do documento não encontrada.</h1>';
+
+            if (!pdfUrl) {
+                loadingIndicator.textContent = "Erro: URL do PDF não encontrada.";
+                return;
+            }
+
+            try {
+                // Carrega o documento PDF a partir da URL
+                const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+                loadingIndicator.style.display = 'none'; // Esconde o indicador de carregamento
+
+                // Renderiza todas as páginas do PDF
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    
+                    const viewport = page.getViewport({ scale: 1.5 }); // Pega o viewport com uma escala base
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    // Adiciona o canvas ao container antes de renderizar
+                    viewerContainer.appendChild(canvas);
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    await page.render(renderContext).promise;
+                }
+
+            } catch (error) {
+                console.error("Erro ao carregar ou renderizar o PDF:", error);
+                loadingIndicator.textContent = "Falha ao carregar o documento. Verifique o link e tente novamente.";
             }
         });
     </script>
