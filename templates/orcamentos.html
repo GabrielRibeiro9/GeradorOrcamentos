@@ -1299,6 +1299,41 @@ async function deletarCliente(clienteId, nomeCliente) {
   } catch(error) { alert(`Erro: ${error.message}`); }
 }
 
+function updateActionButtonsAvailability() {
+        const isOnline = navigator.onLine;
+        const actionButtons = document.querySelectorAll('button[onclick^="editarOrcamento"], button[onclick^="abrirModalStatusPDF"], button[onclick^="abrirModalTipoDocumento"], button[onclick^="deletarOrcamento"]');
+        
+        actionButtons.forEach(button => {
+            button.disabled = !isOnline;
+            if (!isOnline) {
+                button.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                button.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    }
+
+    // Função que observa a lista e aplica o status aos novos botões
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+                updateActionButtonsAvailability();
+            }
+        }
+    });
+
+    // Inicia a observação no container da lista
+    const listaContainer = document.getElementById('lista');
+    if(listaContainer) {
+        observer.observe(listaContainer, { childList: true });
+    }
+
+    window.addEventListener('online', updateActionButtonsAvailability);
+    window.addEventListener('offline', updateActionButtonsAvailability);
+    
+    // Roda a função assim que o script é carregado
+    updateActionButtonsAvailability();
+
 async function editarCliente(clienteId) {
   try {
     const response = await fetch(`/api/clientes/${clienteId}`);
