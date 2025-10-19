@@ -945,15 +945,19 @@ function gerarRelatorioCusto() {
         return;
     }
 
-    // --- VERIFICAÇÃO SÍNCRONA USANDO NOSSA VARIÁVEL ---
     if (!analiseJaFoiSalva) {
         alert("Por favor, salve a análise pelo menos uma vez antes de gerar o relatório em PDF.");
-        return; 
+        return;
     }
 
-    // Como a verificação é instantânea, a chamada window.open acontece no mesmo
-    // evento do clique, e o navegador não deve bloqueá-la.
-    window.open(`/orcamento/${orcamentoId}/relatorio-custo`, '_blank');
+    // 1. Monta a URL do PDF do relatório de custo.
+    const pdfUrl = `/orcamento/${orcamentoId}/relatorio-custo`;
+
+    // 2. Navega para a nossa página de visualização, passando a URL do PDF como parâmetro.
+    window.location.href = `/visualizar-pdf?url=${encodeURIComponent(pdfUrl)}`;
+
+    // 3. (Opcional, mas recomendado) Fecha o modal de análise após iniciar a navegação.
+    fecharModalAnaliseCusto();
 }
 
 window.editarOrcamento = function(id) { window.location.href = `/editar-orcamento/${id}`; }
@@ -1720,13 +1724,19 @@ function inicializar() {
 
     document.getElementById('btn-gerar-orcamento').addEventListener('click', () => {
         const id = pdfOrcamentoIdInput.value;
-        window.open(`/orcamento/${id}/pdf?status=Orçamento`, "_blank");
+        // 1. Monta a URL do arquivo PDF
+        const pdfUrl = `/orcamento/${id}/pdf?status=Orçamento`;
+        // 2. Navega para o visualizador, passando a URL do PDF como parâmetro
+        window.location.href = `/visualizar-pdf?url=${encodeURIComponent(pdfUrl)}`;
         fecharModalStatusPDF();
     });
 
     document.getElementById('btn-gerar-nota').addEventListener('click', () => {
         const id = pdfOrcamentoIdInput.value;
-        window.open(`/orcamento/${id}/pdf?status=Nota de Serviço`, "_blank");
+        // 1. Monta a URL do arquivo PDF
+        const pdfUrl = `/orcamento/${id}/pdf?status=Nota de Serviço`;
+        // 2. Navega para o visualizador, passando a URL do PDF como parâmetro
+        window.location.href = `/visualizar-pdf?url=${encodeURIComponent(pdfUrl)}`;
         fecharModalStatusPDF();
     });
 

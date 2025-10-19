@@ -741,6 +741,7 @@ document.addEventListener("DOMContentLoaded", function() {
         renderizarGruposEParcelasUI(); // Renderiza o estado inicial do modal
         atualizarCabecalhoPagamentoUI(); // Calcula os totais do grupo atual
 
+        document.body.classList.add('overflow-hidden');
         modalPagamento.classList.remove('hidden');
         modalPagamento.classList.add('flex');
         setTimeout(() => { modalPagamentoBox.classList.remove('-translate-y-10', 'opacity-0'); }, 50);
@@ -748,7 +749,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function fecharModalPagamento() {
         modalPagamentoBox.classList.add('-translate-y-10', 'opacity-0');
-        setTimeout(() => { modalPagamento.classList.add('hidden'); modalPagamento.classList.remove('flex'); }, 300);
+        setTimeout(() => { modalPagamento.classList.add('hidden'); modalPagamento.classList.remove('flex'); document.body.classList.remove('overflow-hidden'); }, 300);
     }
 
     function adicionarParcela() {

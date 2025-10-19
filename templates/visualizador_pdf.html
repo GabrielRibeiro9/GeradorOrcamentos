@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de Documento</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Garante que o body e o html ocupem toda a tela e remove margens */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* Impede a rolagem do corpo da página */
+            display: flex;
+            flex-direction: column;
+        }
+        iframe {
+            flex-grow: 1; /* Faz o iframe ocupar todo o espaço restante */
+            border: none;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Cabeçalho fixo com o botão Voltar -->
+    <header class="bg-gray-800 text-white p-3 flex items-center justify-between flex-shrink-0">
+        <h1 class="text-lg font-semibold">Visualizador de Documento</h1>
+        <button onclick="history.back()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            Voltar
+        </button>
+    </header>
+
+    <!-- O iframe onde o PDF será carregado -->
+    <iframe id="pdf-frame" title="Visualizador de PDF"></iframe>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Pega a URL do PDF do parâmetro da página
+            const params = new URLSearchParams(window.location.search);
+            const pdfUrl = params.get('url');
+            
+            if (pdfUrl) {
+                // Define a URL do PDF no iframe
+                document.getElementById('pdf-frame').src = pdfUrl;
+            } else {
+                document.body.innerHTML = '<h1 style="text-align: center; margin-top: 50px;">Erro: URL do documento não encontrada.</h1>';
+            }
+        });
+    </script>
+</body>
+</html>

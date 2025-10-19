@@ -229,6 +229,11 @@ def login_submit(request: Request, username: str = Form(...), password: str = Fo
     print(f"Falha no login para o usuário: {username}")
     return RedirectResponse(url="/login?error=true", status_code=status.HTTP_303_SEE_OTHER)
 
+@app.get("/visualizar-pdf", response_class=HTMLResponse)
+async def visualizar_pdf_page(request: Request):
+    """ Rota para a página que exibe o PDF dentro de um iframe. """
+    return templates.TemplateResponse("visualizador_pdf.html", {"request": request})
+
 @app.get("/logout")
 async def logout(request: Request):
     request.session.clear()
