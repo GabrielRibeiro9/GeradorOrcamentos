@@ -184,7 +184,14 @@
                 <label for="item" class="text-sm font-bold">Item:</label>
                 <div class="relative w-full">
                     <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" /></svg></div>
-                    <input data-tippy-content="Descreva o serviço ou material específico. Ex: 'Pintura de area externa' ou 'Tinta acrílica branca (lata 18L)'" class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="item" name="item">
+                    <textarea 
+                        id="item" 
+                        name="item" 
+                        rows="1" 
+                        class="w-full min-h-10 max-h-48 ps-10 py-2 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400 resize-none overflow-y-auto"
+                        placeholder="Linha 1: Nome do Item (ex: Serviço de Pintura)&#10;Pressione Enter para adicionar tópicos..."
+                        data-tippy-content="Digite o nome do item na primeira linha. Pressione Enter para adicionar subtópicos detalhados."
+                    ></textarea>
                 </div>
             </div>
             <div id="ncm-field-container" class="hidden flex-col items-start justify-start gap-2">
@@ -1035,9 +1042,18 @@ document.addEventListener("DOMContentLoaded", function() {
             tr.dataset.id = item.id;
 
             // Monta o HTML da linha dinamicamente
+            let nomeDoItemHtml = `<span class="font-semibold">${item.nome}</span> (${item.tipo})`;
+            if (item.topicos && item.topicos.length > 0) {
+                nomeDoItemHtml += `<ul class="list-disc pl-5 mt-1 font-normal text-gray-600">`;
+                item.topicos.forEach(topico => {
+                    nomeDoItemHtml += `<li>${topico}</li>`;
+                });
+                nomeDoItemHtml += `</ul>`;
+            }
+
             let rowHTML = `
-                <th scope="row" class="px-4 py-4 font-medium text-gray-900 capitalize align-middle">${item.nome} (${item.tipo})</th>
-            `;
+                      <td scope="row" class="px-4 py-4 font-medium text-gray-900 capitalize align-top">${nomeDoItemHtml}</td>
+                  `;
 
             if (temNcmNaLista) {
                 // Se a coluna NCM existe, adiciona a célula (vazia ou com valor)
@@ -1136,10 +1152,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function removerItem(itemId) {
         itens = itens.filter(item => String(item.id) !== String(itemId));
-        const row = itensContainer.querySelector(`tr[data-id=\'${itemId}\']`);
-        if (row) row.remove();
-        renderizarTabelaCompleta();
-        updateTableVisibility();
+
+        // Se o item que está sendo removido era o que estava em edição, limpa o formulário
+        if (idItemEmEdicao === itemId) {
+            finalizarEdicao();
+        }
+
+        renderizarTabelaCompleta(); // Já chama updateTableVisibility internamente
         if(window.recalcularFechamento) window.recalcularFechamento();
     }
 
@@ -1527,11 +1546,28 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
     async function adicionarItem() {
-        const nomeVal = itemInput.value.trim();
+        const rawText = itemInput.value.trim();
+        const linhas = rawText.split('\n').filter(l => l.trim() !== '');
         const qtdVal = parseInt(itemQtdInput.value, 10);
         const valStr = itemValorInput.value;
         const tipo = tipoItemSelect.value;
         const salvar = document.getElementById("toggleSalvar").checked;
+
+        if (linhas.length === 0) {
+         alert("O campo 'Item' não pode estar vazio.");
+         return;
+        }
+
+        // Processa as linhas para remover os marcadores de tópico
+        const linhasLimpas = linhas.map(l => l.trim().startsWith('• ') ? l.trim().substring(2) : l.trim());
+        
+        const nomeVal = linhasLimpas[0];        // A primeira linha é sempre o nome
+        const topicosVal = linhasLimpas.slice(1); // O resto são os tópicos
+
+        if (tipo === "default" || !nomeVal || isNaN(qtdVal) || qtdVal <= 0 || !valStr) {
+            alert("Para adicionar um item, preencha: Item, Quantidade, Valor e selecione um Tipo válido.");
+            return;
+        }
 
         if (tipo === "default" || !nomeVal || isNaN(qtdVal) || qtdVal <= 0 || !valStr) {
             alert("Para adicionar um item, preencha: Item, Quantidade, Valor e selecione um Tipo válido.");
@@ -1556,7 +1592,8 @@ document.addEventListener("DOMContentLoaded", function() {
         } else {
             // Se o item não existe, continuamos com a lógica original de adicionar um novo item
             let itemParaAdicionar = { 
-                nome: nomeVal, 
+                nome: nomeVal,
+                topicos: topicosVal, 
                 quantidade: qtdVal,
                 valor: valVal, 
                 tipo: tipo,
@@ -1790,6 +1827,64 @@ document.addEventListener("DOMContentLoaded", function() {
             submitButton.textContent = 'Salvar Orçamento';
         }
     }
+
+    function handleItemInput(event) {
+        const textarea = event.target;
+        const bullet = '• ';
+        const bulletLength = bullet.length;
+
+        // 1. Ajuste automático de altura
+        textarea.style.height = 'auto';
+        textarea.style.height = (textarea.scrollHeight) + 'px';
+
+        // 2. Lógica de formatação de tópicos (aperfeiçoada)
+        const valorOriginal = textarea.value;
+        const cursorPosition = textarea.selectionStart;
+        const linhas = valorOriginal.split('\n');
+
+        let charsAdicionadosAntesDoCursor = 0;
+        let posAtual = 0; // Para rastrear a posição no texto reformatado
+        let houveMudanca = false;
+
+        const linhasProcessadas = linhas.map((linha, index) => {
+            const linhaAtualPos = posAtual;
+
+            if (linhas.length > 1) {
+                // MODO TÓPICOS: mais de uma linha
+                if (linha.length > 0 && !linha.startsWith(bullet)) {
+                    houveMudanca = true;
+                    if (linhaAtualPos < cursorPosition) {
+                        charsAdicionadosAntesDoCursor += bulletLength;
+                    }
+                    posAtual += linha.length + bulletLength + 1; // +1 para o '\n'
+                    return bullet + linha;
+                }
+            } else {
+                // MODO NORMAL: apenas uma linha
+                if (linha.startsWith(bullet)) {
+                    houveMudanca = true;
+                    const linhaSemBullet = linha.substring(bulletLength);
+                    if (linhaAtualPos < cursorPosition) {
+                        // Calcula quantos caracteres do bullet foram removidos antes do cursor
+                        const removido = Math.max(0, Math.min(bulletLength, cursorPosition - linhaAtualPos));
+                        charsAdicionadosAntesDoCursor -= removido;
+                    }
+                    posAtual += linhaSemBullet.length + 1;
+                    return linhaSemBullet;
+                }
+            }
+            // Se nenhuma condição de mudança for atendida, apenas retorna a linha como está
+            posAtual += linha.length + 1;
+            return linha;
+        });
+
+        // Apenas atualiza o DOM se houver realmente uma mudança, para evitar loops
+        if (houveMudanca) {
+            textarea.value = linhasProcessadas.join('\n');
+            const novaPosicaoCursor = Math.max(0, cursorPosition + charsAdicionadosAntesDoCursor);
+            textarea.setSelectionRange(novaPosicaoCursor, novaPosicaoCursor);
+        }
+    }
     
     function inicializar() {
         itemValorInput.addEventListener("input", formatarMoeda);
@@ -1813,6 +1908,7 @@ document.addEventListener("DOMContentLoaded", function() {
         pagamentoValorInput.addEventListener('input', formatarMoeda); // Esta é para o valor da parcela
         pagamentoDescontoParcelaInput.addEventListener('input', formatarMoeda);
         btnFecharModalAviso.addEventListener('click', fecharAviso);
+        document.getElementById("item").addEventListener("input", handleItemInput);
         
         pagamentoDescricaoSelect.addEventListener('change', () => {
             if (pagamentoDescricaoSelect.value === 'outro') {

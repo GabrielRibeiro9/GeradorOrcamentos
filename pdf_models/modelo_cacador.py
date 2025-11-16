@@ -77,6 +77,10 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
         bairro = orcamento.bairro_cliente
 
     pdf = CacadorPDF(format='A4', orcamento=orcamento)
+    pdf.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
+    pdf.add_font("DejaVu", "B", "fonts/DejaVuSans-Bold.ttf", uni=True)
+    pdf.add_font("DejaVu", "I", "fonts/DejaVuSans-Oblique.ttf", uni=True)
+    pdf.add_font("DejaVu", "BI", "fonts/DejaVuSans-BoldOblique.ttf", uni=True)
     pdf.alias_nb_pages()
     pdf.add_page()
 
@@ -155,46 +159,59 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
 
     def draw_row(n, it):
         pdf.set_fill_color(240, 240, 240)
-        pdf.set_font("Arial", "", 9)
+        pdf.set_font("DejaVu", "", 9)
         pdf.set_text_color(0, 0, 0)
         start_y = pdf.get_y()
 
-        # Pega os valores com segurança
-        nome_item = it.get('nome', '')
+        # --- LÓGICA DE TÓPICOS CORRIGIDA ---
+        nome_item = str(it.get('nome', ''))
+        topicos = it.get("topicos", [])
+
+        if not topicos:
+            # Se NÃO houver tópicos, a descrição é apenas o nome
+            descricao_completa = nome_item
+        else:
+            # Se HOUVER tópicos, TODOS viram uma lista com marcadores
+            linhas_da_lista = [f"  •  {nome_item}"]
+            for topico in topicos:
+                linhas_da_lista.append(f"  •  {str(topico)}")
+            descricao_completa = "\n".join(linhas_da_lista)
+
         qtd_item = it.get('quantidade', 0)
         valor_item = it.get('valor', 0.0)
-
-        # CALCULA O TOTAL DA LINHA AQUI
         total_linha = qtd_item * valor_item
 
-        # Calcula a altura da linha dinamicamente
-        lines = pdf.multi_cell(TABLE_COL_WIDTHS[1], 4, nome_item, split_only=True)
+        # Calcula a altura da linha usando a descricao_completa
+        lines = pdf.multi_cell(TABLE_COL_WIDTHS[1], 4, descricao_completa, split_only=True)
         text_height = len(lines) * 4
         row_height = max(7, text_height + 3)
+        # --- FIM DA LÓGICA ---
 
         if pdf.get_y() + row_height > pdf.page_break_trigger:
             pdf.add_page()
             draw_header()
             start_y = pdf.get_y()
 
-        # Desenha as células com os valores corretos
+        # Desenha a célula do número do item
         pdf.set_y(start_y)
         pdf.set_x(10)
         pdf.cell(TABLE_COL_WIDTHS[0], row_height, str(n), border=1, align='C', fill=True)
         
         x_after_item = pdf.get_x()
-        y_text_pos = start_y + (row_height - text_height) / 2
+        
+        # Desenha o fundo e a borda da célula
         pdf.rect(x=x_after_item, y=start_y, w=TABLE_COL_WIDTHS[1], h=row_height, style='DF')
-        pdf.set_xy(x_after_item, y_text_pos)
-        pdf.multi_cell(TABLE_COL_WIDTHS[1], 4, nome_item, border=0, align='L')
+        
+        # Posiciona o cursor e desenha o texto completo
+        y_text_pos = start_y + (row_height - text_height) / 2
+        pdf.set_xy(x_after_item + 1, y_text_pos)
+        pdf.multi_cell(TABLE_COL_WIDTHS[1] - 2, 4, descricao_completa, border=0, align='L')
         
         pdf.set_y(start_y)
         pdf.set_x(x_after_item + TABLE_COL_WIDTHS[1])
         
         pdf.cell(TABLE_COL_WIDTHS[2], row_height, str(qtd_item), border=1, align='C', fill=True)
         pdf.cell(TABLE_COL_WIDTHS[3], row_height, format_brl_cacador(valor_item), border=1, align="R", fill=True)
-        
-        # USA O TOTAL DA LINHA CALCULADO
         pdf.cell(TABLE_COL_WIDTHS[4], row_height, format_brl_cacador(total_linha), border=1, align="R", fill=True, ln=1)
 
     if servicos:

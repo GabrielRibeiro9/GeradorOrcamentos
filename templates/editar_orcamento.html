@@ -185,7 +185,14 @@
                 <label for="item" class="text-sm font-bold">Item:</label>
                 <div class="relative w-full">
                     <div class="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" /></svg></div>
-                    <input class="h-10 w-full ps-10 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400" type="text" id="item" name="item">
+                    <textarea 
+                        id="item" 
+                        name="item" 
+                        rows="1" 
+                        class="w-full min-h-10 max-h-48 ps-10 py-2 border border-zinc-300 rounded-lg shadow-xs focus:outline-zinc-400 resize-none overflow-y-auto"
+                        placeholder="Linha 1: Nome do Item (ex: Serviço de Pintura)&#10;Pressione Enter para adicionar tópicos..."
+                        data-tippy-content="Digite o nome do item na primeira linha. Pressione Enter para adicionar subtópicos detalhados."
+                    ></textarea>
                 </div>
             </div>
             <div id="ncm-field-container" class="hidden flex-col items-start justify-start gap-2">
@@ -1208,7 +1215,16 @@ document.addEventListener("DOMContentLoaded", function() {
         idItemEmEdicao = itemId;
 
         // 1. Preenche os campos do formulário com os dados do item
-        itemInput.value = itemParaEditar.nome;
+        let textoParaEditar = itemParaEditar.nome;
+        if (itemParaEditar.topicos && itemParaEditar.topicos.length > 0) {
+            // Adiciona um \n e junta todos os tópicos, cada um numa nova linha
+            textoParaEditar += '\n' + itemParaEditar.topicos.join('\n');
+        }
+        itemInput.value = textoParaEditar;
+
+        // Dispara o evento 'input' para que a formatação (bolinhas) e o ajuste de altura sejam aplicados
+        itemInput.dispatchEvent(new Event('input', { bubbles: true }));
+
         itemQtdInput.value = itemParaEditar.quantidade;
         itemValorInput.value = itemParaEditar.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
         tipoItemSelect.value = itemParaEditar.tipo;
@@ -1271,7 +1287,19 @@ document.addEventListener("DOMContentLoaded", function() {
             tr.dataset.id = item.id;
             tr.onclick = () => iniciarEdicaoItem(item.id);
 
-            let rowHTML = `<th scope="row" class="px-4 py-4 font-medium text-gray-900 capitalize align-middle">${item.nome} (${item.tipo})</th>`;
+            let nomeDoItemHtml = `<span class="font-semibold">${item.nome}</span> (${item.tipo})`;
+            if (item.topicos && item.topicos.length > 0) {
+                nomeDoItemHtml += `<ul class="list-disc pl-5 mt-1 font-normal text-gray-600">`;
+                item.topicos.forEach(topico => {
+                    nomeDoItemHtml += `<li>${topico}</li>`;
+                });
+                nomeDoItemHtml += `</ul>`;
+            }
+
+            let rowHTML = `
+                <td scope="row" class="px-4 py-4 font-medium text-gray-900 capitalize align-top">${nomeDoItemHtml}</td>
+            `;
+
             if (temNcmNaLista) {
                 rowHTML += `<td class="px-4 py-4 text-center align-middle">${item.ncm || ''}</td>`;
             }
@@ -1287,7 +1315,14 @@ document.addEventListener("DOMContentLoaded", function() {
             
             tr.querySelector('.remove-item-btn').onclick = function(event) {
                 event.stopPropagation();
-                itens = itens.filter(i => String(i.id) !== this.dataset.id);
+                const idToRemove = this.dataset.id;
+                itens = itens.filter(i => String(i.id) !== idToRemove);
+
+                // Se o item removido era o que estava em edição, reseta o formulário
+                if (idItemEmEdicao === idToRemove) {
+                    finalizarEdicao();
+                }
+
                 renderizarTabelaCompleta();
                 verificarEAtualizarAvisoPagamento();
             };
@@ -1374,11 +1409,21 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     
     function adicionarItem() {
-        const nomeVal = itemInput.value.trim();
+        const rawText = itemInput.value.trim();
+        const linhas = rawText.split('\n').filter(l => l.trim() !== '');
         const qtdVal = parseInt(itemQtdInput.value, 10);
         const valStr = itemValorInput.value;
         const tipoVal = tipoItemSelect.value;
-        
+
+        if (linhas.length === 0) {
+            alert("O campo 'Item' não pode estar vazio.");
+            return;
+        }
+
+        const linhasLimpas = linhas.map(l => l.trim().startsWith('• ') ? l.trim().substring(2) : l.trim());
+        const nomeVal = linhasLimpas[0];        // A primeira linha é sempre o nome
+        const topicosVal = linhasLimpas.slice(1);
+
         if (!nomeVal || isNaN(qtdVal) || qtdVal <= 0 || !valStr || tipoVal === "default") {
             alert("Preencha todos os campos do item.");
             return;
@@ -1392,6 +1437,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const itemAAtualizar = itens.find(i => String(i.id) === String(idItemEmEdicao));
             if(itemAAtualizar) {
                 itemAAtualizar.nome = nomeVal;
+                itemAAtualizar.topicos = topicosVal; 
                 itemAAtualizar.quantidade = qtdVal;
                 itemAAtualizar.valor = valVal;
                 itemAAtualizar.tipo = tipoVal;
@@ -1410,7 +1456,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 // Se o item não existe, adiciona um novo.
                 const novoItem = { 
                     id: `temp-${Date.now()}`, 
-                    nome: nomeVal, 
+                    nome: nomeVal,
+                    topicos: topicosVal, 
                     quantidade: qtdVal, 
                     valor: valVal, 
                     tipo: tipoVal 
@@ -1504,6 +1551,7 @@ document.addEventListener("DOMContentLoaded", function() {
         btnSalvarContatoModal.addEventListener('click', salvarContatoDoModal);
         btnFecharModalCatalogo.addEventListener('click', fecharModalCatalogo);
         btnFecharModalAviso.addEventListener('click', fecharAviso);
+        document.getElementById("item").addEventListener("input", handleItemInput);
         modalCatalogo.addEventListener('click', (event) => { 
             if (event.target === modalCatalogo) fecharModalCatalogo(); 
         });
@@ -1570,6 +1618,64 @@ document.addEventListener("DOMContentLoaded", function() {
         } else {
             ncmContainer.classList.add('hidden');
             ncmContainer.classList.remove('flex');
+        }
+    }
+
+    function handleItemInput(event) {
+        const textarea = event.target;
+        const bullet = '• ';
+        const bulletLength = bullet.length;
+
+        // 1. Ajuste automático de altura
+        textarea.style.height = 'auto';
+        textarea.style.height = (textarea.scrollHeight) + 'px';
+
+        // 2. Lógica de formatação de tópicos (aperfeiçoada)
+        const valorOriginal = textarea.value;
+        const cursorPosition = textarea.selectionStart;
+        const linhas = valorOriginal.split('\n');
+
+        let charsAdicionadosAntesDoCursor = 0;
+        let posAtual = 0; // Para rastrear a posição no texto reformatado
+        let houveMudanca = false;
+
+        const linhasProcessadas = linhas.map((linha, index) => {
+            const linhaAtualPos = posAtual;
+
+            if (linhas.length > 1) {
+                // MODO TÓPICOS: mais de uma linha
+                if (linha.length > 0 && !linha.startsWith(bullet)) {
+                    houveMudanca = true;
+                    if (linhaAtualPos < cursorPosition) {
+                        charsAdicionadosAntesDoCursor += bulletLength;
+                    }
+                    posAtual += linha.length + bulletLength + 1; // +1 para o '\n'
+                    return bullet + linha;
+                }
+            } else {
+                // MODO NORMAL: apenas uma linha
+                if (linha.startsWith(bullet)) {
+                    houveMudanca = true;
+                    const linhaSemBullet = linha.substring(bulletLength);
+                    if (linhaAtualPos < cursorPosition) {
+                        // Calcula quantos caracteres do bullet foram removidos antes do cursor
+                        const removido = Math.max(0, Math.min(bulletLength, cursorPosition - linhaAtualPos));
+                        charsAdicionadosAntesDoCursor -= removido;
+                    }
+                    posAtual += linhaSemBullet.length + 1;
+                    return linhaSemBullet;
+                }
+            }
+            // Se nenhuma condição de mudança for atendida, apenas retorna a linha como está
+            posAtual += linha.length + 1;
+            return linha;
+        });
+
+        // Apenas atualiza o DOM se houver realmente uma mudança, para evitar loops
+        if (houveMudanca) {
+            textarea.value = linhasProcessadas.join('\n');
+            const novaPosicaoCursor = Math.max(0, cursorPosition + charsAdicionadosAntesDoCursor);
+            textarea.setSelectionRange(novaPosicaoCursor, novaPosicaoCursor);
         }
     }
 
