@@ -1,4 +1,4 @@
-import os, qrcode, tempfile, json, re
+import os, qrcode, tempfile, json, re, html
 from fpdf import FPDF
 from models import Orcamento
 from io import BytesIO
@@ -22,6 +22,11 @@ def format_brl_cacador(value): # Renomeado para evitar conflitos se você import
         return "R$ 0,00"
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+def clean_text(text):
+    if not text: return ""
+    # Retorna o texto puro, sem tentar converter para latin-1
+    return str(text)
+
 class CacadorPDF(FPDF):
     def __init__(self, *args, orcamento: Orcamento, **kwargs):
         super().__init__(*args, **kwargs)
@@ -32,20 +37,24 @@ class CacadorPDF(FPDF):
         if os.path.exists(FULL_PAGE_BACKGROUND_IMAGE):
             self.image(FULL_PAGE_BACKGROUND_IMAGE, 0, 0, self.w, self.h)
         if os.path.exists(LOGO_PATH):
-            self.image(LOGO_PATH, x=0, y=-3, w=70)
+            self.image(LOGO_PATH, x=0, y=-4, w=70) # Logo subida para -4
         
         bar_y = 62 
-        self.set_xy(0, bar_y) 
         self.set_fill_color(0, 0, 0)
         self.set_text_color(255, 255, 255)
         self.set_font("Arial", "B", 9)
-        # Usa self.orcamento diretamente
-        titulo_documento = self.orcamento.status.capitalize() if self.orcamento.status else "Orçamento"
-        header_text = f"Data: {self.orcamento.data_emissao}    |    {titulo_documento} #{self.orcamento.numero}"
-        bar_width = 80
-        self.cell(bar_width, 8, "", 0, 1, 'L', fill=True) 
+
+        # Monta o título completo (Ex: DATA | RECIBO DE SERVIÇO #0037)
+        titulo = self.orcamento.status.upper() if self.orcamento.status else "ORÇAMENTO"
+        header_text = f"DATA: {self.orcamento.data_emissao}    |    {titulo} #{self.orcamento.numero}"
+        
+        # AJUSTE: Calcula largura baseada no texto para não cortar
+        bar_width = self.get_string_width(clean_text(header_text)) + 20
+
+        self.set_xy(0, bar_y) 
+        self.cell(bar_width, 8, "", 0, 0, 'L', fill=True) # Fundo preto
         self.set_xy(5, bar_y) 
-        self.cell(0, 8, header_text, 0, 1, 'L')
+        self.cell(bar_width, 8, clean_text(header_text), 0, 1, 'L') # Texto
         self.set_text_color(0, 0, 0)
 
     def footer(self):
@@ -71,6 +80,18 @@ class CacadorPDF(FPDF):
 # A função abaixo começa SEM INDENTAÇÃO
 
 def gerar_pdf_cacador(file_path, orcamento: Orcamento):
+
+    def draw_term_line(label, value):
+        if not value or value == "[]": return
+        # Fixa o bloco na direita conforme Imagem 1
+        bx_largura = 95
+        bx_x = pdf.w - pdf.r_margin - bx_largura
+        pdf.set_x(bx_x)
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(pdf.get_string_width(f"{label}: "), 4, f"{label}: ")
+        pdf.set_font("Arial", "", 8)
+        # O 'R' garante o alinhamento à direita do texto
+        pdf.multi_cell(bx_largura - pdf.get_string_width(label), 4, clean_text(str(value)), 0, 'R')
 
     if orcamento.cliente:
         nome = orcamento.cliente.nome
@@ -179,13 +200,12 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
         topicos = it.get("topicos", [])
 
         if not topicos:
-            # Se NÃO houver tópicos, a descrição é apenas o nome
             descricao_completa = nome_item
         else:
-            # Se HOUVER tópicos, TODOS viram uma lista com marcadores
-            linhas_da_lista = [f"  •  {nome_item}"]
+            # Usamos o caractere Unicode real da bolinha (\u2022)
+            linhas_da_lista = [f" \u2022 {nome_item}"]
             for topico in topicos:
-                linhas_da_lista.append(f"  •  {str(topico)}")
+                linhas_da_lista.append(f" \u2022 {str(topico)}")
             descricao_completa = "\n".join(linhas_da_lista)
 
         qtd_item = it.get('quantidade', 0)
@@ -221,7 +241,11 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
         pdf.set_y(start_y)
         pdf.set_x(x_after_item + TABLE_COL_WIDTHS[1])
         
-        pdf.cell(TABLE_COL_WIDTHS[2], row_height, str(qtd_item), border=1, align='C', fill=True)
+        q_val = float(it.get('quantidade', 1))
+        u_med = it.get('unidade', 'un').lower().replace('m2', 'm²').replace('m3', 'm³')
+        txt_q = f"{int(q_val) if q_val.is_integer() else q_val}{u_med}"
+        
+        pdf.cell(TABLE_COL_WIDTHS[2], row_height, clean_text(txt_q), border=1, align='C', fill=True)
         pdf.cell(TABLE_COL_WIDTHS[3], row_height, format_brl_cacador(valor_item), border=1, align="R", fill=True)
         pdf.cell(TABLE_COL_WIDTHS[4], row_height, format_brl_cacador(total_linha), border=1, align="R", fill=True, ln=1)
 
@@ -278,13 +302,25 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
 
     pdf.ln(2)
 
+    txt_pagamento = orcamento.condicao_pagamento or ""
+    
+    # Se o texto for um JSON do novo app (começa com [[ ), ele transforma em texto bonito
+    if txt_pagamento.startswith("[["):
+        try:
+            grupos = json.loads(txt_pagamento)
+            # Transforma [[{desc:Sinal, valor:100}]] em "Sinal: R$ 100,00"
+            txt_pagamento = " / ".join([" + ".join([f"{p['descricao']}: {format_brl_cacador(p['valor'])}" for p in g]) for g in grupos])
+        except: 
+            pass
+
     def draw_term_line(label, value):
         """
         Função para desenhar uma linha de termo com rótulo e valor,
         com quebra de linha do valor recuada para a posição do rótulo.
         """
-        if not value: # Não faz nada se não houver valor
+        if not value or value == "[]": 
             return
+         
 
         pdf.set_x(start_x)
         pdf.set_font("Arial", "B", 9)
@@ -313,51 +349,44 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
              pdf.ln() # Se não tiver linhas (valor vazio), só pula a linha
 
 
-    condicao_pagamento_str = orcamento.condicao_pagamento
-    condicao_formatada = ""  # Começamos com uma string vazia
+    condicao_pagamento_raw = orcamento.condicao_pagamento or ""
+    
+    # 1. Limpeza de HTML repetitivo
+    if condicao_pagamento_raw:
+        while "&" in condicao_pagamento_raw:
+            old_val = condicao_pagamento_raw
+            condicao_pagamento_raw = html.unescape(condicao_pagamento_raw)
+            if old_val == condicao_pagamento_raw:
+                break
 
-    if condicao_pagamento_str and condicao_pagamento_str.strip().startswith('[['):
-        # NOVO CENÁRIO: É UM JSON de Grupos de Pagamento
+    condicao_formatada = ""
+
+    # 2. Processa se for o novo formato (JSON)
+    if condicao_pagamento_raw.strip().startswith('[['):
         try:
-            grupos = json.loads(condicao_pagamento_str)
-            if isinstance(grupos, list) and all(isinstance(g, list) for g in grupos):
+            grupos = json.loads(condicao_pagamento_raw)
+            if isinstance(grupos, list):
                 opcoes_formatadas = []
                 for i, grupo in enumerate(grupos):
-                        partes_grupo = []
-                        desconto_total_grupo = sum(float(p.get('desconto', 0)) for p in grupo)
-
-                        for p in grupo:
-                            partes_grupo.append(f"{p.get('descricao', 'Parcela')}: {format_brl_cacador(float(p.get('valor', 0)))}")
-                        
-                        texto_grupo_formatado = " + ".join(partes_grupo)
-
-                        # Se houve desconto NESTE grupo, adiciona a informação
-                        if desconto_total_grupo > 0:
-                            valor_bruto_grupo = sum(float(p.get('valor', 0)) + float(p.get('desconto', 0)) for p in grupo)
-                            # Previne divisão por zero se o valor bruto for 0
-                            if valor_bruto_grupo > 0:
-                                percentual_desconto = (desconto_total_grupo / valor_bruto_grupo) * 100
-                                desconto_str = f" ({percentual_desconto:g}% de desconto)"
-                                texto_grupo_formatado += desconto_str
-
-                        prefixo = f"Opção {i+1}: " if len(grupos) > 1 else ""
-                        opcoes_formatadas.append(prefixo + texto_grupo_formatado)
-                
-                # Junta cada opção com uma quebra de linha para exibir no PDF
+                    partes_grupo = []
+                    items_do_grupo = grupo if isinstance(grupo, list) else [grupo]
+                    for p in items_do_grupo:
+                        desc = p.get('descricao', 'Parcela')
+                        valor = float(p.get('valor', 0))
+                        partes_grupo.append(f"{desc}: {format_brl_cacador(valor)}")
+                    texto_final = " + ".join(partes_grupo)
+                    prefixo = f"Opção {i+1}: " if len(grupos) > 1 else ""
+                    opcoes_formatadas.append(prefixo + texto_final)
                 condicao_formatada = "\n".join(opcoes_formatadas)
-        except (json.JSONDecodeError, TypeError):
-            # Se falhar o parse, apenas limpa
-            condicao_formatada = re.sub(r'\s*R\$\s*[\d.,]+$', '', condicao_pagamento_str.strip())
-    
-    elif condicao_pagamento_str:
-        # COMPATIBILIDADE: Se for um texto antigo, apenas limpa
-        condicao_formatada = re.sub(r'\s*R\$\s*[\d.,]+$', '', condicao_pagamento_str.strip())
-        
-    # Garante que, se for '[]', não exiba nada
-    if condicao_formatada == '[]':
-        condicao_formatada = 'A combinar'
+        except:
+            condicao_formatada = re.sub(r'[\[\]{}"\']', '', condicao_pagamento_raw)
+    else:
+        condicao_formatada = condicao_pagamento_raw
 
-    # --- USO DA FUNÇÃO PARA TODOS OS CAMPOS ---
+    if not condicao_formatada or condicao_formatada == "[]":
+        condicao_formatada = "A combinar"
+
+    # --- DESENHO DOS TERMOS ---
     draw_term_line("Pagamento", condicao_formatada)
     draw_term_line("Prazo", orcamento.prazo_entrega)
     draw_term_line("Garantia", orcamento.garantia)
@@ -366,7 +395,7 @@ def gerar_pdf_cacador(file_path, orcamento: Orcamento):
     pdf.ln(1) # Espaçamento final geral
 
 
-    if orcamento.status == "Nota de Serviço":    
+    if orcamento.status and "recibo de serviço prestado" in orcamento.status.lower():      
 
         def montar_payload_pix(chave_pix, nome_recebedor, cidade_recebedor, valor, descricao=""):
             # Remove caracteres especiais e limita o tamanho dos campos
