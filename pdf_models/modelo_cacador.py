@@ -56,6 +56,17 @@ class CacadorPDF(FPDF):
         # Usa page_no() para o número atual e o alias '{nb}' para o total
         self.cell(0, 10, f"Página {self.page_no()}/{{nb}}", 0, 0, 'C')
 
+        # 2. Marca d'água (Canto Direito)
+        logo_app = os.path.join(MODEL_DIR, '..', 'static', 'logo_full.png') # Caminho da sua logo
+        if os.path.exists(logo_app):
+            self.set_text_color(180, 180, 180)
+            self.set_font("Arial", "B", 6)
+            self.set_xy(-35, -18) 
+            self.cell(30, 3, "Gerado por:", 0, 1, 'C')
+            self.image(logo_app, x=self.w - 33, y=self.h - 15, w=26)
+            self.set_xy(-35, -7)
+            self.cell(30, 3, "www.geraorcamentos.com.br", 0, 0, 'C')
+
 # FIM DA CLASSE MyPDF
 # A função abaixo começa SEM INDENTAÇÃO
 
